@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+deepseek api.txt
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tool caches
+.vite/
+.vitest/
+.eslintcache
+.turbo/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# Generated config artifacts
+/playwright.config.js
+/playwright.config.d.ts
+/tailwind.config.js
+/tailwind.config.d.ts
+/vite.config.js
+/vite.config.d.ts
+/vitest.config.js
+/vitest.config.d.ts
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Project scratch space
+# Keep folder docs, ignore generated temp files and one-off scripts.
+scratch/*
+!scratch/README.md
+!scratch/.gitkeep
+!scratch/test-scripts/
+scratch/test-scripts/*
+!scratch/test-scripts/README.md
+!scratch/test-scripts/.gitkeep

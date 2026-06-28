@@ -1,0 +1,44 @@
+import type { ToolPreset } from '../../../types'
+import { TOOL_SESSION_OUTPUT_SCHEMA_KEY } from '../shared/outputSchema'
+
+export const workoutPlannerPreset: ToolPreset = {
+  id: 'workout-planner',
+  label: 'Workout Planner',
+  description: 'Plan individual workout sessions toward a training goal.',
+  isBuiltIn: true,
+  outputSchemaKey: TOOL_SESSION_OUTPUT_SCHEMA_KEY,
+  defaultLlmOptions: { provider: 'global' },
+  prompt: [
+    'Create an individual calendar breakdown for a workout plan.',
+    'Each workout session must be a separate calendar event with a clear title, duration, and displayDetails.',
+    'Respect the supplied fitness level, equipment, constraints, frequency, and session length.',
+    'Use ISO datetimes and avoid overloading the user.',
+  ].join('\n'),
+  fields: [
+    { id: 'startDate', label: 'Start date', required: true, type: 'date' },
+    { id: 'startTime', label: 'Preferred time', defaultValue: '07:00', required: true, type: 'time' },
+    {
+      id: 'goal',
+      label: 'Goal',
+      required: true,
+      placeholder: 'Build strength, lose fat, run 5K',
+      type: 'text',
+    },
+    {
+      id: 'fitnessLevel',
+      label: 'Fitness level',
+      defaultValue: 'beginner',
+      required: true,
+      type: 'select',
+      options: [
+        { label: 'Beginner', value: 'beginner' },
+        { label: 'Intermediate', value: 'intermediate' },
+        { label: 'Advanced', value: 'advanced' },
+      ],
+    },
+    { id: 'sessionLength', label: 'Session length minutes', defaultValue: '45', required: true, type: 'number' },
+    { id: 'frequency', label: 'Frequency', defaultValue: '3 times per week', required: true, type: 'text' },
+    { id: 'equipment', label: 'Equipment', placeholder: 'Dumbbells, treadmill, none', required: false, type: 'text' },
+    { id: 'constraints', label: 'Constraints', placeholder: 'Knee pain, apartment-friendly', required: false, type: 'textarea' },
+  ],
+}

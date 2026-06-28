@@ -1,0 +1,36 @@
+{
+  "items": {
+    "cheese": {
+      "category": "dairy",
+      "confidence": 0.82,
+      "estimated_shelf_life_days": 14,
+      "notes": "Seeded default entry for common refrigerated cheese.",
+      "source": "local_seed",
+      "storage_type": "fridge"
+    },
+    "eggs": {
+      "category": "eggs",
+      "confidence": 0.86,
+      "estimated_shelf_life_days": 21,
+      "notes": "Seeded default entry for refrigerated eggs.",
+      "source": "local_seed",
+      "storage_type": "fridge"
+    },
+    "milk": {
+      "category": "dairy",
+      "confidence": 0.86,
+      "estimated_shelf_life_days": 7,
+      "notes": "Seeded default entry for purchased milk.",
+      "source": "local_seed",
+      "storage_type": "fridge"
+    },
+    "yogurt": {
+      "category": "dairy",
+      "confidence": 0.84,
+      "estimated_shelf_life_days": 10,
+      "notes": "Seeded default entry for refrigerated yogurt.",
+      "source": "local_seed",
+      "storage_type": "fridge"
+    }
+  }
+}
