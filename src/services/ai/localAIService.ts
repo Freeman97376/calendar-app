@@ -1,6 +1,7 @@
 import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
+  AIProgressToolResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -8,6 +9,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -53,6 +56,166 @@ function toISODateTimeFromTime(date: string, time: string, context?: TimezoneCon
 
 function addMinutes(isoDateTime: string, minutes: number): string {
   return new Date(new Date(isoDateTime).getTime() + minutes * 60_000).toISOString()
+}
+
+function timedEventsOverlap(
+  left: { startAt: string; endAt: string },
+  right: { startAt: string; endAt: string },
+): boolean {
+  const leftStart = new Date(left.startAt)
+  const leftEnd = new Date(left.endAt)
+  const rightStart = new Date(right.startAt)
+  const rightEnd = new Date(right.endAt)
+
+  if (
+    Number.isNaN(leftStart.getTime()) ||
+    Number.isNaN(leftEnd.getTime()) ||
+    Number.isNaN(rightStart.getTime()) ||
+    Number.isNaN(rightEnd.getTime())
+  ) {
+    return false
+  }
+
+  return leftStart < rightEnd && rightStart < leftEnd
+}
+
+function nextNonConflictingStart(
+  date: string,
+  time: string,
+  durationMinutes: number,
+  context: AIProgressToolRequest,
+): { shifted: boolean; startAt: string } {
+  let startAt = toISODateTimeFromTime(date, time, context)
+  let shifted = false
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = { startAt, endAt: addMinutes(startAt, durationMinutes) }
+    const overlaps = context.calendarEvents.some((event) => timedEventsOverlap(candidate, event))
+
+    if (!overlaps) return { shifted, startAt }
+
+    startAt = addMinutes(startAt, 60)
+    shifted = true
+  }
+
+  return { shifted, startAt }
+}
+
+function nextWeekday(isoDate: string, weekday: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  let offset = (weekday - date.getDay() + 7) % 7
+  if (offset === 0) offset = 7
+  return addDays(isoDate, offset)
+}
+
+function isFullWeekRequest(message: string): boolean {
+  return /\b(next week|full week|whole week|weekly plan|week plan)\b|下周|一整周|整周|全周|一周/.test(
+    message.toLowerCase(),
+  )
+}
+
+function parseRequestedSessionCount(value: string): number | undefined {
+  if (/\b(daily|every day)\b|每天/.test(value.toLowerCase())) return 7
+  if (/\bweekdays?\b|工作日/.test(value.toLowerCase())) return 5
+
+  const digitMatch = value.match(/(\d{1,2})\s*(?:sessions?|blocks?|workouts?|lessons?|classes?|times?|hours?|hrs?|次|节|个|小时)/i)
+  if (digitMatch) return Number(digitMatch[1])
+
+  const chineseCounts: Array<[RegExp, number]> = [
+    [/七\s*(?:次|节|个|天|小时)/, 7],
+    [/六\s*(?:次|节|个|天|小时)/, 6],
+    [/五\s*(?:次|节|个|天|小时)/, 5],
+    [/四\s*(?:次|节|个|天|小时)/, 4],
+    [/三\s*(?:次|节|个|天|小时)/, 3],
+    [/两\s*(?:次|节|个|天|小时)|二\s*(?:次|节|个|天|小时)/, 2],
+    [/一\s*(?:次|节|个|天|小时)/, 1],
+  ]
+  return chineseCounts.find(([pattern]) => pattern.test(value))?.[1]
+}
+
+function clampSessionCount(value: number): number {
+  return Math.min(20, Math.max(1, Math.floor(value)))
+}
+
+function sessionOffsets(sessionCount: number): number[] {
+  if (sessionCount <= 1) return [0]
+  if (sessionCount === 2) return [0, 3]
+  if (sessionCount === 3) return [0, 2, 4]
+  if (sessionCount === 4) return [0, 1, 3, 5]
+  return Array.from({ length: sessionCount }, (_, index) => index)
+}
+
+function truncateText(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1).trimEnd()}...` : value
+}
+
+function latestProgressToolMessage(request: AIProgressToolRequest): string {
+  const instruction = request.userInstruction?.trim()
+  if (!instruction) return ''
+
+  const match = instruction.match(/Latest user message:\s*([\s\S]*?)(?:\n\nRecent tool conversation:|\n\nTask:|$)/i)
+  return truncateText((match?.[1] ?? instruction).trim(), 220)
+}
+
+function isAutomaticRequirementConfirmation(message: string): boolean {
+  return /^confirm current requirements\b/i.test(message.trim())
+}
+
+function learningSessionTopic(index: number, outcome: string, goal: string) {
+  const topics = [
+    {
+      actionTitle: 'Write the agent task contract',
+      description: `Define goal, audience, input/output, constraints, and success criteria for ${goal}.`,
+      eventTitle: 'AI agent skill block: task framing',
+      focus: 'write the task contract and success criteria',
+      milestoneTitle: 'Foundations and task framing',
+    },
+    {
+      actionTitle: 'Practice prompt and task framing',
+      description: 'Turn one broad request into a precise task, inputs, constraints, and acceptance checks.',
+      eventTitle: 'AI agent skill block: prompt framing',
+      focus: 'prompt shape, task boundaries, and acceptance criteria',
+      milestoneTitle: 'Foundations and task framing',
+    },
+    {
+      actionTitle: 'Implement one structured tool call exercise',
+      description: 'Create a small JSON schema, mock a tool response, validate it, and handle failures.',
+      eventTitle: 'AI agent skill block: tool use',
+      focus: 'tool calls, schemas, validation, and review-before-apply behavior',
+      milestoneTitle: 'Tool use and structured outputs',
+    },
+    {
+      actionTitle: 'Design a compact memory retrieval prompt',
+      description: 'Limit context to the smallest useful facts and record what was used.',
+      eventTitle: 'AI agent skill block: retrieval and memory',
+      focus: 'compact retrieval context and memory-backed planning',
+      milestoneTitle: 'Retrieval, memory, and evaluation',
+    },
+    {
+      actionTitle: 'Create one evaluation checklist',
+      description: 'Define test cases, failure modes, and safety checks for the agent workflow.',
+      eventTitle: 'AI agent skill block: eval and safety',
+      focus: 'evaluation cases, safety checks, and failure handling',
+      milestoneTitle: 'Retrieval, memory, and evaluation',
+    },
+    {
+      actionTitle: 'Build the demo agent loop',
+      description: `Implement a small loop that can demonstrate: ${outcome}.`,
+      eventTitle: 'AI agent skill block: demo build',
+      focus: `build the smallest demo loop for ${outcome}`,
+      milestoneTitle: 'Demo agent build',
+    },
+    {
+      actionTitle: 'Review and present the demo',
+      description: 'Run the demo, document what worked, and capture the next iteration.',
+      eventTitle: 'AI agent skill block: demo review',
+      focus: 'demo walkthrough, evidence, and next iteration notes',
+      milestoneTitle: 'Demo agent build',
+    },
+  ]
+
+  return topics[index % topics.length]
 }
 
 function addMinutesToDate(date: Date, minutes: number): string {
@@ -355,6 +518,14 @@ export class LocalAIService implements IAIService {
     return this.planDiningToolSession(request)
   }
 
+  async runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    if (request.toolKind === 'agent-learning') {
+      return this.planAgentLearningProgressTool(request)
+    }
+
+    return this.planFitnessProgressTool(request)
+  }
+
   async continueConversation(
     messages: AIConversationMessage[],
     context: AICalendarContext,
@@ -524,6 +695,238 @@ export class LocalAIService implements IAIService {
       summary: `Planned ${events.length} individual workout sessions.`,
       events,
       warnings: ['Local planner used. Review intensity before applying.'],
+    })
+  }
+
+  private planFitnessProgressTool(request: AIProgressToolRequest): AIProgressToolResult {
+    const goal = request.formInput.goal || request.project?.title || 'Fitness demo goal'
+    const level = request.formInput.level || 'beginner'
+    const equipment = request.formInput.equipment || 'bodyweight'
+    const constraints = request.formInput.constraints || 'none listed'
+    const frequency = request.formInput.frequency || '3 times per week'
+    const durationMinutes = Math.min(120, Math.max(20, Number(request.formInput.sessionLength || 45)))
+    const preferredTime = request.formInput.preferredTime || '07:00'
+    const latestMessage = latestProgressToolMessage(request)
+    const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
+    const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
+    const sessionCount = clampSessionCount(
+      parseRequestedSessionCount(latestMessage) ?? parseRequestedSessionCount(frequency) ?? (fullWeekRequested ? 5 : 2),
+    )
+    const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
+      const date = addDays(startDate, offset)
+      const block = nextNonConflictingStart(date, preferredTime, durationMinutes, request)
+      return { ...block, date, index }
+    })
+    const warnings = ['Local planner used. Review intensity and timing before applying.']
+
+    if (scheduledSessions.some((session) => session.shifted)) {
+      warnings.push('Adjusted one or more workout blocks to avoid supplied calendar conflicts.')
+    }
+
+    if (/\b(pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(constraints)) {
+      warnings.push('Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.')
+    }
+
+    return AIProgressToolResultSchema.parse({
+      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+        ? `Confirmed: ${latestMessage}. I updated the workout plan, next actions, and progress log.`
+        : `Confirmed ${goal}: ${level}, ${frequency}, ${durationMinutes} minute sessions.`,
+      confirmedRequirements: [
+        `Goal: ${goal}`,
+        `Level: ${level}`,
+        `Equipment: ${equipment}`,
+        `Frequency: ${frequency}`,
+        `Calendar sessions: ${sessionCount}`,
+        `Session length: ${durationMinutes} minutes`,
+      ],
+      summary: `Built a ${frequency} ${level} fitness plan for ${goal} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
+      currentRecommendation: `Next session: ${durationMinutes} minutes focused on ${goal}, using ${equipment}. Preview includes ${sessionCount} session${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
+      milestones: [
+        {
+          title: 'Baseline and habit setup',
+          description: 'Confirm constraints, warm-up routine, and repeatable schedule.',
+          dueDate: addDays(startDate, 7),
+          status: request.milestones.length ? 'in_progress' : 'not_started',
+        },
+        {
+          title: 'Progressive training rhythm',
+          description: `Complete consistent ${frequency} sessions with controlled progression.`,
+          dueDate: addDays(startDate, 21),
+          status: 'not_started',
+        },
+        {
+          title: 'Review and adjust plan',
+          description: 'Review adherence, recovery, and next cycle priorities.',
+          dueDate: addDays(startDate, 28),
+          status: 'not_started',
+        },
+      ],
+      actions: [
+        ...scheduledSessions.map((session) => ({
+          title:
+            session.index === 0
+              ? 'Complete baseline workout'
+              : `Complete workout session ${session.index + 1}`,
+          description: `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
+          dueDate: session.date,
+          milestoneTitle: session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
+          status: 'scheduled' as const,
+        })),
+        {
+          title: 'Log recovery and effort',
+          description: 'Record effort, soreness, and any constraint notes after the first session.',
+          dueDate: startDate,
+          milestoneTitle: 'Baseline and habit setup',
+          status: 'todo',
+        },
+      ],
+      progressLog: {
+        details: `Inputs: ${JSON.stringify(request.formInput)}. ${
+          latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+            ? `Conversation: ${latestMessage}. `
+            : ''
+        }Calendar context contained ${request.calendarEvents.length} event(s).`,
+        logType: 'tool_result',
+        summary:
+          latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+            ? 'Updated local fitness progress plan from conversation.'
+            : 'Generated a local fitness progress plan.',
+      },
+      calendarEvents: scheduledSessions.map((session) => {
+        const focus =
+          session.index === 0
+            ? 'baseline form, warm-up, and sustainable pace'
+            : session.index === scheduledSessions.length - 1
+              ? 'review, recovery, and repeatable routine'
+              : 'controlled progression without increasing intensity too quickly'
+
+        return {
+          title:
+            session.index === 0
+              ? `${goal} baseline workout`
+              : `${goal} workout session ${session.index + 1}`,
+          description: `Fitness AI demo plan for ${level}.`,
+          displayDetails: [
+            `Goal: ${goal}`,
+            `Equipment: ${equipment}`,
+            `Constraints: ${constraints}`,
+            `Focus: ${focus}.`,
+          ].join('\n'),
+          startAt: session.startAt,
+          endAt: addMinutes(session.startAt, durationMinutes),
+          allDay: false as const,
+          eventTypeId: 'project',
+          color: '#2563eb',
+        }
+      }),
+      warnings,
+    })
+  }
+
+  private planAgentLearningProgressTool(request: AIProgressToolRequest): AIProgressToolResult {
+    const goal = request.formInput.goal || request.project?.title || 'Learn AI agent skills'
+    const level = request.formInput.level || 'beginner'
+    const weeklyTime = request.formInput.weeklyTime || '3 hours per week'
+    const outcome = request.formInput.outcome || 'ship a small agent demo'
+    const preferredTime = request.formInput.preferredTime || '19:00'
+    const durationMinutes = 60
+    const latestMessage = latestProgressToolMessage(request)
+    const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
+    const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
+    const sessionCount = clampSessionCount(
+      parseRequestedSessionCount(latestMessage) ??
+        (fullWeekRequested ? parseRequestedSessionCount(weeklyTime) ?? 5 : 1),
+    )
+    const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
+      const date = addDays(startDate, offset)
+      const block = nextNonConflictingStart(date, preferredTime, durationMinutes, request)
+      return { ...block, date, index }
+    })
+    const warnings = ['Local planner used. Review learning scope before applying.']
+
+    if (scheduledSessions.some((session) => session.shifted)) {
+      warnings.push('Adjusted the next learning block to avoid supplied calendar conflicts.')
+    }
+
+    return AIProgressToolResultSchema.parse({
+      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+        ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
+        : `Confirmed ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
+      confirmedRequirements: [
+        `Goal: ${goal}`,
+        `Level: ${level}`,
+        `Weekly time: ${weeklyTime}`,
+        `Calendar sessions: ${sessionCount}`,
+        `Outcome: ${outcome}`,
+      ],
+      summary: `Built an AI agent learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
+      currentRecommendation: `Start with foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
+      milestones: [
+        {
+          title: 'Foundations and task framing',
+          description: 'Understand agent goals, state, constraints, and success criteria.',
+          dueDate: addDays(request.today, 7),
+          status: request.milestones.length ? 'in_progress' : 'not_started',
+        },
+        {
+          title: 'Tool use and structured outputs',
+          description: 'Practice tool calls, schemas, validation, and review-before-apply flows.',
+          dueDate: addDays(request.today, 14),
+          status: 'not_started',
+        },
+        {
+          title: 'Retrieval, memory, and evaluation',
+          description: 'Add memory/retrieval context, compact prompts, and acceptance checks.',
+          dueDate: addDays(request.today, 21),
+          status: 'not_started',
+        },
+        {
+          title: 'Demo agent build',
+          description: `Build and present a demo that achieves: ${outcome}.`,
+          dueDate: addDays(request.today, 28),
+          status: 'not_started',
+        },
+      ],
+      actions: scheduledSessions.map((session) => {
+        const lesson = learningSessionTopic(session.index, outcome, goal)
+        return {
+          title: lesson.actionTitle,
+          description: lesson.description,
+          dueDate: session.date,
+          milestoneTitle: lesson.milestoneTitle,
+          status: 'scheduled' as const,
+        }
+      }),
+      progressLog: {
+        details: `Inputs: ${JSON.stringify(request.formInput)}. ${
+          latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+            ? `Conversation: ${latestMessage}. `
+            : ''
+        }Search context: ${request.memorySearchResults.map((result) => result.title).join(', ')}`,
+        logType: 'tool_result',
+        summary: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+          ? 'Updated local AI agent learning route from conversation.'
+          : 'Generated a local AI agent learning route.',
+      },
+      calendarEvents: scheduledSessions.map((session) => {
+        const lesson = learningSessionTopic(session.index, outcome, goal)
+        return {
+          title: lesson.eventTitle,
+          description: `Learning route for ${goal}.`,
+          displayDetails: [
+            `Level: ${level}`,
+            `Weekly time: ${weeklyTime}`,
+            `Outcome: ${outcome}`,
+            `Focus: ${lesson.focus}.`,
+          ].join('\n'),
+          startAt: session.startAt,
+          endAt: addMinutes(session.startAt, durationMinutes),
+          allDay: false as const,
+          eventTypeId: 'project',
+          color: '#047857',
+        }
+      }),
+      warnings,
     })
   }
 

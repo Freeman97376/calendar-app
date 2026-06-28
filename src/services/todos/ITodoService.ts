@@ -5,6 +5,7 @@ export type TodoDraft = {
   notes?: string
   eventTypeId?: string
   dueDate?: string
+  longProject?: Todo['longProject']
   priority?: Todo['priority']
 }
 
@@ -20,4 +21,3 @@ export interface ITodoService {
   getTodos(): Promise<Todo[]>
   updateTodo(id: string, changes: TodoUpdate): Promise<Todo>
 }
-

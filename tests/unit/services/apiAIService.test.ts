@@ -164,6 +164,88 @@ describe('ApiAIService', () => {
     })
   })
 
+  it('runProgressTool drops invalid dueDate values returned by API models', async () => {
+    const service = new ApiAIService({
+      apiKey: 'test-key',
+      fetcher: vi.fn(async () =>
+        apiResponse({
+          summary: 'Adjusted fitness plan.',
+          assistantReply: 'Confirmed the lower-impact request.',
+          confirmedRequirements: 'Goal: Build consistent strength',
+          needsUserConfirmation: 'false',
+          currentRecommendation: 'Do the next short workout when the calendar is open.',
+          milestones: [
+            {
+              title: 'Foundation block',
+              dueDate: 'Week 1',
+              status: 'in_progress',
+            },
+            {
+              title: 'First review',
+              dueDate: '2026-06-30',
+              status: 'not_started',
+            },
+          ],
+          actions: [
+            {
+              title: 'Workout A',
+              dueDate: 'Day 1',
+              status: 'scheduled',
+              milestoneTitle: 'Foundation block',
+            },
+            {
+              title: 'Workout B',
+              dueDate: '2026-06-29',
+              status: 'todo',
+            },
+          ],
+          progressLog: {
+            summary: 'Generated adjusted plan.',
+            logType: 'tool_result',
+          },
+          calendarEvents: [],
+          warnings: '',
+        }),
+      ),
+    })
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        frequency: '3 days per week',
+        goal: 'Build consistent strength',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      project: null,
+      sourceToolId: 'fitness-ai',
+      today: '2026-06-18',
+      toolKind: 'fitness',
+      toolRuns: [],
+    })
+
+    expect(result.assistantReply).toBe('Confirmed the lower-impact request.')
+    expect(result.confirmedRequirements).toEqual(['Goal: Build consistent strength'])
+    expect(result.needsUserConfirmation).toBe(false)
+    expect(result.actions[0]).toMatchObject({
+      milestoneTitle: 'Foundation block',
+      status: 'scheduled',
+      title: 'Workout A',
+    })
+    expect(result.actions[0]).not.toHaveProperty('dueDate')
+    expect(result.actions[1]).toMatchObject({
+      dueDate: '2026-06-29',
+      title: 'Workout B',
+    })
+    expect(result.milestones[0]).not.toHaveProperty('dueDate')
+    expect(result.milestones[1]).toMatchObject({
+      dueDate: '2026-06-30',
+      title: 'First review',
+    })
+  })
+
   it('planCalendarActions sends authoritative local time context to the API model', async () => {
     const fetcher = vi.fn(async () =>
       apiResponse({

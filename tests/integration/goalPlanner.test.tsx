@@ -166,6 +166,12 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
     return toolRun
   }
 
+  async getProject(projectId: string): Promise<LongTermProject> {
+    const project = this.projects.find((candidate) => candidate.project_id === projectId)
+    if (!project) throw new Error('Missing project')
+    return project
+  }
+
   async listActions(projectId: string): Promise<LongTermActionItem[]> {
     return this.actions.filter((action) => action.project_id === projectId)
   }
@@ -192,6 +198,10 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
 
   async listToolRunsForProject(projectId: string): Promise<LongTermToolRun[]> {
     return this.toolRuns.filter((toolRun) => toolRun.related_project_id === projectId)
+  }
+
+  async search() {
+    return []
   }
 
   async updateAction(actionId: string, changes: { status?: ActionItemStatus }) {

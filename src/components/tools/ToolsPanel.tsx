@@ -1,6 +1,31 @@
 import { useToolsPanel } from '../../hooks/useToolsPanel'
 import Button from '../ui/Button'
 import { TOOL_DEFINITIONS } from './registry'
+import type { ToolDefinition } from './types'
+
+const categoryLabels: Record<NonNullable<ToolDefinition['category']>, string> = {
+  'ai-demo': 'AI Demo',
+  planning: 'Planning',
+  system: 'System',
+}
+
+function groupedTools() {
+  const groups: Array<{
+    category: NonNullable<ToolDefinition['category']>
+    tools: ToolDefinition[]
+  }> = [
+    { category: 'ai-demo', tools: [] },
+    { category: 'planning', tools: [] },
+    { category: 'system', tools: [] },
+  ]
+
+  for (const tool of TOOL_DEFINITIONS) {
+    const category = tool.category ?? 'planning'
+    groups.find((group) => group.category === category)?.tools.push(tool)
+  }
+
+  return groups.filter((group) => group.tools.length)
+}
 
 export default function ToolsPanel() {
   const toolsPanel = useToolsPanel()
@@ -21,22 +46,32 @@ export default function ToolsPanel() {
             Close
           </Button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {TOOL_DEFINITIONS.map((tool) => (
-            <button
-              aria-pressed={activeToolId === tool.id}
-              className={[
-                'h-9 rounded-md border px-3 text-sm font-medium shadow-sm',
-                activeToolId === tool.id
-                  ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-              ].join(' ')}
-              key={tool.id}
-              onClick={() => toolsPanel.setActiveToolId(tool.id)}
-              type="button"
-            >
-              {tool.label}
-            </button>
+        <div className="mt-3 space-y-3">
+          {groupedTools().map((group) => (
+            <div key={group.category}>
+              <p className="mb-1 text-xs font-semibold uppercase text-slate-500">
+                {categoryLabels[group.category]}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {group.tools.map((tool) => (
+                  <button
+                    aria-pressed={activeToolId === tool.id}
+                    className={[
+                      'min-h-9 rounded-md border px-3 py-2 text-left text-sm font-medium shadow-sm',
+                      activeToolId === tool.id
+                        ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                    ].join(' ')}
+                    key={tool.id}
+                    onClick={() => toolsPanel.setActiveToolId(tool.id)}
+                    title={tool.description}
+                    type="button"
+                  >
+                    {tool.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

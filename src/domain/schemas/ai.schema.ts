@@ -25,6 +25,7 @@ export const AIBreakdownResultSchema = z.object({
 
 const ISODateTimeSchema = z.string().datetime()
 const ISODateSchema = z.string().date()
+const MetadataSchema = z.record(z.unknown()).default({})
 
 const NonEmptyUpdateSchema = z
   .object({
@@ -203,9 +204,168 @@ export const AICalendarContextSchema = z.object({
   ),
 })
 
+export const AIProgressToolKindSchema = z.enum(['fitness', 'agent-learning'])
+
+export const AIProgressToolCalendarEventSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  displayDetails: z.string().optional(),
+  startAt: ISODateTimeSchema,
+  endAt: ISODateTimeSchema,
+  allDay: z.boolean(),
+  eventTypeId: z.string().min(1).optional(),
+})
+
+export const AIProgressToolProjectSchema = z.object({
+  project_id: z.string().min(1),
+  goal_id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  status: z.enum(['active', 'paused', 'completed']),
+  metadata: MetadataSchema,
+})
+
+export const AIProgressToolMilestoneContextSchema = z.object({
+  milestone_id: z.string().min(1),
+  project_id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  due_date: ISODateSchema.nullable(),
+  status: z.enum(['not_started', 'in_progress', 'done', 'blocked', 'skipped']),
+  metadata: MetadataSchema,
+})
+
+export const AIProgressToolActionContextSchema = z.object({
+  action_id: z.string().min(1),
+  project_id: z.string().min(1),
+  milestone_id: z.string().nullable(),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  due_date: ISODateSchema.nullable(),
+  status: z.enum(['todo', 'scheduled', 'done', 'blocked', 'skipped']),
+  metadata: MetadataSchema,
+})
+
+export const AIProgressToolProgressContextSchema = z.object({
+  progress_id: z.string().min(1),
+  project_id: z.string().min(1),
+  goal_id: z.string().nullable(),
+  action_id: z.string().nullable(),
+  log_type: z.enum(['update', 'decision', 'blocker', 'review', 'tool_result']),
+  summary: z.string().min(1),
+  details: z.string().default(''),
+  metadata: MetadataSchema,
+  created_at: ISODateTimeSchema,
+  updated_at: ISODateTimeSchema,
+})
+
+export const AIProgressToolRunContextSchema = z.object({
+  tool_run_id: z.string().min(1),
+  tool_name: z.string().min(1),
+  intent: z.string().default(''),
+  output_summary: z.string().default(''),
+  status: z.enum(['success', 'failed', 'needs_user_confirmation']),
+  created_at: ISODateTimeSchema,
+})
+
+export const AIProgressToolMemorySearchResultSchema = z.object({
+  entity_type: z.enum(['goal', 'project', 'milestone', 'action_item', 'progress_log', 'tool_run']),
+  item_id: z.string().min(1),
+  project_id: z.string().nullable(),
+  goal_id: z.string().nullable(),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  status: z.string().default(''),
+  updated_at: ISODateTimeSchema,
+})
+
+export const AIProgressToolRequestSchema = z.object({
+  calendarEvents: z.array(AIProgressToolCalendarEventSchema).max(20).default([]),
+  currentDate: ISODateSchema.optional(),
+  currentDateTime: ISODateTimeSchema.optional(),
+  currentLocalDateTime: z.string().trim().optional(),
+  focusedDate: ISODateSchema.optional(),
+  formInput: z.record(z.string()).default({}),
+  locale: z.string().trim().optional(),
+  localDateTimeLabel: z.string().trim().optional(),
+  memorySearchResults: z.array(AIProgressToolMemorySearchResultSchema).max(6).default([]),
+  milestones: z.array(AIProgressToolMilestoneContextSchema).max(25).default([]),
+  actions: z.array(AIProgressToolActionContextSchema).max(25).default([]),
+  progress: z.array(AIProgressToolProgressContextSchema).max(5).default([]),
+  project: AIProgressToolProjectSchema.nullable().optional(),
+  sourceToolId: z.string().trim().min(1),
+  timezone: z.string().trim().optional(),
+  timezoneName: z.string().trim().optional(),
+  timezoneOffsetLabel: z.string().trim().optional(),
+  timezoneOffsetMinutes: z.number().int().optional(),
+  today: ISODateSchema,
+  toolKind: AIProgressToolKindSchema,
+  toolRuns: z.array(AIProgressToolRunContextSchema).max(5).default([]),
+  userInstruction: z.string().trim().max(1000).optional(),
+})
+
+export const AIProgressToolEventDraftSchema = z
+  .object({
+    allDay: z.boolean().default(false),
+    color: z.string().trim().optional(),
+    description: z.string().trim().optional(),
+    displayDetails: z.string().trim().optional(),
+    endAt: ISODateTimeSchema,
+    eventTypeId: z.string().trim().min(1).optional(),
+    startAt: ISODateTimeSchema,
+    title: z.string().trim().min(1).max(200),
+  })
+  .refine((event) => new Date(event.endAt).getTime() > new Date(event.startAt).getTime(), {
+    message: 'Event end time must be after start time',
+    path: ['endAt'],
+  })
+
+export const AIProgressToolMilestoneUpsertSchema = z.object({
+  description: z.string().trim().optional(),
+  dueDate: ISODateSchema.optional(),
+  existingMilestoneId: z.string().trim().min(1).optional(),
+  status: z.enum(['not_started', 'in_progress', 'done', 'blocked', 'skipped']).default('not_started'),
+  title: z.string().trim().min(1).max(160),
+})
+
+export const AIProgressToolActionUpsertSchema = z.object({
+  description: z.string().trim().optional(),
+  dueDate: ISODateSchema.optional(),
+  existingActionId: z.string().trim().min(1).optional(),
+  milestoneTitle: z.string().trim().optional(),
+  status: z.enum(['todo', 'scheduled', 'done', 'blocked', 'skipped']).default('todo'),
+  title: z.string().trim().min(1).max(200),
+})
+
+export const AIProgressToolProgressLogSchema = z.object({
+  details: z.string().trim().optional(),
+  logType: z.enum(['update', 'decision', 'blocker', 'review', 'tool_result']).default('tool_result'),
+  summary: z.string().trim().min(1).max(500),
+})
+
+export const AIProgressToolResultSchema = z.object({
+  actions: z.array(AIProgressToolActionUpsertSchema).max(25).default([]),
+  assistantReply: z.string().trim().max(1200).optional(),
+  calendarEvents: z.array(AIProgressToolEventDraftSchema).max(20).default([]),
+  confirmedRequirements: z.array(z.string().trim().min(1).max(160)).max(8).default([]),
+  currentRecommendation: z.string().trim().min(1).max(1000),
+  milestones: z.array(AIProgressToolMilestoneUpsertSchema).max(25).default([]),
+  needsUserConfirmation: z.boolean().default(false),
+  progressLog: AIProgressToolProgressLogSchema.optional(),
+  summary: z.string().trim().min(1).max(500),
+  warnings: z.array(z.string().trim()).default([]),
+})
+
 export type AIStep = z.infer<typeof AIStepSchema>
 export type AIBreakdownResult = z.infer<typeof AIBreakdownResultSchema>
 export type AIAction = z.infer<typeof AIActionSchema>
 export type AICalendarActionPlan = z.infer<typeof AICalendarActionPlanSchema>
 export type AICalendarContext = z.infer<typeof AICalendarContextSchema>
 export type AIConversationResult = z.infer<typeof AIConversationResultSchema>
+export type AIProgressToolActionUpsert = z.infer<typeof AIProgressToolActionUpsertSchema>
+export type AIProgressToolEventDraft = z.infer<typeof AIProgressToolEventDraftSchema>
+export type AIProgressToolKind = z.infer<typeof AIProgressToolKindSchema>
+export type AIProgressToolMilestoneUpsert = z.infer<typeof AIProgressToolMilestoneUpsertSchema>
+export type AIProgressToolRequest = z.infer<typeof AIProgressToolRequestSchema>
+export type AIProgressToolResult = z.infer<typeof AIProgressToolResultSchema>

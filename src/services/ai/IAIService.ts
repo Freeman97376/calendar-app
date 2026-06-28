@@ -8,6 +8,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -48,6 +50,13 @@ export interface IAIService {
    * Runs a configured tool-session prompt and returns validated calendar event drafts.
    */
   runToolSession(request: ToolSessionRequest): Promise<ToolSessionResult>
+
+  /**
+   * Runs a memory-backed AI demo tool that can inspect compact calendar and
+   * project progress context, then returns validated progress and calendar
+   * recommendations for user review.
+   */
+  runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult>
 
   /**
    * Free-form multi-turn assistant conversation. When a context is provided,

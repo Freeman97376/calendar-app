@@ -17,14 +17,19 @@ class LongTermMemoryServiceTests(unittest.TestCase):
                 {
                     "title": "Build durable planning memory",
                     "description": "Keep structured project context locally.",
+                    "metadata": {"toolCategory": "ai-demo", "toolKind": "fitness"},
                 }
             )
-            updated_goal = service.update_goal(goal["goal_id"], {"status": "paused"})
+            updated_goal = service.update_goal(
+                goal["goal_id"],
+                {"metadata": {"toolCategory": "ai-demo", "toolKind": "agent-learning"}, "status": "paused"},
+            )
             project = service.create_project(
                 {
                     "goal_id": goal["goal_id"],
                     "title": "Goal Planner MVP",
                     "description": "Create the local CRUD foundation.",
+                    "metadata": {"sourceToolId": "agent-learning"},
                 }
             )
             milestone = service.create_milestone(
@@ -32,21 +37,26 @@ class LongTermMemoryServiceTests(unittest.TestCase):
                     "project_id": project["project_id"],
                     "title": "SQLite schema ready",
                     "due_date": "2026-07-01",
+                    "metadata": {"phase": 1},
                 }
             )
+            skipped_milestone = service.update_milestone(milestone["milestone_id"], {"status": "skipped"})
             action = service.create_action(
                 {
                     "project_id": project["project_id"],
                     "title": "Draft memory API tests",
                     "due_date": "2026-06-30",
+                    "metadata": {"source": "test"},
                 }
             )
+            skipped_action = service.update_action(action["action_id"], {"status": "skipped"})
             progress = service.create_progress(
                 {
                     "project_id": project["project_id"],
                     "summary": "Repository layer verified",
                     "details": "CRUD objects round-trip through SQLite.",
                     "log_type": "tool_result",
+                    "metadata": {"toolKind": "agent-learning"},
                 }
             )
             tool_run = service.create_tool_run(
@@ -64,9 +74,16 @@ class LongTermMemoryServiceTests(unittest.TestCase):
             )
 
             self.assertEqual(updated_goal["status"], "paused")
+            self.assertEqual(updated_goal["metadata"]["toolKind"], "agent-learning")
+            self.assertEqual(project["metadata"]["sourceToolId"], "agent-learning")
             self.assertEqual(milestone["status"], "not_started")
+            self.assertEqual(milestone["metadata"]["phase"], 1)
+            self.assertEqual(skipped_milestone["status"], "skipped")
             self.assertEqual(action["status"], "todo")
+            self.assertEqual(action["metadata"]["source"], "test")
+            self.assertEqual(skipped_action["status"], "skipped")
             self.assertEqual(progress["log_type"], "tool_result")
+            self.assertEqual(progress["metadata"]["toolKind"], "agent-learning")
             self.assertEqual(tool_run["id"], tool_run["tool_run_id"])
             self.assertEqual(tool_run["intent"], "Verify memory persistence")
             self.assertEqual(tool_run["input_summary"], "operation: smoke")

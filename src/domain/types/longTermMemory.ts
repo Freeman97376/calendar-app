@@ -1,7 +1,7 @@
 export type GoalStatus = 'active' | 'paused' | 'completed' | 'archived'
 export type ProjectStatus = 'active' | 'paused' | 'completed'
-export type MilestoneStatus = 'not_started' | 'in_progress' | 'done' | 'blocked'
-export type ActionItemStatus = 'todo' | 'scheduled' | 'done' | 'blocked'
+export type MilestoneStatus = 'not_started' | 'in_progress' | 'done' | 'blocked' | 'skipped'
+export type ActionItemStatus = 'todo' | 'scheduled' | 'done' | 'blocked' | 'skipped'
 export type ProgressLogType = 'update' | 'decision' | 'blocker' | 'review' | 'tool_result'
 export type ToolRunStatus = 'success' | 'failed' | 'needs_user_confirmation'
 
@@ -96,6 +96,7 @@ export type LongTermMemorySearchResult = {
 
 export type CreateGoalInput = {
   description?: string
+  metadata?: Record<string, unknown>
   status?: GoalStatus
   title: string
 }
@@ -103,6 +104,7 @@ export type CreateGoalInput = {
 export type CreateProjectInput = {
   description?: string
   goal_id: string
+  metadata?: Record<string, unknown>
   status?: ProjectStatus
   title: string
 }
@@ -110,6 +112,7 @@ export type CreateProjectInput = {
 export type CreateMilestoneInput = {
   description?: string
   due_date?: string
+  metadata?: Record<string, unknown>
   project_id: string
   status?: MilestoneStatus
   title: string
@@ -118,6 +121,7 @@ export type CreateMilestoneInput = {
 export type CreateActionItemInput = {
   description?: string
   due_date?: string
+  metadata?: Record<string, unknown>
   milestone_id?: string
   project_id: string
   status?: ActionItemStatus
@@ -129,6 +133,7 @@ export type CreateProgressLogInput = {
   details?: string
   goal_id?: string
   log_type?: ProgressLogType
+  metadata?: Record<string, unknown>
   project_id: string
   summary: string
 }

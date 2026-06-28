@@ -5,6 +5,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../../src/domain/types'
@@ -74,6 +76,10 @@ class MockAIService implements IAIService {
 
   async runToolSession(): Promise<ToolSessionResult> {
     return this.runToolSessionImpl()
+  }
+
+  async runProgressTool(_request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    throw new Error('Not used')
   }
 }
 

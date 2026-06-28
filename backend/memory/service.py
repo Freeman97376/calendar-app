@@ -9,8 +9,8 @@ from .repository import MemoryRepository, MemoryRowNotFoundError
 
 GOAL_STATUSES = {"active", "paused", "completed", "archived"}
 PROJECT_STATUSES = {"active", "paused", "completed"}
-MILESTONE_STATUSES = {"not_started", "in_progress", "done", "blocked"}
-ACTION_STATUSES = {"todo", "scheduled", "done", "blocked"}
+MILESTONE_STATUSES = {"not_started", "in_progress", "done", "blocked", "skipped"}
+ACTION_STATUSES = {"todo", "scheduled", "done", "blocked", "skipped"}
 PROGRESS_LOG_TYPES = {"update", "decision", "blocker", "review", "tool_result"}
 TOOL_RUN_STATUSES = {"success", "failed", "needs_user_confirmation"}
 

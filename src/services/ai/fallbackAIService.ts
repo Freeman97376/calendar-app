@@ -4,6 +4,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -51,6 +53,10 @@ export class FallbackAIService implements IAIService {
     const selectedProvider = provider === 'global' ? this.defaultProvider : provider
 
     return this.runWithProvider(selectedProvider, (service) => service.runToolSession(request))
+  }
+
+  async runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    return this.runWithProvider(this.defaultProvider, (service) => service.runProgressTool(request))
   }
 
   async continueConversation(

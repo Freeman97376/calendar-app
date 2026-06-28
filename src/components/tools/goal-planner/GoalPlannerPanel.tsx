@@ -17,8 +17,8 @@ const textareaClass =
 
 const goalStatuses: GoalStatus[] = ['active', 'paused', 'completed', 'archived']
 const projectStatuses: ProjectStatus[] = ['active', 'paused', 'completed']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked']
-const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked']
+const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
 const progressLogTypes: ProgressLogType[] = ['update', 'decision', 'blocker', 'review', 'tool_result']
 
 function label(value: string): string {

@@ -8,13 +8,19 @@
 export type { Event } from '../schemas/event.schema'
 export type { EventType } from '../schemas/eventType.schema'
 export type { RecurrenceRule, Weekday } from '../schemas/recurrence.schema'
-export type { Todo } from '../schemas/todo.schema'
+export type { Todo, TodoLongProject } from '../schemas/todo.schema'
 export type {
   AIAction,
   AIBreakdownResult,
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolActionUpsert,
+  AIProgressToolEventDraft,
+  AIProgressToolKind,
+  AIProgressToolMilestoneUpsert,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   AIStep,
 } from '../schemas/ai.schema'
 export type {

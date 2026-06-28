@@ -21,6 +21,7 @@ export class LocalTodoService implements ITodoService {
       notes: draft.notes,
       eventTypeId: draft.eventTypeId ?? 'general',
       dueDate: draft.dueDate,
+      longProject: draft.longProject,
       priority: draft.priority ?? 'medium',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -76,4 +77,3 @@ export class LocalTodoService implements ITodoService {
     this.storage.setItem(this.key, JSON.stringify(TodoSchema.array().parse(todos)))
   }
 }
-

@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+export const TodoLongProjectSchema = z.object({
+  memoryGoalId: z.string().trim().min(1),
+  memoryProjectId: z.string().trim().min(1),
+  sourceToolId: z.string().trim().min(1).optional(),
+})
+
 export const TodoSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -8,6 +14,7 @@ export const TodoSchema = z.object({
   eventTypeId: z.string().trim().min(1).default('general'),
   dueDate: z.string().date().optional(),
   linkedEventId: z.string().min(1).optional(),
+  longProject: TodoLongProjectSchema.optional(),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -15,4 +22,4 @@ export const TodoSchema = z.object({
 })
 
 export type Todo = z.infer<typeof TodoSchema>
-
+export type TodoLongProject = z.infer<typeof TodoLongProjectSchema>

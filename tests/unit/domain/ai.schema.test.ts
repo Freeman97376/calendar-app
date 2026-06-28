@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { AIBreakdownResultSchema } from '../../../src/domain/schemas/ai.schema'
+import {
+  AIBreakdownResultSchema,
+  AIProgressToolRequestSchema,
+  AIProgressToolResultSchema,
+} from '../../../src/domain/schemas/ai.schema'
 
 const validResult = {
   goal: 'Prepare for interview',
@@ -83,6 +87,63 @@ describe('AIBreakdownResultSchema', () => {
           ...validResult.steps[0],
           title: `Step ${index}`,
         })),
+      }),
+    ).toThrow()
+  })
+})
+
+describe('AIProgressTool schemas', () => {
+  it('validates compact progress tool requests and results', () => {
+    const request = AIProgressToolRequestSchema.parse({
+      actions: [],
+      calendarEvents: [],
+      formInput: { goal: 'Build strength' },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'fitness-ai',
+      today: '2026-06-18',
+      toolKind: 'fitness',
+      toolRuns: [],
+    })
+    const result = AIProgressToolResultSchema.parse({
+      summary: 'Generated plan.',
+      assistantReply: 'Confirmed the requirements.',
+      confirmedRequirements: ['Goal: Build strength'],
+      needsUserConfirmation: false,
+      currentRecommendation: 'Do the first workout.',
+      milestones: [{ title: 'Baseline', status: 'in_progress' }],
+      actions: [{ title: 'Workout 1', status: 'scheduled', milestoneTitle: 'Baseline' }],
+      calendarEvents: [
+        {
+          title: 'Workout 1',
+          startAt: '2026-06-18T16:00:00.000Z',
+          endAt: '2026-06-18T17:00:00.000Z',
+          allDay: false,
+        },
+      ],
+      warnings: [],
+    })
+
+    expect(request.toolKind).toBe('fitness')
+    expect(result.assistantReply).toBe('Confirmed the requirements.')
+    expect(result.confirmedRequirements).toEqual(['Goal: Build strength'])
+    expect(result.calendarEvents[0].title).toBe('Workout 1')
+  })
+
+  it('rejects progress tool events where endAt is not after startAt', () => {
+    expect(() =>
+      AIProgressToolResultSchema.parse({
+        summary: 'Bad plan.',
+        currentRecommendation: 'Fix time.',
+        calendarEvents: [
+          {
+            title: 'Bad event',
+            startAt: '2026-06-18T17:00:00.000Z',
+            endAt: '2026-06-18T16:00:00.000Z',
+            allDay: false,
+          },
+        ],
       }),
     ).toThrow()
   })

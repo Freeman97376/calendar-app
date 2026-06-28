@@ -1,9 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { RuntimeConfig, Todo } from '../../domain/types'
+import type {
+  ActionItemStatus,
+  LongTermActionItem,
+  LongTermMilestone,
+  MilestoneStatus,
+} from '../../domain/types/longTermMemory'
 import { useRuntimeConfig } from '../../hooks/useRuntimeConfig'
 import { useTaskStepAIRefinement } from '../../hooks/useTaskStepAIRefinement'
 import { useTodoPanel } from '../../hooks/useTodoPanel'
+import { useTodoLongProjects } from '../../hooks/useTodoLongProjects'
 import { useTodos } from '../../hooks/useTodos'
 import EventTypeSettings from '../eventTypes/EventTypeSettings'
 import Button from '../ui/Button'
@@ -11,6 +18,7 @@ import Button from '../ui/Button'
 type TodoFormState = {
   dueDate: string
   eventTypeId: string
+  longProjectEnabled: boolean
   notes: string
   priority: Todo['priority']
   title: string
@@ -41,6 +49,7 @@ function createEmptyTodoForm(config: RuntimeConfig): TodoFormState {
   return {
     dueDate: '',
     eventTypeId: config.defaultTodoEventTypeId,
+    longProjectEnabled: false,
     notes: '',
     priority: config.defaultTodoPriority,
     title: '',
@@ -57,6 +66,19 @@ function statusLabel(status: Todo['status']): string {
   if (status === 'doing') return 'In progress'
   if (status === 'done') return 'Done'
   return 'To do'
+}
+
+const longProjectActionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
+const longProjectMilestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
+
+function longProjectStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ')
 }
 
 function isJsonHeader(line: string): boolean {
@@ -270,18 +292,134 @@ function setTodoDetailItemCompletion(
     .join('\n')
 }
 
+function LongProjectDetails({
+  actions,
+  isActive,
+  isLoading,
+  milestones,
+  onSetActionStatus,
+  onSetMilestoneStatus,
+  progressSummary,
+}: {
+  actions: LongTermActionItem[]
+  isActive: boolean
+  isLoading: boolean
+  milestones: LongTermMilestone[]
+  onSetActionStatus: (action: LongTermActionItem, status: ActionItemStatus) => void
+  onSetMilestoneStatus: (milestone: LongTermMilestone, status: MilestoneStatus) => void
+  progressSummary: { completed: number; percent: number; source: string; total: number }
+}) {
+  if (!isActive) {
+    return <p className="rounded bg-slate-50 p-2 text-xs text-slate-500">Open to load project progress.</p>
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border border-emerald-100 bg-emerald-50 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase text-emerald-800">Long project</p>
+          <p className="mt-1 text-xs text-emerald-900">
+            {progressSummary.completed}/{progressSummary.total} complete from {progressSummary.source}
+          </p>
+        </div>
+        <span className="rounded bg-white px-2 py-1 text-xs font-semibold text-emerald-800">
+          {progressSummary.percent}%
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-emerald-700" style={{ width: `${progressSummary.percent}%` }} />
+      </div>
+      {isLoading ? <p className="text-xs text-emerald-800">Loading project progress...</p> : null}
+
+      {milestones.length ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-emerald-950">Milestones</p>
+          {milestones.map((milestone) => (
+            <div className="rounded-md border border-emerald-100 bg-white p-2" key={milestone.milestone_id}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-900">{milestone.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {milestone.due_date ? `Due ${milestone.due_date}` : 'No due date'}
+                  </p>
+                </div>
+                <select
+                  aria-label={`Long project milestone status for ${milestone.title}`}
+                  className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs"
+                  onChange={(event) => onSetMilestoneStatus(milestone, event.target.value as MilestoneStatus)}
+                  value={milestone.status}
+                >
+                  {longProjectMilestoneStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {longProjectStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {actions.length ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-emerald-950">Actions</p>
+          {actions.map((action) => (
+            <div className="rounded-md border border-emerald-100 bg-white p-2" key={action.action_id}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-900">{action.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {action.due_date ? `Due ${action.due_date}` : 'No due date'}
+                  </p>
+                </div>
+                <select
+                  aria-label={`Long project action status for ${action.title}`}
+                  className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs"
+                  onChange={(event) => onSetActionStatus(action, event.target.value as ActionItemStatus)}
+                  value={action.status}
+                >
+                  {longProjectActionStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {longProjectStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 function TodoDetails({
+  longProject,
   onEditItem,
+  onOpenLongProject,
   onSetAllItemSelection,
   onSendSelectedToAI,
+  onSetLongProjectActionStatus,
+  onSetLongProjectMilestoneStatus,
   onToggleItemCompletion,
   onToggleItemSelection,
   selectedItemIndexes,
   todo,
 }: {
+  longProject: {
+    actions: LongTermActionItem[]
+    activeProjectId: string
+    isLoading: boolean
+    milestones: LongTermMilestone[]
+    progressSummary: { completed: number; percent: number; source: string; total: number }
+  }
   onEditItem: (todo: Todo, itemIndex: number, itemLabel: 'Action' | 'Step', value: string) => void
+  onOpenLongProject: (todo: Todo) => void
   onSetAllItemSelection: (todo: Todo, itemCount: number, selected: boolean) => void
   onSendSelectedToAI: (todo: Todo) => void
+  onSetLongProjectActionStatus: (action: LongTermActionItem, status: ActionItemStatus) => void
+  onSetLongProjectMilestoneStatus: (milestone: LongTermMilestone, status: MilestoneStatus) => void
   onToggleItemCompletion: (
     todo: Todo,
     itemIndex: number,
@@ -292,16 +430,39 @@ function TodoDetails({
   selectedItemIndexes: number[]
   todo: Todo
 }) {
-  if (!todo.notes) return null
+  if (!todo.notes && !todo.longProject) return null
 
-  const details = parseTodoDetails(todo.notes)
+  const details = parseTodoDetails(todo.notes ?? '')
   const hasStructuredDetails = details.intro.length || details.items.length || details.warnings.length
   const allItemsSelected = details.items.length > 0 && selectedItemIndexes.length >= details.items.length
+  const longProjectActive =
+    Boolean(todo.longProject) && longProject.activeProjectId === todo.longProject?.memoryProjectId
 
   return (
-    <details className="mt-2 text-xs text-slate-600">
+    <details
+      className="mt-2 text-xs text-slate-600"
+      onToggle={(event) => {
+        if (event.currentTarget.open && todo.longProject) onOpenLongProject(todo)
+      }}
+    >
       <summary className="cursor-pointer text-slate-500">Details</summary>
       <div className="mt-2 space-y-2">
+        {todo.longProject ? (
+          <LongProjectDetails
+            actions={longProjectActive ? longProject.actions : []}
+            isActive={longProjectActive}
+            isLoading={longProject.isLoading}
+            milestones={longProjectActive ? longProject.milestones : []}
+            onSetActionStatus={onSetLongProjectActionStatus}
+            onSetMilestoneStatus={onSetLongProjectMilestoneStatus}
+            progressSummary={
+              longProjectActive
+                ? longProject.progressSummary
+                : { completed: 0, percent: 0, source: 'empty', total: 0 }
+            }
+          />
+        ) : null}
+
         {details.intro.length ? (
           <div className="space-y-1 rounded bg-slate-50 p-2">
             {details.intro.map((line) => (
@@ -417,7 +578,7 @@ function TodoDetails({
           </details>
         ) : null}
 
-        {!hasStructuredDetails ? (
+        {todo.notes && !hasStructuredDetails ? (
           <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-sans text-xs leading-5 text-slate-600">
             {todo.notes}
           </pre>
@@ -430,6 +591,7 @@ function TodoDetails({
 export default function TodoPanel() {
   const runtimeConfig = useRuntimeConfig()
   const todoPanel = useTodoPanel()
+  const todoLongProjects = useTodoLongProjects()
   const todos = useTodos()
   const taskStepAIRefinement = useTaskStepAIRefinement()
   const [editDraft, setEditDraft] = useState<TodoFormState | null>(null)
@@ -470,6 +632,9 @@ export default function TodoPanel() {
     const todo = await todos.addTodo({
       dueDate: todoDraft.dueDate || undefined,
       eventTypeId: todoDraft.eventTypeId,
+      longProject: todoDraft.longProjectEnabled
+        ? await todoLongProjects.createLink(todoDraft.title.trim(), todoDraft.notes || undefined)
+        : undefined,
       notes: todoDraft.notes || undefined,
       priority: todoDraft.priority,
       title: todoDraft.title.trim(),
@@ -504,6 +669,7 @@ export default function TodoPanel() {
     setEditDraft({
       dueDate: todo.dueDate ?? '',
       eventTypeId: todo.eventTypeId,
+      longProjectEnabled: Boolean(todo.longProject),
       notes: todo.notes ?? '',
       priority: todo.priority,
       title: todo.title,
@@ -580,6 +746,25 @@ export default function TodoPanel() {
     setStatus(`Sent ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'} to AI Assistant.`)
   }
 
+  async function openLongProject(todo: Todo) {
+    if (!todo.longProject) return
+
+    await todoLongProjects.load(todo.longProject)
+  }
+
+  async function setLongProjectActionStatus(action: LongTermActionItem, nextStatus: ActionItemStatus) {
+    await todoLongProjects.setActionStatus(action, nextStatus)
+    setStatus(`Updated ${action.title} to ${longProjectStatusLabel(nextStatus)}.`)
+  }
+
+  async function setLongProjectMilestoneStatus(
+    milestone: LongTermMilestone,
+    nextStatus: MilestoneStatus,
+  ) {
+    await todoLongProjects.setMilestoneStatus(milestone, nextStatus)
+    setStatus(`Updated ${milestone.title} to ${longProjectStatusLabel(nextStatus)}.`)
+  }
+
   async function saveEditedTodo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editingTodo || !editDraft?.title.trim()) return
@@ -587,6 +772,10 @@ export default function TodoPanel() {
     const updated = await todos.editTodo(editingTodo.id, {
       dueDate: editDraft.dueDate || undefined,
       eventTypeId: editDraft.eventTypeId,
+      longProject: editDraft.longProjectEnabled
+        ? editingTodo.longProject ??
+          (await todoLongProjects.createLink(editDraft.title.trim(), editDraft.notes || undefined))
+        : undefined,
       notes: editDraft.notes || undefined,
       priority: editDraft.priority,
       title: editDraft.title.trim(),
@@ -733,6 +922,26 @@ export default function TodoPanel() {
             />
           </div>
 
+          <label className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <input
+              checked={todoDraft.longProjectEnabled}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+              onChange={(inputEvent) =>
+                setTodoDraft((current) => ({
+                  ...current,
+                  longProjectEnabled: inputEvent.target.checked,
+                }))
+              }
+              type="checkbox"
+            />
+            <span>
+              Long project
+              <span className="mt-1 block text-xs text-slate-500">
+                Create a linked SQLite Memory project with milestones and progress.
+              </span>
+            </span>
+          </label>
+
           <Button disabled={!todoDraft.title.trim()} type="submit" variant="primary">
             Add task
           </Button>
@@ -740,6 +949,11 @@ export default function TodoPanel() {
 
         {todos.error ? (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{todos.error}</p>
+        ) : null}
+        {todoLongProjects.error ? (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {todoLongProjects.error}
+          </p>
         ) : null}
         {status ? (
           <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{status}</p>
@@ -782,9 +996,23 @@ export default function TodoPanel() {
                         <span>{statusLabel(todo.status)}</span>
                       </p>
                       <TodoDetails
+                        longProject={{
+                          actions: todoLongProjects.actions,
+                          activeProjectId: todoLongProjects.activeProjectId,
+                          isLoading: todoLongProjects.isDetailLoading,
+                          milestones: todoLongProjects.milestones,
+                          progressSummary: todoLongProjects.progressSummary,
+                        }}
                         onEditItem={openEditDetailItem}
+                        onOpenLongProject={(candidate) => void openLongProject(candidate)}
                         onSetAllItemSelection={setAllDetailItemSelection}
                         onSendSelectedToAI={sendSelectedDetailItemsToAI}
+                        onSetLongProjectActionStatus={(action, nextStatus) =>
+                          void setLongProjectActionStatus(action, nextStatus)
+                        }
+                        onSetLongProjectMilestoneStatus={(milestone, nextStatus) =>
+                          void setLongProjectMilestoneStatus(milestone, nextStatus)
+                        }
                         onToggleItemCompletion={(candidate, itemIndex, itemLabel, completed) =>
                           void toggleDetailItemCompletion(candidate, itemIndex, itemLabel, completed)
                         }
@@ -845,9 +1073,23 @@ export default function TodoPanel() {
                     <p className="truncate text-sm font-medium text-slate-500 line-through">{todo.title}</p>
                     <p className="text-xs text-slate-400">{formatDueDate(todo)}</p>
                     <TodoDetails
+                      longProject={{
+                        actions: todoLongProjects.actions,
+                        activeProjectId: todoLongProjects.activeProjectId,
+                        isLoading: todoLongProjects.isDetailLoading,
+                        milestones: todoLongProjects.milestones,
+                        progressSummary: todoLongProjects.progressSummary,
+                      }}
                       onEditItem={openEditDetailItem}
+                      onOpenLongProject={(candidate) => void openLongProject(candidate)}
                       onSetAllItemSelection={setAllDetailItemSelection}
                       onSendSelectedToAI={sendSelectedDetailItemsToAI}
+                      onSetLongProjectActionStatus={(action, nextStatus) =>
+                        void setLongProjectActionStatus(action, nextStatus)
+                      }
+                      onSetLongProjectMilestoneStatus={(milestone, nextStatus) =>
+                        void setLongProjectMilestoneStatus(milestone, nextStatus)
+                      }
                       onToggleItemCompletion={(candidate, itemIndex, itemLabel, completed) =>
                         void toggleDetailItemCompletion(candidate, itemIndex, itemLabel, completed)
                       }
@@ -977,6 +1219,25 @@ export default function TodoPanel() {
                 value={editDraft.notes}
               />
             </div>
+
+            <label className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <input
+                checked={editDraft.longProjectEnabled}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                onChange={(event) =>
+                  setEditDraft((current) =>
+                    current ? { ...current, longProjectEnabled: event.target.checked } : current,
+                  )
+                }
+                type="checkbox"
+              />
+              <span>
+                Long project
+                <span className="mt-1 block text-xs text-slate-500">
+                  Link this task to a SQLite Memory project for milestones and progress.
+                </span>
+              </span>
+            </label>
 
             <div className="flex justify-end gap-2">
               <Button onClick={closeEditTodo}>Cancel</Button>

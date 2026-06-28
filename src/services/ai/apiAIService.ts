@@ -4,6 +4,7 @@ import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
   AIConversationResultSchema,
+  AIProgressToolResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -11,6 +12,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -62,6 +65,18 @@ When a draft action plan is provided, adjust that draft rather than inventing a 
 Use the authoritative local time context for relative dates and near-term time questions.
 Do not create duplicate or overlapping event time blocks. Add warnings when details are inferred.
 Use only event and todo ids that appear in the supplied context for update/delete/schedule actions.
+Use only the documented keys. Omit optional fields instead of returning null.`
+
+const progressToolSystemPrompt = `You are a memory-backed AI demo tool inside a calendar app.
+Return only a JSON object matching the requested schema.
+Use the compact project memory, calendar events, and search results to adjust the plan.
+Do not assume unseen calendar availability. Prefer suggesting practical next blocks that avoid supplied calendar event conflicts.
+When userInstruction contains dialogue, treat the latest user message as the active request. Confirm requirements in assistantReply, update the plan, and write progressLog entries for decisions, blockers, or completed work.
+If a critical detail is missing, ask one concise question in assistantReply, set needsUserConfirmation to true, and keep existing plan data instead of inventing a full replacement.
+When the user asks for multiple sessions, a full-week plan, or a next-week plan, return one calendarEvents draft per session up to the schema limit. Keep all events in preview only; never imply they are already applied.
+For fitness planning, keep advice general, conservative, and non-medical; add a warning when constraints or injury notes need professional review.
+For agent-learning planning, produce a clear learning route with measurable milestones and practice actions.
+For dueDate, output only YYYY-MM-DD strings. If the date is relative, vague, or not known, omit dueDate.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
 const breakdownJsonShape = `{
@@ -173,6 +188,51 @@ const conversationJsonShape = `{
   }
 }`
 
+const progressToolJsonShape = `{
+  "summary": "string",
+  "assistantReply": "optional concise conversational reply confirming requirements or asking one question",
+  "confirmedRequirements": ["optional concise confirmed requirements"],
+  "needsUserConfirmation": false,
+  "currentRecommendation": "string",
+  "milestones": [
+    {
+      "title": "string",
+      "description": "optional string",
+      "dueDate": "optional ISO date in YYYY-MM-DD format; omit if unsure",
+      "status": "not_started | in_progress | done | blocked | skipped",
+      "existingMilestoneId": "optional existing milestone id"
+    }
+  ],
+  "actions": [
+    {
+      "title": "string",
+      "description": "optional string",
+      "dueDate": "optional ISO date in YYYY-MM-DD format; omit if unsure",
+      "status": "todo | scheduled | done | blocked | skipped",
+      "milestoneTitle": "optional title of the milestone this belongs to",
+      "existingActionId": "optional existing action id"
+    }
+  ],
+  "progressLog": {
+    "summary": "string",
+    "details": "optional string",
+    "logType": "update | decision | blocker | review | tool_result"
+  },
+  "calendarEvents": [
+    {
+      "title": "string",
+      "description": "optional string",
+      "displayDetails": "optional string",
+      "startAt": "ISO datetime",
+      "endAt": "ISO datetime",
+      "allDay": false,
+      "eventTypeId": "optional string",
+      "color": "optional string"
+    }
+  ],
+  "warnings": []
+}`
+
 type ApiAIServiceOptions = {
   apiKey?: string
   baseUrl?: string
@@ -262,6 +322,25 @@ export class ApiAIService implements IAIService {
       2048,
       request.llmOptions.model,
       normalizeToolSessionOutput,
+    )
+  }
+
+  async runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    return this.callJson(
+      AIProgressToolResultSchema as z.ZodType<AIProgressToolResult>,
+      progressToolSystemPrompt,
+      [
+        'Authoritative local time context:',
+        formatRequestTimeContext(request),
+        '',
+        'Return JSON matching this shape:',
+        progressToolJsonShape,
+        '',
+        JSON.stringify(request, null, 2),
+      ].join('\n'),
+      3072,
+      undefined,
+      normalizeProgressToolOutput,
     )
   }
 
@@ -509,6 +588,54 @@ function normalizeConversationOutput(value: unknown): unknown {
   })
 }
 
+function normalizeProgressToolOutput(value: unknown): unknown {
+  const output = unwrapStructuredOutput(value)
+  if (!isRecord(output)) return output
+
+  return compactUndefined({
+    ...output,
+    actions: Array.isArray(output.actions)
+      ? output.actions.map((action) => {
+          if (!isRecord(action)) return action
+          return compactUndefined({
+            ...action,
+            description: optionalString(action.description),
+            dueDate: optionalStrictDate(action.dueDate),
+            existingActionId: optionalString(action.existingActionId),
+            milestoneTitle: optionalString(action.milestoneTitle),
+            status: enumLowercase(action.status),
+          })
+        })
+      : output.actions,
+    assistantReply: optionalString(output.assistantReply),
+    calendarEvents: Array.isArray(output.calendarEvents)
+      ? output.calendarEvents.map(normalizeEventLike)
+      : output.calendarEvents,
+    confirmedRequirements: normalizeStringArray(output.confirmedRequirements),
+    milestones: Array.isArray(output.milestones)
+      ? output.milestones.map((milestone) => {
+          if (!isRecord(milestone)) return milestone
+          return compactUndefined({
+            ...milestone,
+            description: optionalString(milestone.description),
+            dueDate: optionalStrictDate(milestone.dueDate),
+            existingMilestoneId: optionalString(milestone.existingMilestoneId),
+            status: enumLowercase(milestone.status),
+          })
+        })
+      : output.milestones,
+    progressLog: isRecord(output.progressLog)
+      ? compactUndefined({
+          ...output.progressLog,
+          details: optionalString(output.progressLog.details),
+          logType: enumLowercase(output.progressLog.logType),
+        })
+      : output.progressLog,
+    needsUserConfirmation: booleanFromUnknown(output.needsUserConfirmation),
+    warnings: normalizeWarnings(output.warnings),
+  })
+}
+
 function normalizeAction(value: unknown): unknown {
   if (!isRecord(value)) return value
 
@@ -586,6 +713,17 @@ function normalizeWarnings(value: unknown): unknown {
   return value
 }
 
+function normalizeStringArray(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => optionalString(entry))
+      .filter((entry): entry is string => typeof entry === 'string')
+  }
+  if (typeof value === 'string' && value.trim()) return [value.trim()]
+  if (value === null || value === undefined || value === '') return undefined
+  return value
+}
+
 function optionalString(value: unknown): unknown {
   if (value === null || value === undefined) return undefined
   if (typeof value !== 'string') return value
@@ -598,6 +736,13 @@ function optionalDate(value: unknown): unknown {
   if (typeof value !== 'string') return value
   const trimmed = value.trim()
   return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : trimmed || undefined
+}
+
+function optionalStrictDate(value: unknown): unknown {
+  if (value === null || value === undefined) return undefined
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : undefined
 }
 
 function optionalDateTime(value: unknown): unknown {

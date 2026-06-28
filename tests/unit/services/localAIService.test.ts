@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { AICalendarContext } from '../../../src/domain/types'
+import type { AIProgressToolRequest } from '../../../src/domain/types'
 import { LocalAIService } from '../../../src/services/ai/localAIService'
 
 const context: AICalendarContext = {
@@ -60,5 +61,131 @@ describe('LocalAIService', () => {
       title: 'dinner',
       type: 'create_event',
     })
+  })
+
+  it('generates deterministic fitness progress plans and avoids supplied conflicts', async () => {
+    const service = new LocalAIService()
+    const request: AIProgressToolRequest = {
+      actions: [],
+      calendarEvents: [
+        {
+          allDay: false,
+          endAt: '2026-06-18T15:00:00.000Z',
+          id: 'event-1',
+          startAt: '2026-06-18T14:00:00.000Z',
+          title: 'Existing meeting',
+        },
+      ],
+      formInput: {
+        goal: 'Build strength',
+        preferredTime: '07:00',
+        sessionLength: '45',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'fitness-ai',
+      timezoneOffsetMinutes: -420,
+      today: '2026-06-18',
+      toolKind: 'fitness',
+      toolRuns: [],
+      userInstruction:
+        'Latest user message:\nMake the first week lower impact.\n\nTask: confirm requirements through the conversation.',
+    }
+
+    const result = await service.runProgressTool(request)
+
+    expect(result.assistantReply).toContain('Make the first week lower impact')
+    expect(result.confirmedRequirements).toContain('Goal: Build strength')
+    expect(result.summary).toContain('Build strength')
+    expect(result.milestones.length).toBeGreaterThan(0)
+    expect(result.actions.length).toBeGreaterThan(0)
+    expect(result.calendarEvents[0].startAt).toBe('2026-06-18T15:00:00.000Z')
+    expect(result.warnings.join(' ')).toContain('Adjusted')
+  })
+
+  it('generates multiple fitness sessions for next-week conversation requests', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        goal: 'Build strength',
+        frequency: '3 times per week',
+        preferredTime: '07:00',
+        sessionLength: '45',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'fitness-ai',
+      timezoneOffsetMinutes: -420,
+      today: '2026-06-18',
+      toolKind: 'fitness',
+      toolRuns: [],
+      userInstruction:
+        'Latest user message:\nGenerate next week full plan with 5 sessions.\n\nTask: confirm requirements through the conversation.',
+    })
+
+    expect(result.calendarEvents).toHaveLength(5)
+    expect(result.calendarEvents[0].startAt).toBe('2026-06-22T14:00:00.000Z')
+    expect(result.actions.filter((action) => action.status === 'scheduled')).toHaveLength(5)
+    expect(result.confirmedRequirements).toContain('Calendar sessions: 5')
+  })
+
+  it('generates deterministic AI agent learning routes', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        goal: 'Learn AI agent skills',
+        outcome: 'ship a demo',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'agent-learning',
+      today: '2026-06-18',
+      toolKind: 'agent-learning',
+      toolRuns: [],
+    })
+
+    expect(result.summary).toContain('ship a demo')
+    expect(result.assistantReply).toContain('Confirmed Learn AI agent skills')
+    expect(result.milestones.map((milestone) => milestone.title)).toContain('Tool use and structured outputs')
+    expect(result.currentRecommendation).toContain('Start with foundations')
+  })
+
+  it('generates multiple agent learning sessions for a Chinese full-week request', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        goal: 'Learn AI agent skills',
+        outcome: 'ship a demo',
+        preferredTime: '19:00',
+        weeklyTime: '3 hours per week',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'agent-learning',
+      timezoneOffsetMinutes: -420,
+      today: '2026-06-18',
+      toolKind: 'agent-learning',
+      toolRuns: [],
+      userInstruction:
+        'Latest user message:\n生成下周一整周的计划。\n\nTask: confirm requirements through the conversation.',
+    })
+
+    expect(result.calendarEvents).toHaveLength(3)
+    expect(result.calendarEvents[0].startAt).toBe('2026-06-23T02:00:00.000Z')
+    expect(result.actions.map((action) => action.title)).toContain('Implement one structured tool call exercise')
+    expect(result.confirmedRequirements).toContain('Calendar sessions: 3')
   })
 })

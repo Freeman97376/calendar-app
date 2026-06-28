@@ -7,9 +7,15 @@ describe('tools registry', () => {
     expect(TOOL_DEFINITIONS.map((tool) => tool.id)).toEqual([
       'settings',
       'tool-sessions',
+      'fitness-ai',
+      'agent-learning',
       'fridge',
       'goal-planner',
     ])
     expect(TOOL_DEFINITIONS.every((tool) => tool.label && tool.Component)).toBe(true)
+    expect(TOOL_DEFINITIONS.filter((tool) => tool.category === 'ai-demo').map((tool) => tool.id)).toEqual([
+      'fitness-ai',
+      'agent-learning',
+    ])
   })
 })

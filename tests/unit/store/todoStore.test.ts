@@ -46,4 +46,21 @@ describe('todoStore', () => {
 
     expect(useTodoStore.getState().todos).toHaveLength(0)
   })
+
+  it('persists long project links on todos', async () => {
+    const todo = await useTodoStore.getState().createTodo({
+      longProject: {
+        memoryGoalId: 'goal_1',
+        memoryProjectId: 'project_1',
+        sourceToolId: 'todo-long-project',
+      },
+      title: 'Build a long project',
+    })
+
+    expect(todo.longProject).toEqual({
+      memoryGoalId: 'goal_1',
+      memoryProjectId: 'project_1',
+      sourceToolId: 'todo-long-project',
+    })
+  })
 })

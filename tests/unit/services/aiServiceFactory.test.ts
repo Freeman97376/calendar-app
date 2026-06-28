@@ -5,6 +5,8 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIProgressToolRequest,
+  AIProgressToolResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../../src/domain/types'
@@ -73,6 +75,19 @@ class MockLocalService implements IAIService {
           allDay: false,
         },
       ],
+      warnings: [],
+    }
+  }
+
+  async runProgressTool(_request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    return {
+      actions: [],
+      calendarEvents: [],
+      confirmedRequirements: [],
+      currentRecommendation: 'Use the local demo route.',
+      milestones: [],
+      needsUserConfirmation: false,
+      summary: 'Local progress tool',
       warnings: [],
     }
   }
