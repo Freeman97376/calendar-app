@@ -50,6 +50,10 @@ describe('Settings panel', () => {
     await user.clear(screen.getByLabelText('Default event end'))
     await user.type(screen.getByLabelText('Default event end'), '14:45')
     await user.selectOptions(screen.getByLabelText('Default task priority'), 'high')
+    await user.selectOptions(screen.getByLabelText('Panel position'), 'right')
+    await user.clear(screen.getByLabelText('Panel size percent'))
+    await user.type(screen.getByLabelText('Panel size percent'), '30')
+    await user.selectOptions(screen.getByLabelText('Language'), 'zh')
     await user.click(screen.getByRole('button', { name: 'Save frontend config' }))
 
     expect(useConfigStore.getState().config).toMatchObject({
@@ -63,9 +67,13 @@ describe('Settings panel', () => {
       defaultEventStartTime: '13:30',
       defaultTodoPriority: 'high',
       firebaseProjectId: 'calendar-test',
+      language: 'zh',
+      layoutPanelPosition: 'right',
+      layoutPanelSizePercent: 30,
       timezoneOverride: 'America/Los_Angeles',
     })
-    expect(screen.getByText('Saved frontend runtime config.')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('zh-CN')
+    expect(screen.getByText('已保存前端运行配置。')).toBeInTheDocument()
   }, 10_000)
 
   it('resets API URL and model when the DeepSeek profile is selected', async () => {

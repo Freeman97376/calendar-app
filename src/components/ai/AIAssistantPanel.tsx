@@ -6,6 +6,7 @@ import {
   TIME_CONFLICT_WARNING_PREFIX,
 } from '../../domain/types/aiWarnings'
 import { useAI } from '../../hooks/useAI'
+import { useI18n } from '../../hooks/useI18n'
 import Button from '../ui/Button'
 import AIMessageBubble from './AIMessageBubble'
 import AIScheduleSuggestion from './AIScheduleSuggestion'
@@ -15,12 +16,16 @@ const providerLabels: Record<AIProvider, string> = {
   local: 'Local',
 }
 
-function setupMessage(provider: AIProvider, model: string): string {
+function setupMessage(
+  provider: AIProvider,
+  model: string,
+  t: ReturnType<typeof useI18n>['t'],
+): string {
   if (provider === 'local') {
-    return 'Local AI planner is unavailable.'
+    return t('ai.providerLocalUnavailable')
   }
 
-  return `API provider is selected but no API key is configured. Add VITE_AI_API_KEY or VITE_DEEPSEEK_API_KEY to .env.local, or save it in Tools > Settings. Current model: ${model}.`
+  return t('ai.noApiKey', { model })
 }
 
 function isTimeConfirmationWarning(warning: string): boolean {
@@ -43,33 +48,40 @@ function warningLabel(warning: string): string {
   return warning
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+function formatDateTime(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
 }
 
-function actionTimeLabel(action: AIAction): string | null {
+function actionTimeLabel(
+  action: AIAction,
+  locale: string,
+  t: ReturnType<typeof useI18n>['t'],
+): string | null {
   if (action.type === 'create_event') {
-    return `${formatDateTime(action.startAt)} - ${formatDateTime(action.endAt)}`
+    return `${formatDateTime(action.startAt, locale)} - ${formatDateTime(action.endAt, locale)}`
   }
 
   if (action.type === 'update_event' && action.changes.startAt) {
     return action.changes.endAt
-      ? `${formatDateTime(action.changes.startAt)} - ${formatDateTime(action.changes.endAt)}`
-      : formatDateTime(action.changes.startAt)
+      ? `${formatDateTime(action.changes.startAt, locale)} - ${formatDateTime(action.changes.endAt, locale)}`
+      : formatDateTime(action.changes.startAt, locale)
   }
 
-  if (action.type === 'create_todo' && action.dueDate) return `Due ${action.dueDate}`
-  if (action.type === 'update_todo' && action.changes.dueDate) return `Due ${action.changes.dueDate}`
-  if (action.type === 'schedule_todo' && action.date) return `Schedule ${action.date}`
+  if (action.type === 'create_todo' && action.dueDate) return `${t('todo.dueDate')}: ${action.dueDate}`
+  if (action.type === 'update_todo' && action.changes.dueDate) {
+    return `${t('todo.dueDate')}: ${action.changes.dueDate}`
+  }
+  if (action.type === 'schedule_todo' && action.date) return `${t('todo.schedule')}: ${action.date}`
 
   return null
 }
 
 export default function AIAssistantPanel() {
   const ai = useAI()
+  const { locale, t } = useI18n()
   const [chatMessage, setChatMessage] = useState('')
   const [goal, setGoal] = useState('')
   const [command, setCommand] = useState('')
@@ -115,18 +127,26 @@ export default function AIAssistantPanel() {
   async function handleApplyActions() {
     setApplyStatus(null)
     if (hasTimeConflict) {
-      setApplyStatus('Fix overlapping or duplicate action times before applying.')
+      setApplyStatus(t('ai.fixTimeConflicts'))
       return
     }
 
     if (requiresTimeConfirmation && !timeConfirmed) {
-      setApplyStatus('Confirm the near-term action times before applying.')
+      setApplyStatus(t('ai.reviewTimesBeforeApply'))
       return
     }
 
     try {
-      await ai.applyActionPlan()
-      setApplyStatus('Applied AI actions.')
+      const result = await ai.applyActionPlan()
+      setApplyStatus(
+        `Applied ${result.appliedCount} AI action${result.appliedCount === 1 ? '' : 's'}.${
+          result.skippedDuplicateCount
+            ? ` Skipped ${result.skippedDuplicateCount} duplicate event${
+                result.skippedDuplicateCount === 1 ? '' : 's'
+              }.`
+            : ''
+        }`,
+      )
     } catch (error) {
       setApplyStatus(error instanceof Error ? error.message : 'Unable to apply AI actions')
     }
@@ -163,16 +183,13 @@ export default function AIAssistantPanel() {
   }
 
   return (
-    <aside
-      aria-label="AI assistant"
-      className="flex w-full flex-col border-t border-slate-200 bg-white xl:max-w-sm xl:border-l xl:border-t-0"
-    >
+    <div className="flex min-h-0 flex-1 flex-col bg-white">
       <div className="border-b border-slate-200 px-4 py-4">
-        <h2 className="text-base font-semibold text-slate-950">AI Assistant</h2>
+        <h2 className="text-base font-semibold text-slate-950">{t('ai.header')}</h2>
         <div className="mt-3 grid gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600" htmlFor="ai-provider">
-              AI provider
+              {t('ai.provider')}
             </label>
             <select
               className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -189,7 +206,7 @@ export default function AIAssistantPanel() {
           {ai.provider === 'api' ? (
             <div>
             <label className="block text-xs font-medium text-slate-600" htmlFor="ai-model">
-              AI model
+              {t('ai.model')}
             </label>
             <input
               className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -210,10 +227,13 @@ export default function AIAssistantPanel() {
             {providerLabels[ai.provider]} / {ai.model}
           </p>
           <div className="rounded-md bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
-            <p>Local time: {ai.timeContext.localDateTimeLabel}</p>
+            <p>{t('ai.localTime', { value: ai.timeContext.localDateTimeLabel })}</p>
             <p>
-              Timezone: {ai.timeContext.timezone} ({ai.timeContext.timezoneName},{' '}
-              {ai.timeContext.timezoneOffsetLabel})
+              {t('ai.timezone', {
+                name: ai.timeContext.timezoneName,
+                offset: ai.timeContext.timezoneOffsetLabel,
+                value: ai.timeContext.timezone,
+              })}
             </p>
           </div>
         </div>
@@ -222,7 +242,7 @@ export default function AIAssistantPanel() {
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
         {!ai.isAvailable ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            {setupMessage(ai.provider, ai.model)}
+            {setupMessage(ai.provider, ai.model, t)}
           </div>
         ) : null}
 
@@ -230,11 +250,11 @@ export default function AIAssistantPanel() {
           <section className="space-y-2 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-semibold">Task refinement context</h3>
+                <h3 className="font-semibold">{t('ai.taskRefinementContext')}</h3>
                 <p className="mt-1 text-xs text-sky-800">{ai.conversationContext.todoTitle}</p>
               </div>
               <Button className="h-8 px-2 text-xs" onClick={ai.clearHistory} variant="ghost">
-                Clear
+                {t('ai.clear')}
               </Button>
             </div>
             <ul className="space-y-1 text-xs leading-5 text-sky-900">
@@ -252,15 +272,15 @@ export default function AIAssistantPanel() {
           <section className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-semibold">Draft plan conversation</h3>
+                <h3 className="font-semibold">{t('ai.draftPlanContext')}</h3>
                 <p className="mt-1 text-xs text-emerald-800">{ai.conversationContext.title}</p>
               </div>
               <Button className="h-8 px-2 text-xs" onClick={ai.clearHistory} variant="ghost">
-                Clear
+                {t('ai.clear')}
               </Button>
             </div>
             <p className="text-xs leading-5 text-emerald-900">
-              This conversation is scoped to the current unapplied action plan.
+              {t('ai.scopedDraftPlan')}
             </p>
           </section>
         ) : null}
@@ -273,7 +293,7 @@ export default function AIAssistantPanel() {
           </div>
         ) : null}
 
-        {ai.isLoading ? <p className="text-sm text-slate-500">Thinking...</p> : null}
+        {ai.isLoading ? <p className="text-sm text-slate-500">{t('ai.thinking')}</p> : null}
         {ai.error ? (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{ai.error}</p>
         ) : null}
@@ -287,10 +307,35 @@ export default function AIAssistantPanel() {
           />
         ) : null}
 
+        {ai.pendingEnabledToolRoute ? (
+          <section className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
+            <div>
+              <h3 className="text-sm font-semibold text-emerald-950">{t('ai.enabledToolRoute')}</h3>
+              <p className="mt-1 text-sm text-emerald-900">
+                {ai.pendingEnabledToolRoute.instanceAlias} | {ai.pendingEnabledToolRoute.toolName}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-emerald-800">
+                {ai.pendingEnabledToolRoute.reason}
+              </p>
+            </div>
+            <div className="rounded-md bg-white p-2 text-xs leading-5 text-slate-700">
+              {ai.pendingEnabledToolRoute.rewrittenInstruction}
+            </div>
+            <div className="flex gap-2">
+              <Button disabled={ai.isLoading} onClick={() => void ai.confirmEnabledToolRoute()} variant="primary">
+                {t('ai.dispatch')}
+              </Button>
+              <Button disabled={ai.isLoading} onClick={ai.clearEnabledToolRoute}>
+                {t('ai.cancel')}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         {ai.pendingActionPlan ? (
           <section className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
             <div>
-              <h3 className="text-sm font-semibold text-slate-950">Action Plan</h3>
+              <h3 className="text-sm font-semibold text-slate-950">{t('ai.actionPlan')}</h3>
               <p className="mt-1 text-sm text-slate-600">{ai.pendingActionPlan.summary}</p>
             </div>
             <div className="space-y-2">
@@ -311,8 +356,10 @@ export default function AIAssistantPanel() {
                   {'changes' in action && 'title' in action.changes && action.changes.title ? (
                     <p className="mt-1 text-xs font-medium text-slate-700">{action.changes.title}</p>
                   ) : null}
-                  {actionTimeLabel(action) ? (
-                    <p className="mt-1 text-xs text-slate-700">Time: {actionTimeLabel(action)}</p>
+                  {actionTimeLabel(action, locale, t) ? (
+                    <p className="mt-1 text-xs text-slate-700">
+                      {t('ai.time', { value: actionTimeLabel(action, locale, t) ?? '' })}
+                    </p>
                   ) : null}
                   {'reason' in action && action.reason ? (
                     <p className="mt-1 text-xs leading-5 text-slate-600">{action.reason}</p>
@@ -332,7 +379,7 @@ export default function AIAssistantPanel() {
             ) : null}
             {hasTimeConflict ? (
               <p className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800">
-                Overlapping or duplicate times must be fixed before applying.
+                {t('ai.timeConflictsMustBeFixed')}
               </p>
             ) : null}
             {requiresTimeConfirmation ? (
@@ -343,7 +390,7 @@ export default function AIAssistantPanel() {
                   onChange={(event) => setTimeConfirmed(event.target.checked)}
                   type="checkbox"
                 />
-                <span>I reviewed and confirmed the near-term times.</span>
+                <span>{t('ai.confirmTimes')}</span>
               </label>
             ) : null}
             <div className="flex gap-2">
@@ -352,10 +399,10 @@ export default function AIAssistantPanel() {
                 onClick={() => void handleApplyActions()}
                 variant="primary"
               >
-                Apply Actions
+                {t('ai.applyActions')}
               </Button>
-              <Button onClick={() => void handleAddResultToTasks()}>Add to Tasks</Button>
-              <Button onClick={ai.clearActionPlan}>Dismiss</Button>
+              <Button onClick={() => void handleAddResultToTasks()}>{t('ai.addToTasks')}</Button>
+              <Button onClick={ai.clearActionPlan}>{t('ai.dismiss')}</Button>
             </div>
           </section>
         ) : null}
@@ -373,11 +420,11 @@ export default function AIAssistantPanel() {
       <form className="space-y-2 border-t border-slate-200 p-4" onSubmit={handleConversationSubmit}>
         <div className="flex items-center justify-between gap-3">
           <label className="block text-sm font-medium text-slate-700" htmlFor="ai-chat-message">
-            Conversation
+            {t('ai.conversation')}
           </label>
           {ai.messages.length ? (
             <Button disabled={ai.isLoading} onClick={ai.clearHistory} variant="ghost">
-              Clear
+              {t('ai.clear')}
             </Button>
           ) : null}
         </div>
@@ -386,7 +433,7 @@ export default function AIAssistantPanel() {
           disabled={!ai.isAvailable || ai.isLoading}
           id="ai-chat-message"
           onChange={(event) => setChatMessage(event.target.value)}
-          placeholder="Ask a question, clarify unclear details, or ask AI to rewrite selected task steps."
+          placeholder={t('ai.conversationPlaceholder')}
           value={chatMessage}
         />
         <Button
@@ -394,20 +441,20 @@ export default function AIAssistantPanel() {
           type="submit"
           variant="primary"
         >
-          {ai.isLoading ? 'Thinking...' : 'Send message'}
+          {ai.isLoading ? t('ai.thinking') : t('ai.sendMessage')}
         </Button>
       </form>
 
       <form className="space-y-2 border-t border-slate-200 p-4" onSubmit={handleCommandSubmit}>
         <label className="block text-sm font-medium text-slate-700" htmlFor="ai-command">
-          Calendar or task command
+          {t('ai.command')}
         </label>
         <textarea
           className="min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
           disabled={!ai.isAvailable || ai.isLoading}
           id="ai-command"
           onChange={(event) => setCommand(event.target.value)}
-          placeholder='Examples: "add dinner with friend this Friday at 7pm", "create todo draft proposal tomorrow", "delete event Planning session"'
+          placeholder={t('ai.commandPlaceholder')}
           value={command}
         />
         <Button
@@ -415,13 +462,13 @@ export default function AIAssistantPanel() {
           type="submit"
           variant="primary"
         >
-          {ai.isLoading ? 'Thinking...' : 'Plan actions'}
+          {ai.isLoading ? t('ai.thinking') : t('ai.planActions')}
         </Button>
       </form>
 
       <form className="space-y-2 border-t border-slate-200 p-4" onSubmit={handleSubmit}>
         <label className="block text-sm font-medium text-slate-700" htmlFor="ai-goal">
-          Goal
+          {t('ai.goal')}
         </label>
         <textarea
           className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -431,9 +478,9 @@ export default function AIAssistantPanel() {
           value={goal}
         />
         <Button disabled={!ai.isAvailable || ai.isLoading || !goal.trim()} type="submit" variant="primary">
-          {ai.isLoading ? 'Thinking...' : 'Break down goal'}
+          {ai.isLoading ? t('ai.thinking') : t('ai.breakDownGoal')}
         </Button>
       </form>
-    </aside>
+    </div>
   )
 }

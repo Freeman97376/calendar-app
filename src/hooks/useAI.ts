@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { addDays, set } from 'date-fns'
 
+import { isDuplicateEventDraft } from '../domain/logic/eventDeduplication'
+import type { EventDraft } from '../domain/logic/eventUtils'
 import { getLocalTimeContext } from '../domain/logic/timeContext'
 import { AICalendarContextSchema } from '../domain/schemas/ai.schema'
 import type {
@@ -19,6 +21,7 @@ import { useConfigStore } from '../store/configStore'
 import { useEventStore } from '../store/eventStore'
 import { useEventTypeStore } from '../store/eventTypeStore'
 import { useTodoStore } from '../store/todoStore'
+import { useUIStore } from '../store/uiStore'
 
 export type { AIMessage } from '../store/aiStore'
 
@@ -202,6 +205,18 @@ function toAllDayEventFromTodo(todo: Todo, date: string) {
   }
 }
 
+function eventDraftFromCreateAction(action: Extract<AIAction, { type: 'create_event' }>): EventDraft {
+  return {
+    allDay: action.allDay,
+    description: action.description,
+    displayDetails: action.displayDetails,
+    endAt: action.endAt,
+    eventTypeId: action.eventTypeId,
+    startAt: action.startAt,
+    title: action.title,
+  }
+}
+
 export function useAI() {
   const error = useAIStore((state) => state.error)
   const isAvailable = useAIStore((state) => state.isAvailable)
@@ -210,10 +225,13 @@ export function useAI() {
   const conversationContext = useAIStore((state) => state.conversationContext)
   const messages = useAIStore((state) => state.messages)
   const pendingActionPlan = useAIStore((state) => state.pendingActionPlan)
+  const pendingEnabledToolRoute = useAIStore((state) => state.pendingEnabledToolRoute)
   const pendingSuggestion = useAIStore((state) => state.pendingSuggestion)
   const provider = useAIStore((state) => state.provider)
   const clearActionPlan = useAIStore((state) => state.clearActionPlan)
+  const clearEnabledToolRoute = useAIStore((state) => state.clearEnabledToolRoute)
   const clearHistory = useAIStore((state) => state.clearHistory)
+  const confirmEnabledToolRouteInStore = useAIStore((state) => state.confirmEnabledToolRoute)
   const dismissSuggestion = useAIStore((state) => state.dismissSuggestion)
   const markActionPlanApplied = useAIStore((state) => state.markActionPlanApplied)
   const markSuggestionAccepted = useAIStore((state) => state.acceptSuggestion)
@@ -237,11 +255,18 @@ export function useAI() {
   const updateTodo = useTodoStore((state) => state.updateTodo)
   const deleteTodo = useTodoStore((state) => state.deleteTodo)
   const loadTodos = useTodoStore((state) => state.loadTodos)
+  const showWorkspaceCalendar = useUIStore((state) => state.showWorkspaceCalendar)
 
   useEffect(() => {
     if (!eventTypes.length) loadEventTypes().catch(() => undefined)
     loadTodos().catch(() => undefined)
   }, [eventTypes.length, loadEventTypes, loadTodos])
+
+  useEffect(() => {
+    if (pendingActionPlan || pendingEnabledToolRoute) {
+      showWorkspaceCalendar()
+    }
+  }, [pendingActionPlan, pendingEnabledToolRoute, showWorkspaceCalendar])
 
   function buildContext() {
     const timeContext = getLocalTimeContext(new Date(), config.timezoneOverride)
@@ -285,25 +310,37 @@ export function useAI() {
     for (const step of pendingSuggestion.steps) {
       const start = scheduledStart(focusedDate, step)
       const end = new Date(start.getTime() + step.durationMinutes * 60_000)
-
-      await createEvent({
-        title: step.title,
-        description: step.description,
-        startAt: start.toISOString(),
-        endAt: end.toISOString(),
+      const draft = {
         color: priorityColor(step.priority),
-      })
+        description: step.description,
+        endAt: end.toISOString(),
+        startAt: start.toISOString(),
+        title: step.title,
+      }
+
+      if (isDuplicateEventDraft(draft, useEventStore.getState().events)) continue
+
+      await createEvent(draft)
     }
 
     markSuggestionAccepted()
+    showWorkspaceCalendar()
   }
 
   async function sendActionCommand(command: string) {
-    await sendActionCommandToStore(command, buildContext())
+    await sendActionCommandToStore(command, buildContext(), {
+      confirmEnabledToolRouting: config.confirmEnabledToolRouting,
+    })
   }
 
   async function sendConversationMessage(message: string) {
-    await sendConversationMessageToStore(message, buildContext())
+    await sendConversationMessageToStore(message, buildContext(), {
+      confirmEnabledToolRouting: config.confirmEnabledToolRouting,
+    })
+  }
+
+  async function confirmEnabledToolRoute() {
+    await confirmEnabledToolRouteInStore(buildContext())
   }
 
   function startTaskStepConversation(
@@ -325,28 +362,26 @@ export function useAI() {
     setStoreModel(modelForProvider(provider, saved))
   }
 
-  async function applyAction(action: AIAction) {
+  async function applyAction(action: AIAction): Promise<'applied' | 'skipped_duplicate'> {
     if (action.type === 'create_event') {
-      await createEvent({
-        title: action.title,
-        description: action.description,
-        displayDetails: action.displayDetails,
-        startAt: action.startAt,
-        endAt: action.endAt,
-        allDay: action.allDay,
-        eventTypeId: action.eventTypeId,
-      })
-      return
+      const draft = eventDraftFromCreateAction(action)
+
+      if (isDuplicateEventDraft(draft, useEventStore.getState().events)) {
+        return 'skipped_duplicate'
+      }
+
+      await createEvent(draft)
+      return 'applied'
     }
 
     if (action.type === 'update_event') {
       await updateEvent(action.eventId, action.changes)
-      return
+      return 'applied'
     }
 
     if (action.type === 'delete_event') {
       await deleteEvent(action.eventId)
-      return
+      return 'applied'
     }
 
     if (action.type === 'create_todo') {
@@ -357,17 +392,17 @@ export function useAI() {
         priority: action.priority,
         eventTypeId: action.eventTypeId,
       })
-      return
+      return 'applied'
     }
 
     if (action.type === 'update_todo') {
       await updateTodo(action.todoId, action.changes)
-      return
+      return 'applied'
     }
 
     if (action.type === 'delete_todo') {
       await deleteTodo(action.todoId)
-      return
+      return 'applied'
     }
 
     const todo = useTodoStore.getState().todos.find((candidate) => candidate.id === action.todoId)
@@ -375,16 +410,27 @@ export function useAI() {
 
     const event = await createEvent(toAllDayEventFromTodo(todo, action.date ?? todo.dueDate ?? focusedDate))
     await updateTodo(todo.id, { linkedEventId: event.id })
+    return 'applied'
   }
 
   async function applyActionPlan() {
-    if (!pendingActionPlan) return
+    if (!pendingActionPlan) return { appliedCount: 0, skippedDuplicateCount: 0 }
 
+    let appliedCount = 0
+    let skippedDuplicateCount = 0
     for (const action of pendingActionPlan.actions) {
-      await applyAction(action)
+      const result = await applyAction(action)
+      if (result === 'skipped_duplicate') {
+        skippedDuplicateCount += 1
+      } else {
+        appliedCount += 1
+      }
     }
 
     markActionPlanApplied()
+    showWorkspaceCalendar()
+
+    return { appliedCount, skippedDuplicateCount }
   }
 
   async function addAssistantResultToTodo() {
@@ -415,7 +461,9 @@ export function useAI() {
     applyActionPlan,
     breakdownGoal: sendGoal,
     clearActionPlan,
+    clearEnabledToolRoute,
     clearHistory,
+    confirmEnabledToolRoute,
     currentModel: model,
     currentProvider: provider,
     conversationContext,
@@ -427,6 +475,7 @@ export function useAI() {
     model,
     messages,
     pendingActionPlan,
+    pendingEnabledToolRoute,
     pendingSuggestion,
     provider,
     sendActionCommand,

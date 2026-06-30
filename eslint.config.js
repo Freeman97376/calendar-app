@@ -40,7 +40,7 @@ const restrictedZones = [
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'scratch'],
+    ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'scratch', '.pytest_cache'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

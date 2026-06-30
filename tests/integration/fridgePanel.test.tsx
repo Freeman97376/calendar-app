@@ -4,167 +4,337 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import App from '../../src/App'
 import type {
-  FridgeInventoryItem,
-  FridgeReceiptAnalysisResponse,
-} from '../../src/domain/types'
-import type {
-  AnalyzeReceiptInput,
-  FridgeInventoryDraft,
-  FridgeInventoryUpdate,
-  IFridgeService,
-} from '../../src/services/fridge/IFridgeService'
+  ActionItemStatus,
+  CreateActionItemInput,
+  CreateGoalInput,
+  CreateMilestoneInput,
+  CreateProgressLogInput,
+  CreateProjectInput,
+  CreateToolRunInput,
+  GoalStatus,
+  LongTermActionItem,
+  LongTermGoal,
+  LongTermMemorySearchResult,
+  LongTermMilestone,
+  LongTermProgressLog,
+  LongTermProject,
+  LongTermToolRun,
+  MilestoneStatus,
+  ProjectStatus,
+} from '../../src/domain/types/longTermMemory'
+import { LocalAIService } from '../../src/services/ai/localAIService'
+import { RuntimeConfigService } from '../../src/services/config/runtimeConfigService'
+import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
+import { configureAIService, useAIStore } from '../../src/store/aiStore'
 import { useCalendarStore } from '../../src/store/calendarStore'
+import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
 import { configureEventSync, useEventStore } from '../../src/store/eventStore'
-import { configureFridgeService, useFridgeStore } from '../../src/store/fridgeStore'
+import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
+import {
+  configureLongTermMemoryClient,
+  useLongTermMemoryStore,
+  type LongTermMemoryClientContract,
+} from '../../src/store/longTermMemoryStore'
 import { useUIStore } from '../../src/store/uiStore'
 
-const milkPrediction = {
-  item_name: 'Organic Milk',
-  normalized_name: 'milk',
-  category: 'dairy',
-  storage_type: 'fridge' as const,
-  estimated_shelf_life_days: 7,
-  purchase_date: '2026-06-07',
-  estimated_expiration_date: '2026-06-14',
-  confidence: 0.86,
-  source: 'local_cache',
-  notes: 'Cache match.',
-  cache_hit: true,
-  cache_match_type: 'exact',
-  cache_layer: 'defaults',
-  metadata: {
-    cache_hit: true,
-    cache_match_type: 'exact',
-    cache_layer: 'defaults',
-    source: 'local_cache',
-    confidence: 0.86,
-  },
+function timestamp() {
+  return '2026-06-07T00:00:00.000Z'
 }
 
-const analysis: FridgeReceiptAnalysisResponse = {
-  success: true,
-  receipt_id: 'receipt_1',
-  purchase_date: '2026-06-07',
-  timezone: 'America/Los_Angeles',
-  confidence: 0.82,
-  source: 'local_ocr',
-  ocr: { text: 'ORGANIC MILK 4.99', source: 'local_ocr', confidence: 0.8 },
-  candidates: [],
-  items: [milkPrediction],
-  reminder_suggestions: [
-    {
-      title: 'Use before: Organic Milk',
-      date: '2026-06-14',
-      description: 'Receipt item: Organic Milk.',
-    },
-  ],
-  trace: { receipt_id: 'receipt_1', steps: [] },
-  warnings: [],
-  recoverable_errors: [],
+async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const directEntry = screen.queryByRole('button', { name })
+  if (directEntry) {
+    await user.click(directEntry)
+    return
+  }
+
+  if (name === 'Todos' && screen.queryByRole('heading', { name: 'To-Do List' })) return
+  if (screen.queryByRole('heading', { name })) return
+
+  const closeButton = screen.queryByRole('button', { name: 'Close' })
+  if (closeButton) {
+    await user.click(closeButton)
+  } else {
+    const backButton = screen.queryByRole('button', { name: 'Back' })
+    if (backButton) {
+      await user.click(backButton)
+    }
+  }
+  await user.click(await screen.findByRole('button', { name }))
 }
 
-const inventoryItem: FridgeInventoryItem = {
-  item_id: 'item_1',
-  item_name: 'Organic Milk',
-  normalized_name: 'milk',
-  category: 'dairy',
-  storage_type: 'fridge',
-  purchase_date: '2026-06-07',
-  estimated_expiration_date: '2026-06-14',
-  estimated_shelf_life_days: 7,
-  confidence: 0.86,
-  source: 'local_cache',
-  receipt_id: 'receipt_1',
-  quantity: null,
-  notes: '',
-  created_at: '2026-06-07T00:00:00Z',
-  updated_at: '2026-06-07T00:00:00Z',
+class MemoryClient implements LongTermMemoryClientContract {
+  actions: LongTermActionItem[] = []
+  goals: LongTermGoal[] = []
+  milestones: LongTermMilestone[] = []
+  progress: LongTermProgressLog[] = []
+  projects: LongTermProject[] = []
+  toolRuns: LongTermToolRun[] = []
+
+  async createAction(input: CreateActionItemInput): Promise<LongTermActionItem> {
+    const action: LongTermActionItem = {
+      action_id: `action_${this.actions.length + 1}`,
+      created_at: timestamp(),
+      description: input.description ?? '',
+      due_date: input.due_date ?? null,
+      metadata: input.metadata ?? {},
+      milestone_id: input.milestone_id ?? null,
+      project_id: input.project_id,
+      status: input.status ?? 'todo',
+      title: input.title,
+      updated_at: timestamp(),
+    }
+    this.actions = [action, ...this.actions]
+    return action
+  }
+
+  async createGoal(input: CreateGoalInput): Promise<LongTermGoal> {
+    const goal: LongTermGoal = {
+      created_at: timestamp(),
+      description: input.description ?? '',
+      goal_id: `goal_${this.goals.length + 1}`,
+      metadata: input.metadata ?? {},
+      status: input.status ?? 'active',
+      title: input.title,
+      updated_at: timestamp(),
+    }
+    this.goals = [goal, ...this.goals]
+    return goal
+  }
+
+  async createMilestone(input: CreateMilestoneInput): Promise<LongTermMilestone> {
+    const milestone: LongTermMilestone = {
+      created_at: timestamp(),
+      description: input.description ?? '',
+      due_date: input.due_date ?? null,
+      metadata: input.metadata ?? {},
+      milestone_id: `milestone_${this.milestones.length + 1}`,
+      project_id: input.project_id,
+      status: input.status ?? 'not_started',
+      title: input.title,
+      updated_at: timestamp(),
+    }
+    this.milestones = [milestone, ...this.milestones]
+    return milestone
+  }
+
+  async createProgress(input: CreateProgressLogInput): Promise<LongTermProgressLog> {
+    const entry: LongTermProgressLog = {
+      action_id: input.action_id ?? null,
+      created_at: timestamp(),
+      details: input.details ?? '',
+      goal_id: input.goal_id ?? null,
+      log_type: input.log_type ?? 'update',
+      metadata: input.metadata ?? {},
+      progress_id: `progress_${this.progress.length + 1}`,
+      project_id: input.project_id,
+      summary: input.summary,
+      updated_at: timestamp(),
+    }
+    this.progress = [entry, ...this.progress]
+    return entry
+  }
+
+  async createProject(input: CreateProjectInput): Promise<LongTermProject> {
+    const project: LongTermProject = {
+      created_at: timestamp(),
+      description: input.description ?? '',
+      goal_id: input.goal_id,
+      metadata: input.metadata ?? {},
+      project_id: `project_${this.projects.length + 1}`,
+      status: input.status ?? 'active',
+      title: input.title,
+      updated_at: timestamp(),
+    }
+    this.projects = [project, ...this.projects]
+    return project
+  }
+
+  async createToolRun(input: CreateToolRunInput): Promise<LongTermToolRun> {
+    const toolRun: LongTermToolRun = {
+      created_at: timestamp(),
+      error: input.error ?? '',
+      goal_id: input.related_goal_id ?? null,
+      id: `toolrun_${this.toolRuns.length + 1}`,
+      input: input.input ?? {},
+      input_summary: input.input_summary ?? '',
+      intent: input.intent ?? '',
+      output: input.output ?? {},
+      output_summary: input.output_summary ?? '',
+      project_id: input.related_project_id ?? null,
+      related_goal_id: input.related_goal_id ?? null,
+      related_project_id: input.related_project_id ?? null,
+      status: input.status ?? 'success',
+      tool_name: input.tool_name,
+      tool_run_id: `toolrun_${this.toolRuns.length + 1}`,
+      updated_at: timestamp(),
+    }
+    this.toolRuns = [toolRun, ...this.toolRuns]
+    return toolRun
+  }
+
+  async getProject(projectId: string): Promise<LongTermProject> {
+    const project = this.projects.find((candidate) => candidate.project_id === projectId)
+    if (!project) throw new Error('Missing project')
+    return project
+  }
+
+  async listActions(projectId: string): Promise<LongTermActionItem[]> {
+    return this.actions.filter((action) => action.project_id === projectId)
+  }
+
+  async listGoals(): Promise<LongTermGoal[]> {
+    return this.goals
+  }
+
+  async listMilestones(projectId: string): Promise<LongTermMilestone[]> {
+    return this.milestones.filter((milestone) => milestone.project_id === projectId)
+  }
+
+  async listProgress(projectId: string): Promise<LongTermProgressLog[]> {
+    return this.progress.filter((entry) => entry.project_id === projectId)
+  }
+
+  async listProjects(): Promise<LongTermProject[]> {
+    return this.projects
+  }
+
+  async listToolRuns(): Promise<LongTermToolRun[]> {
+    return this.toolRuns
+  }
+
+  async listToolRunsForProject(projectId: string): Promise<LongTermToolRun[]> {
+    return this.toolRuns.filter((toolRun) => toolRun.related_project_id === projectId)
+  }
+
+  async search(query: string): Promise<LongTermMemorySearchResult[]> {
+    const lower = query.toLowerCase()
+    return this.projects
+      .filter((project) => lower.includes(project.title.toLowerCase()))
+      .map((project) => ({
+        description: project.description,
+        entity_type: 'project',
+        goal_id: project.goal_id,
+        item_id: project.project_id,
+        project_id: project.project_id,
+        status: project.status,
+        title: project.title,
+        updated_at: project.updated_at,
+      }))
+  }
+
+  async updateAction(
+    actionId: string,
+    changes: Partial<CreateActionItemInput> & { status?: ActionItemStatus },
+  ): Promise<LongTermActionItem> {
+    const action = this.actions.find((candidate) => candidate.action_id === actionId)
+    if (!action) throw new Error('Missing action')
+    Object.assign(action, {
+      ...changes,
+      due_date: changes.due_date ?? action.due_date,
+      metadata: changes.metadata ?? action.metadata,
+      milestone_id: changes.milestone_id ?? action.milestone_id,
+      updated_at: timestamp(),
+    })
+    return action
+  }
+
+  async updateGoal(
+    goalId: string,
+    changes: Partial<CreateGoalInput> & { status?: GoalStatus },
+  ): Promise<LongTermGoal> {
+    const goal = this.goals.find((candidate) => candidate.goal_id === goalId)
+    if (!goal) throw new Error('Missing goal')
+    Object.assign(goal, { ...changes, metadata: changes.metadata ?? goal.metadata, updated_at: timestamp() })
+    return goal
+  }
+
+  async updateMilestone(
+    milestoneId: string,
+    changes: Partial<CreateMilestoneInput> & { status?: MilestoneStatus },
+  ): Promise<LongTermMilestone> {
+    const milestone = this.milestones.find((candidate) => candidate.milestone_id === milestoneId)
+    if (!milestone) throw new Error('Missing milestone')
+    Object.assign(milestone, {
+      ...changes,
+      due_date: changes.due_date ?? milestone.due_date,
+      metadata: changes.metadata ?? milestone.metadata,
+      updated_at: timestamp(),
+    })
+    return milestone
+  }
+
+  async updateProject(
+    projectId: string,
+    changes: Partial<CreateProjectInput> & { status?: ProjectStatus },
+  ): Promise<LongTermProject> {
+    const project = this.projects.find((candidate) => candidate.project_id === projectId)
+    if (!project) throw new Error('Missing project')
+    Object.assign(project, { ...changes, metadata: changes.metadata ?? project.metadata, updated_at: timestamp() })
+    return project
+  }
 }
 
-class MockFridgeService implements IFridgeService {
-  inventory: FridgeInventoryItem[] = []
+describe('Fridge tool template', () => {
+  let memoryClient: MemoryClient
 
-  async analyzeReceipt(_input: AnalyzeReceiptInput): Promise<FridgeReceiptAnalysisResponse> {
-    return analysis
-  }
-
-  async createInventoryItem(_draft: FridgeInventoryDraft): Promise<FridgeInventoryItem> {
-    this.inventory = [inventoryItem]
-    return inventoryItem
-  }
-
-  async deleteInventoryItem(itemId: string): Promise<void> {
-    this.inventory = this.inventory.filter((item) => item.item_id !== itemId)
-  }
-
-  async getInventoryItems(): Promise<FridgeInventoryItem[]> {
-    return this.inventory
-  }
-
-  async updateInventoryItem(
-    _itemId: string,
-    _changes: FridgeInventoryUpdate,
-  ): Promise<FridgeInventoryItem> {
-    return inventoryItem
-  }
-}
-
-async function openFridgePanel(service = new MockFridgeService()) {
-  configureFridgeService(service)
-  const user = userEvent.setup()
-  render(<App />)
-  await user.click(screen.getByRole('button', { name: 'Tools' }))
-  await user.click(screen.getByRole('button', { name: 'Fridge' }))
-  return { service, user }
-}
-
-describe('Fridge panel', () => {
   beforeEach(() => {
+    localStorage.clear()
+    memoryClient = new MemoryClient()
+    configureConfigServices(new RuntimeConfigService(localStorage, 'test_fridge_template_runtime_config'))
     configureEventSync(null)
-    configureFridgeService(null)
+    configureEventTypeService(new LocalEventTypeService(localStorage, 'test_fridge_template_event_types'))
+    configureLongTermMemoryClient(memoryClient)
+    useAIStore.getState().reset()
     useCalendarStore.getState().reset({ focusedDate: '2026-06-07', view: 'month' })
+    useConfigStore.getState().reset()
     useEventStore.getState().reset()
-    useFridgeStore.getState().reset()
+    useEventTypeStore.getState().reset()
+    useLongTermMemoryStore.getState().reset()
     useUIStore.getState().reset()
+    configureAIService(new LocalAIService(), { model: 'local', provider: 'local' })
   })
 
-  it('analyzes a receipt image and renders fridge items', async () => {
-    const { user } = await openFridgePanel()
-    const file = new File(['png'], 'receipt.png', { type: 'image/png' })
+  it('creates a Fridge enabled tool and records routed generic runs', async () => {
+    const user = userEvent.setup()
+    render(<App />)
 
-    await user.upload(screen.getByLabelText('Receipt image'), file)
-    await user.type(screen.getByLabelText('Purchase date'), '2026-06-07')
-    await user.click(screen.getByRole('button', { name: 'Analyze receipt' }))
+    await user.click(screen.getByRole('button', { name: 'Tools' }))
+    await user.click(screen.getByRole('button', { name: 'Fridge' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Manage fridge receipts, groceries, expiration reminders, and weekly inventory review.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
 
-    expect(await screen.findByText('Organic Milk')).toBeInTheDocument()
-    expect(screen.getByText(/confidence 82%/i)).toBeInTheDocument()
-  })
+    await user.clear(await screen.findByLabelText('Enabled tool alias'))
+    await user.type(screen.getByLabelText('Enabled tool alias'), 'Fridge Coach')
+    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
 
-  it('adds analyzed items to inventory', async () => {
-    const { user } = await openFridgePanel()
-    const file = new File(['png'], 'receipt.png', { type: 'image/png' })
-
-    await user.upload(screen.getByLabelText('Receipt image'), file)
-    await user.click(screen.getByRole('button', { name: 'Analyze receipt' }))
-    await user.click(await screen.findByRole('button', { name: 'Add' }))
-
-    await waitFor(() => {
-      expect(useFridgeStore.getState().inventory).toHaveLength(1)
+    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(memoryClient.projects[0].metadata).toMatchObject({
+      instanceAlias: 'Fridge Coach',
+      toolCategory: 'enabled-tool',
+      toolName: 'Fridge',
     })
-    expect(screen.getByText('Added Organic Milk')).toBeInTheDocument()
-  })
 
-  it('schedules expiration reminders as calendar events', async () => {
-    const { user } = await openFridgePanel()
-    const file = new File(['png'], 'receipt.png', { type: 'image/png' })
+    await openWorkspaceEntry(user, 'AI Assistant')
+    await user.type(
+      screen.getByLabelText('Conversation'),
+      'Update Fridge Coach with this week grocery receipts and expiration reminders.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
-    await user.upload(screen.getByLabelText('Receipt image'), file)
-    await user.click(screen.getByRole('button', { name: 'Analyze receipt' }))
-    await user.click(await screen.findByRole('button', { name: 'Schedule all' }))
+    expect(await screen.findByText(/Route this to Fridge Coach/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dispatch' }))
 
+    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect((await screen.findAllByText('AI Assistant routed a request to Fridge Coach.')).length).toBeGreaterThan(0)
     await waitFor(() => {
-      expect(useEventStore.getState().events).toHaveLength(1)
+      expect(memoryClient.toolRuns[0]).toMatchObject({
+        status: 'needs_user_confirmation',
+        tool_name: 'Fridge',
+      })
     })
-    expect(useEventStore.getState().events[0].title).toBe('Use before: Organic Milk')
-  })
+  }, 15_000)
 })

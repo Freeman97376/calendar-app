@@ -23,6 +23,28 @@ async function openTodoPanel() {
   return user
 }
 
+async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const directEntry = screen.queryByRole('button', { name })
+  if (directEntry) {
+    await user.click(directEntry)
+    return
+  }
+
+  if (name === 'Todos' && screen.queryByRole('heading', { name: 'To-Do List' })) return
+  if (screen.queryByRole('heading', { name })) return
+
+  const closeButton = screen.queryByRole('button', { name: 'Close' })
+  if (closeButton) {
+    await user.click(closeButton)
+  } else {
+    const backButton = screen.queryByRole('button', { name: 'Back' })
+    if (backButton) {
+      await user.click(backButton)
+    }
+  }
+  await user.click(await screen.findByRole('button', { name }))
+}
+
 describe('Todo panel', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -309,7 +331,7 @@ describe('Todo panel', () => {
 
     expect(await screen.findByText('AI: First prep')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Todos' }))
+    await openWorkspaceEntry(user, 'Todos')
     const secondCard = screen.getByText('AI: Second prep').closest('div.rounded-md')
     expect(secondCard).not.toBeNull()
     await user.click(within(secondCard as HTMLElement).getByText('Details'))

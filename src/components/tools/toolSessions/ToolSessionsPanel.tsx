@@ -117,8 +117,18 @@ export default function ToolSessionsPanel() {
   }
 
   async function applyResult() {
-    const created = await toolSessions.applyResult()
-    setStatus(`Applied ${created.length} event${created.length === 1 ? '' : 's'} to the calendar.`)
+    const applyResult = await toolSessions.applyResult()
+    setStatus(
+      `Applied ${applyResult.created.length} event${
+        applyResult.created.length === 1 ? '' : 's'
+      } to the calendar.${
+        applyResult.skippedDuplicateCount
+          ? ` Skipped ${applyResult.skippedDuplicateCount} duplicate${
+              applyResult.skippedDuplicateCount === 1 ? '' : 's'
+            }.`
+          : ''
+      }`,
+    )
   }
 
   return (

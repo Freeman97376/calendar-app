@@ -1,7 +1,9 @@
 import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
+  AIEnabledToolRouteResultSchema,
   AIProgressToolResultSchema,
+  AIToolActivationResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -9,8 +11,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -162,8 +168,138 @@ function isAutomaticRequirementConfirmation(message: string): boolean {
   return /^confirm current requirements\b/i.test(message.trim())
 }
 
-function learningSessionTopic(index: number, outcome: string, goal: string) {
-  const topics = [
+type LearningRouteKind = 'agent' | 'seo'
+
+function learningRouteKindFromInput(request: AIProgressToolRequest): LearningRouteKind {
+  const text = [
+    request.formInput.learningTrack,
+    request.formInput.goal,
+    request.formInput.outcome,
+    request.sourceToolId,
+    request.userInstruction,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return /\bseo\b|search engine|keyword|on-page|technical seo|搜索引擎|关键词|排名/.test(text)
+    ? 'seo'
+    : 'agent'
+}
+
+function learningRouteLabel(kind: LearningRouteKind): string {
+  return kind === 'seo' ? 'SEO' : 'AI agent'
+}
+
+function learningRouteArticle(kind: LearningRouteKind): string {
+  return kind === 'agent' ? 'an' : 'a'
+}
+
+function learningMilestones(kind: LearningRouteKind, outcome: string, today: string, hasExisting: boolean) {
+  if (kind === 'seo') {
+    return [
+      {
+        title: 'SEO foundations and keyword research',
+        description: 'Understand search intent, keyword groups, competitors, and baseline metrics.',
+        dueDate: addDays(today, 7),
+        status: hasExisting ? 'in_progress' : 'not_started',
+      },
+      {
+        title: 'On-page and technical SEO',
+        description: 'Practice page titles, internal links, crawlability, performance, and indexability checks.',
+        dueDate: addDays(today, 14),
+        status: 'not_started',
+      },
+      {
+        title: 'Content strategy and analytics',
+        description: 'Build a content plan, measurement loop, and weekly review habit.',
+        dueDate: addDays(today, 21),
+        status: 'not_started',
+      },
+      {
+        title: 'SEO project build',
+        description: `Create and present a repeatable SEO workflow for: ${outcome}.`,
+        dueDate: addDays(today, 28),
+        status: 'not_started',
+      },
+    ] as const
+  }
+
+  return [
+    {
+      title: 'Foundations and task framing',
+      description: 'Understand agent goals, state, constraints, and success criteria.',
+      dueDate: addDays(today, 7),
+      status: hasExisting ? 'in_progress' : 'not_started',
+    },
+    {
+      title: 'Tool use and structured outputs',
+      description: 'Practice tool calls, schemas, validation, and review-before-apply flows.',
+      dueDate: addDays(today, 14),
+      status: 'not_started',
+    },
+    {
+      title: 'Retrieval, memory, and evaluation',
+      description: 'Add memory/retrieval context, compact prompts, and acceptance checks.',
+      dueDate: addDays(today, 21),
+      status: 'not_started',
+    },
+    {
+      title: 'Demo agent build',
+      description: `Build and present a demo that achieves: ${outcome}.`,
+      dueDate: addDays(today, 28),
+      status: 'not_started',
+    },
+  ] as const
+}
+
+function learningSessionTopic(index: number, outcome: string, goal: string, kind: LearningRouteKind) {
+  const seoTopics = [
+    {
+      actionTitle: 'Create the SEO baseline audit',
+      description: `Define audience, target pages, baseline traffic, rankings, and technical risks for ${goal}.`,
+      eventTitle: 'SEO learning block: baseline audit',
+      focus: 'baseline audit, goals, search intent, and current performance',
+      milestoneTitle: 'SEO foundations and keyword research',
+    },
+    {
+      actionTitle: 'Build a keyword and intent map',
+      description: 'Group seed keywords by intent, difficulty, funnel stage, and page target.',
+      eventTitle: 'SEO learning block: keyword research',
+      focus: 'keyword research, intent mapping, and competitor comparison',
+      milestoneTitle: 'SEO foundations and keyword research',
+    },
+    {
+      actionTitle: 'Draft an on-page SEO checklist',
+      description: 'Practice titles, headings, internal links, schema candidates, and content relevance checks.',
+      eventTitle: 'SEO learning block: on-page optimization',
+      focus: 'on-page optimization and reusable checklist design',
+      milestoneTitle: 'On-page and technical SEO',
+    },
+    {
+      actionTitle: 'Run technical SEO checks',
+      description: 'Review crawlability, indexability, performance, mobile usability, and broken-link risks.',
+      eventTitle: 'SEO learning block: technical checks',
+      focus: 'technical SEO checks and remediation notes',
+      milestoneTitle: 'On-page and technical SEO',
+    },
+    {
+      actionTitle: 'Create a content plan and analytics loop',
+      description: 'Turn keyword groups into content briefs, publishing cadence, and analytics checkpoints.',
+      eventTitle: 'SEO learning block: content analytics',
+      focus: 'content planning, measurement, and weekly review',
+      milestoneTitle: 'Content strategy and analytics',
+    },
+    {
+      actionTitle: 'Build the SEO workflow demo',
+      description: `Package the audit, keyword map, and content plan into a repeatable workflow for ${outcome}.`,
+      eventTitle: 'SEO learning block: project build',
+      focus: `build the smallest SEO workflow demo for ${outcome}`,
+      milestoneTitle: 'SEO project build',
+    },
+  ]
+
+  const agentTopics = [
     {
       actionTitle: 'Write the agent task contract',
       description: `Define goal, audience, input/output, constraints, and success criteria for ${goal}.`,
@@ -215,6 +351,7 @@ function learningSessionTopic(index: number, outcome: string, goal: string) {
     },
   ]
 
+  const topics = kind === 'seo' ? seoTopics : agentTopics
   return topics[index % topics.length]
 }
 
@@ -452,6 +589,115 @@ function eventTypeIdFromCommand(command: string, context: AICalendarContext): st
   return undefined
 }
 
+function activationLatestMessage(request: AIToolActivationRequest): string {
+  return request.messages
+    .slice()
+    .reverse()
+    .find((message) => message.role === 'user')?.content.trim() ?? ''
+}
+
+function uniqueTags(values: string[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+
+  for (const value of values) {
+    const tag = value.trim().toLowerCase()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    output.push(tag)
+  }
+
+  return output.slice(0, 16)
+}
+
+function activationAlias(request: AIToolActivationRequest, latest: string): string {
+  const fromFor = latest.match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]?.trim()
+  const base = fromFor || request.templateLabel
+  const candidate = base.replace(/\s+/g, ' ').trim()
+
+  if (!candidate) return request.templateLabel
+  return candidate.length > 48 ? candidate.slice(0, 48).trimEnd() : candidate
+}
+
+function activationForm(request: AIToolActivationRequest, latest: string): Record<string, string> {
+  const lower = `${request.templateId} ${request.templateLabel} ${latest}`.toLowerCase()
+  if (lower.includes('fitness') || lower.includes('workout') || lower.includes('train')) {
+    return {
+      constraints: latest,
+      equipment: 'available equipment',
+      frequency: '3 times per week',
+      goal: latest || 'Build a fitness routine',
+      level: 'beginner',
+      preferredTime: '07:00',
+      sessionLength: '45',
+    }
+  }
+
+  if (lower.includes('seo')) {
+    return {
+      goal: latest || 'Learn SEO skills',
+      learningTrack: 'SEO skills',
+      level: 'beginner',
+      outcome: 'build a repeatable SEO audit and content plan',
+      preferredTime: '19:00',
+      weeklyTime: '3 hours per week',
+    }
+  }
+
+  if (lower.includes('learn') || lower.includes('agent')) {
+    return {
+      goal: latest || 'Learn AI agent skills',
+      learningTrack: lower.includes('seo') ? 'SEO skills' : 'AI agent skills',
+      level: 'beginner',
+      outcome: lower.includes('seo') ? 'build an SEO workflow' : 'ship a small AI agent demo',
+      preferredTime: '19:00',
+      weeklyTime: '3 hours per week',
+    }
+  }
+
+  return {
+    requirement: latest || request.templateDescription || request.templateLabel,
+  }
+}
+
+function routeScore(message: string, tool: AIEnabledToolRouteRequest['enabledTools'][number]): number {
+  const lower = message.toLowerCase()
+  const fields = [
+    tool.instanceAlias,
+    tool.toolName,
+    tool.templateId,
+    tool.sourceToolId,
+    tool.activationSummary,
+    ...tool.routeTags,
+  ]
+  let score = 0
+
+  for (const field of fields) {
+    const normalized = field.toLowerCase()
+    if (!normalized) continue
+    if (lower.includes(normalized)) {
+      score += normalized === tool.instanceAlias.toLowerCase() ? 4 : 2
+      continue
+    }
+
+    for (const token of normalized.split(/[^a-z0-9]+/).filter((entry) => entry.length > 2)) {
+      if (lower.includes(token)) score += 1
+    }
+  }
+
+  if (/\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) && tool.sourceToolId.includes('fitness')) {
+    score += 3
+  }
+  if (/\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) && tool.sourceToolId.includes('seo')) {
+    score += 3
+  }
+  if (/\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) && tool.sourceToolId.includes('agent')) {
+    score += 3
+  }
+
+  return score
+}
+
 export class LocalAIService implements IAIService {
   isAvailable(): boolean {
     return true
@@ -524,6 +770,62 @@ export class LocalAIService implements IAIService {
     }
 
     return this.planFitnessProgressTool(request)
+  }
+
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    const latest = activationLatestMessage(request)
+    const needsMoreInfo = !latest
+    const suggestedInstanceAlias = activationAlias(request, latest)
+    const routeTags = uniqueTags([
+      ...request.routeTags,
+      ...request.capabilityTags,
+      request.templateLabel,
+      suggestedInstanceAlias,
+      ...latest.split(/[^a-zA-Z0-9]+/).filter((entry) => entry.length > 3),
+    ])
+    const activationSummary = needsMoreInfo
+      ? `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
+      : `Enabled ${request.templateLabel} for: ${latest}`
+
+    return AIToolActivationResultSchema.parse({
+      activationForm: activationForm(request, latest),
+      activationSummary,
+      assistantReply: needsMoreInfo
+        ? `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
+        : `I can create "${suggestedInstanceAlias}" from ${request.templateLabel}. Review the alias, then create the enabled tool.`,
+      needsMoreInfo,
+      routeTags,
+      suggestedInstanceAlias,
+      warnings: [],
+    })
+  }
+
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    const candidates = request.enabledTools.filter(
+      (tool) => tool.routingEnabled && tool.status === 'active',
+    )
+    const ranked = candidates
+      .map((tool) => ({ score: routeScore(request.userMessage, tool), tool }))
+      .sort((left, right) => right.score - left.score)
+    const best = ranked[0]
+
+    if (!best || best.score <= 0) {
+      return AIEnabledToolRouteResultSchema.parse({
+        confidence: 0,
+        matchedProjectId: null,
+        needsConfirmation: true,
+        reason: 'No enabled tool matched the message.',
+        rewrittenInstruction: request.userMessage,
+      })
+    }
+
+    return AIEnabledToolRouteResultSchema.parse({
+      confidence: Math.min(0.95, 0.45 + best.score / 20),
+      matchedProjectId: best.tool.projectId,
+      needsConfirmation: true,
+      reason: `Matched ${best.tool.instanceAlias} by alias, tool name, or route tags.`,
+      rewrittenInstruction: request.userMessage,
+    })
   }
 
   async continueConversation(
@@ -830,6 +1132,8 @@ export class LocalAIService implements IAIService {
     const outcome = request.formInput.outcome || 'ship a small agent demo'
     const preferredTime = request.formInput.preferredTime || '19:00'
     const durationMinutes = 60
+    const routeKind = learningRouteKindFromInput(request)
+    const routeLabel = learningRouteLabel(routeKind)
     const latestMessage = latestProgressToolMessage(request)
     const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
     const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
@@ -851,44 +1155,20 @@ export class LocalAIService implements IAIService {
     return AIProgressToolResultSchema.parse({
       assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
         ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
-        : `Confirmed ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
+        : `Confirmed ${routeLabel} learning for ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
       confirmedRequirements: [
         `Goal: ${goal}`,
+        `Route: ${routeLabel}`,
         `Level: ${level}`,
         `Weekly time: ${weeklyTime}`,
         `Calendar sessions: ${sessionCount}`,
         `Outcome: ${outcome}`,
       ],
-      summary: `Built an AI agent learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
-      currentRecommendation: `Start with foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
-      milestones: [
-        {
-          title: 'Foundations and task framing',
-          description: 'Understand agent goals, state, constraints, and success criteria.',
-          dueDate: addDays(request.today, 7),
-          status: request.milestones.length ? 'in_progress' : 'not_started',
-        },
-        {
-          title: 'Tool use and structured outputs',
-          description: 'Practice tool calls, schemas, validation, and review-before-apply flows.',
-          dueDate: addDays(request.today, 14),
-          status: 'not_started',
-        },
-        {
-          title: 'Retrieval, memory, and evaluation',
-          description: 'Add memory/retrieval context, compact prompts, and acceptance checks.',
-          dueDate: addDays(request.today, 21),
-          status: 'not_started',
-        },
-        {
-          title: 'Demo agent build',
-          description: `Build and present a demo that achieves: ${outcome}.`,
-          dueDate: addDays(request.today, 28),
-          status: 'not_started',
-        },
-      ],
+      summary: `Built ${learningRouteArticle(routeKind)} ${routeLabel} learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
+      currentRecommendation: `Start with ${routeLabel} foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
+      milestones: learningMilestones(routeKind, outcome, request.today, Boolean(request.milestones.length)),
       actions: scheduledSessions.map((session) => {
-        const lesson = learningSessionTopic(session.index, outcome, goal)
+        const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
         return {
           title: lesson.actionTitle,
           description: lesson.description,
@@ -905,11 +1185,11 @@ export class LocalAIService implements IAIService {
         }Search context: ${request.memorySearchResults.map((result) => result.title).join(', ')}`,
         logType: 'tool_result',
         summary: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-          ? 'Updated local AI agent learning route from conversation.'
-          : 'Generated a local AI agent learning route.',
+          ? `Updated local ${routeLabel} learning route from conversation.`
+          : `Generated a local ${routeLabel} learning route.`,
       },
       calendarEvents: scheduledSessions.map((session) => {
-        const lesson = learningSessionTopic(session.index, outcome, goal)
+        const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
         return {
           title: lesson.eventTitle,
           description: `Learning route for ${goal}.`,

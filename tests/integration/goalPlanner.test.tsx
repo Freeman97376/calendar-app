@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -21,9 +21,13 @@ import type {
   MilestoneStatus,
   ProjectStatus,
 } from '../../src/domain/types/longTermMemory'
+import { LocalAIService } from '../../src/services/ai/localAIService'
 import { RuntimeConfigService, BackendConfigApiService } from '../../src/services/config/runtimeConfigService'
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
+import { configureAIService, useAIStore } from '../../src/store/aiStore'
+import { useCalendarStore } from '../../src/store/calendarStore'
 import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
+import { configureEventSync, useEventStore } from '../../src/store/eventStore'
 import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
 import {
   configureLongTermMemoryClient,
@@ -70,7 +74,7 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
       created_at: timestamp(),
       description: input.description ?? '',
       due_date: input.due_date ?? null,
-      metadata: {},
+      metadata: input.metadata ?? {},
       milestone_id: input.milestone_id ?? null,
       project_id: input.project_id,
       status: input.status ?? 'todo',
@@ -86,7 +90,7 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
       created_at: timestamp(),
       description: input.description ?? '',
       goal_id: `goal_${this.goals.length + 1}`,
-      metadata: {},
+      metadata: input.metadata ?? {},
       status: input.status ?? 'active',
       title: input.title,
       updated_at: timestamp(),
@@ -100,7 +104,7 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
       created_at: timestamp(),
       description: input.description ?? '',
       due_date: input.due_date ?? null,
-      metadata: {},
+      metadata: input.metadata ?? {},
       milestone_id: `milestone_${this.milestones.length + 1}`,
       project_id: input.project_id,
       status: input.status ?? 'not_started',
@@ -118,7 +122,7 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
       details: input.details ?? '',
       goal_id: input.goal_id ?? null,
       log_type: input.log_type ?? 'update',
-      metadata: {},
+      metadata: input.metadata ?? {},
       progress_id: `progress_${this.progress.length + 1}`,
       project_id: input.project_id,
       summary: input.summary,
@@ -133,7 +137,7 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
       created_at: timestamp(),
       description: input.description ?? '',
       goal_id: input.goal_id,
-      metadata: {},
+      metadata: input.metadata ?? {},
       project_id: `project_${this.projects.length + 1}`,
       status: input.status ?? 'active',
       title: input.title,
@@ -234,8 +238,11 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
 }
 
 describe('Goal Planner tool', () => {
+  let memoryClient: MockLongTermMemoryClient
+
   beforeEach(() => {
     localStorage.clear()
+    memoryClient = new MockLongTermMemoryClient()
     configureConfigServices(
       new RuntimeConfigService(localStorage, 'test_goal_planner_runtime_config'),
       new BackendConfigApiService(
@@ -243,79 +250,51 @@ describe('Goal Planner tool', () => {
         async () => backendStatusResponse(),
       ),
     )
+    configureEventSync(null)
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_goal_planner_types'))
-    configureLongTermMemoryClient(new MockLongTermMemoryClient())
+    configureLongTermMemoryClient(memoryClient)
+    useAIStore.getState().reset()
+    useCalendarStore.getState().reset({ focusedDate: '2026-06-26', view: 'month' })
     useConfigStore.getState().reset()
+    useEventStore.getState().reset()
     useEventTypeStore.getState().reset()
     useLongTermMemoryStore.getState().reset()
     useUIStore.getState().reset()
+    configureAIService(new LocalAIService(), { model: 'local', provider: 'local' })
   })
 
-  it('creates a goal, project, milestone, action item, and progress log', async () => {
+  it('creates a Goal Planner enabled tool from the template library', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: 'Tools' }))
     await user.click(screen.getByRole('button', { name: 'Goal Planner' }))
 
-    expect(screen.getByRole('heading', { name: 'Goal Planner' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tools' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Goal title')).not.toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Goal title'), 'Launch AI planning')
-    await user.type(screen.getByLabelText('Goal description'), 'Manage durable project memory')
-    await user.click(screen.getByRole('button', { name: 'Create goal' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Manage durable project memory for a launch plan with milestones and action items.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
+    await user.clear(await screen.findByLabelText('Enabled tool alias'))
+    await user.type(screen.getByLabelText('Enabled tool alias'), 'Planning Ops')
+    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
 
-    expect(await screen.findByText('Created goal Launch AI planning')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Goal status for Launch AI planning'), 'paused')
-
-    await user.type(screen.getByLabelText('Project title'), 'Planner MVP')
-    await user.type(screen.getByLabelText('Project description'), 'Local memory foundation')
-    await user.click(screen.getByRole('button', { name: 'Create project' }))
-
-    expect(await screen.findByText('Created project Planner MVP')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Project status for Planner MVP'), 'completed')
-
-    await act(async () => {
-      await useLongTermMemoryStore.getState().createToolRun({
-        intent: 'Run Workout Planner',
-        output_summary: 'Generated 3 workout event drafts.',
-        related_project_id: useLongTermMemoryStore.getState().selectedProjectId,
-        status: 'needs_user_confirmation',
-        tool_name: 'Workout Planner',
-      })
+    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(screen.getAllByText('Planning Ops').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Goal Planner').length).toBeGreaterThan(0)
+    expect(memoryClient.projects[0].metadata).toMatchObject({
+      adapterId: 'generic',
+      instanceAlias: 'Planning Ops',
+      sourceToolId: 'goal-planner',
+      toolCategory: 'enabled-tool',
+      toolName: 'Goal Planner',
     })
-
-    expect(await screen.findByText('Workout Planner')).toBeInTheDocument()
-    expect(screen.getByText('Intent: Run Workout Planner')).toBeInTheDocument()
-    expect(screen.getByText('Generated 3 workout event drafts.')).toBeInTheDocument()
-
-    await user.type(screen.getByLabelText('Milestone'), 'Schema and API ready')
-    await user.click(screen.getByRole('button', { name: 'Add milestone' }))
-
-    expect(await screen.findByText('Added milestone Schema and API ready')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Milestone status for Schema and API ready'), 'done')
-
-    await user.type(screen.getByLabelText('Action item'), 'Write first memory test')
-    await user.click(screen.getByRole('button', { name: 'Add action' }))
-
-    expect(await screen.findByText('Added action Write first memory test')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Action status for Write first memory test'), 'done')
-
-    await user.selectOptions(screen.getByLabelText('Log type'), 'decision')
-    await user.type(screen.getByLabelText('Summary'), 'Keep memory local')
-    await user.type(screen.getByLabelText('Details'), 'SQLite is enough for the first implementation.')
-    await user.click(screen.getByRole('button', { name: 'Add progress log' }))
-
-    expect(await screen.findByText('Logged decision')).toBeInTheDocument()
-    expect(screen.getByText('Keep memory local')).toBeInTheDocument()
-    expect(screen.getByText('SQLite is enough for the first implementation.')).toBeInTheDocument()
-
-    await waitFor(() => {
-      const state = useLongTermMemoryStore.getState()
-      expect(state.goals[0].status).toBe('paused')
-      expect(state.projects[0].status).toBe('completed')
-      expect(state.milestones[0].status).toBe('done')
-      expect(state.actions[0].status).toBe('done')
-      expect(state.progress[0].log_type).toBe('decision')
+    expect(memoryClient.goals[0].metadata).toMatchObject({
+      instanceAlias: 'Planning Ops',
+      toolCategory: 'enabled-tool',
     })
   }, 15_000)
 })

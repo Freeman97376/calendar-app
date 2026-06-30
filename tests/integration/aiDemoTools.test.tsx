@@ -43,6 +43,28 @@ function timestamp() {
   return '2026-06-18T00:00:00.000Z'
 }
 
+async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const directEntry = screen.queryByRole('button', { name })
+  if (directEntry) {
+    await user.click(directEntry)
+    return
+  }
+
+  if (name === 'Todos' && screen.queryByRole('heading', { name: 'To-Do List' })) return
+  if (screen.queryByRole('heading', { name })) return
+
+  const closeButton = screen.queryByRole('button', { name: 'Close' })
+  if (closeButton) {
+    await user.click(closeButton)
+  } else {
+    const backButton = screen.queryByRole('button', { name: 'Back' })
+    if (backButton) {
+      await user.click(backButton)
+    }
+  }
+  await user.click(await screen.findByRole('button', { name }))
+}
+
 class MemoryClient implements LongTermMemoryClientContract {
   actions: LongTermActionItem[] = []
   goals: LongTermGoal[] = []
@@ -268,7 +290,7 @@ describe('AI demo tools and Todo long projects', () => {
     configureAIService(new LocalAIService(), { model: 'local', provider: 'local' })
   })
 
-  it('runs Fitness AI and applies preview calendar events', async () => {
+  it('creates a Fitness AI enabled tool and routes AI Assistant dispatch to it', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -276,40 +298,83 @@ describe('AI demo tools and Todo long projects', () => {
     expect(screen.getByText('AI Demo')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Fitness AI' }))
 
-    await user.type(screen.getByLabelText('Training goal'), 'Build strength')
-    await user.click(screen.getByRole('button', { name: 'Generate / Adjust plan' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Build strength with dumbbells 3 times per week.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
 
-    expect(await screen.findByText(/Built a 3 times per week beginner fitness plan/i)).toBeInTheDocument()
-    expect(screen.getByText('Baseline and habit setup')).toBeInTheDocument()
-    expect(screen.getByText('Calendar Preview')).toBeInTheDocument()
-    expect(screen.getByText('Progress Log')).toBeInTheDocument()
+    expect(await screen.findByText(/I can create/i)).toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Enabled tool alias'))
+    await user.type(screen.getByLabelText('Enabled tool alias'), 'Strength Coach')
+    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
 
-    await user.type(screen.getByLabelText('Conversation message'), 'Make the first week lower impact')
-    await user.click(screen.getByRole('button', { name: 'Send' }))
-
-    expect((await screen.findAllByText(/Make the first week lower impact/i)).length).toBeGreaterThan(0)
-    expect((await screen.findAllByText(/updated the workout plan/i)).length).toBeGreaterThan(0)
-    expect(memoryClient.progress[0].summary).toMatch(/Updated local fitness progress plan/i)
-
-    await user.click(screen.getByRole('button', { name: 'Apply events' }))
-
-    await waitFor(() => {
-      expect(useEventStore.getState().events.length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(screen.getAllByText('Strength Coach').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Fitness AI').length).toBeGreaterThan(0)
+    expect(memoryClient.projects[0].metadata).toMatchObject({
+      instanceAlias: 'Strength Coach',
+      toolCategory: 'enabled-tool',
+      toolName: 'Fitness AI',
     })
+
+    await openWorkspaceEntry(user, 'AI Assistant')
+    await user.type(
+      screen.getByLabelText('Conversation'),
+      'Generate next week full workout plan with 5 sessions.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    expect(await screen.findByText(/Route this to Strength Coach/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dispatch' }))
+
+    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(await screen.findByText('Baseline and habit setup')).toBeInTheDocument()
+    expect(screen.getByText('Latest Calendar Preview')).toBeInTheDocument()
+    expect(useEventStore.getState().events).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Apply to calendar' }))
+    await waitFor(() => {
+      expect(useEventStore.getState().events).toHaveLength(5)
+    })
+    expect(await screen.findByText('Applied 5 calendar events.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Apply to calendar' }))
+    await waitFor(() => {
+      expect(useEventStore.getState().events).toHaveLength(5)
+    })
+    expect(await screen.findByText('Applied 0 calendar events. Skipped 5 duplicates.')).toBeInTheDocument()
     expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain('Fitness AI')
   }, 15_000)
 
-  it('runs Agent Learning and shows learning route milestones', async () => {
+  it('creates an SEO Learning Assistant instance and routes SEO learning to it', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: 'Tools' }))
-    await user.click(screen.getByRole('button', { name: 'Agent Learning' }))
-    await user.click(screen.getByRole('button', { name: 'Generate / Adjust plan' }))
+    await user.click(screen.getByRole('button', { name: 'SEO Learning' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Learn SEO for a SaaS blog and build a repeatable audit workflow.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
+    await user.clear(await screen.findByLabelText('Enabled tool alias'))
+    await user.type(screen.getByLabelText('Enabled tool alias'), 'SEO Coach')
+    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
 
-    expect(await screen.findByText(/Built an AI agent learning route/i)).toBeInTheDocument()
-    expect(screen.getByText('Tool use and structured outputs')).toBeInTheDocument()
-    expect(screen.getByText('AI agent skill block: task framing')).toBeInTheDocument()
+    expect((await screen.findAllByText('SEO Coach')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Learning Assistant').length).toBeGreaterThan(0)
+
+    await openWorkspaceEntry(user, 'AI Assistant')
+    await user.type(
+      screen.getByLabelText('Conversation'),
+      'Make a full-week SEO learning plan with 5 sessions.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    expect(await screen.findByText(/Route this to SEO Coach/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dispatch' }))
+
+    expect(await screen.findByText('SEO foundations and keyword research')).toBeInTheDocument()
+    expect(screen.getByText('SEO learning block: baseline audit')).toBeInTheDocument()
+    expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain('Learning Assistant')
   }, 15_000)
 
   it('creates a Todo long project and updates progress from expanded details', async () => {

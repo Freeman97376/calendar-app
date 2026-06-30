@@ -8,8 +8,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -57,6 +61,18 @@ export interface IAIService {
    * recommendations for user review.
    */
   runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult>
+
+  /**
+   * Runs a short activation conversation for a tool template and returns the
+   * requirements summary used to create an enabled tool instance.
+   */
+  runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult>
+
+  /**
+   * Chooses an existing enabled tool instance for a user message. This only
+   * routes to supplied enabled tools and must not create new tool instances.
+   */
+  routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult>
 
   /**
    * Free-form multi-turn assistant conversation. When a context is provided,

@@ -246,6 +246,51 @@ describe('ApiAIService', () => {
     })
   })
 
+  it('runToolActivation fills empty required strings from the template request context', async () => {
+    const service = new ApiAIService({
+      apiKey: 'test-key',
+      fetcher: vi.fn(async () =>
+        apiResponse({
+          activationForm: {
+            goal: '  ',
+            requirement: 'Track groceries',
+          },
+          activationSummary: '',
+          assistantReply: '',
+          needsMoreInfo: '',
+          routeTags: '',
+          suggestedInstanceAlias: '',
+          warnings: '',
+        }),
+      ),
+    })
+
+    const result = await service.runToolActivation({
+      capabilityTags: ['inventory'],
+      existingInstanceAliases: [],
+      messages: [
+        {
+          content: 'Manage groceries.',
+          role: 'user',
+        },
+      ],
+      routeTags: ['fridge', 'grocery'],
+      sourceToolId: 'fridge',
+      templateDescription: 'Receipt and fridge planning helper.',
+      templateId: 'fridge',
+      templateLabel: 'Fridge',
+      toolName: 'Fridge',
+    })
+
+    expect(result.activationSummary).toBe(
+      'Enabled Fridge for: Manage groceries.',
+    )
+    expect(result.assistantReply).toContain('I can create')
+    expect(result.activationForm).toEqual({ requirement: 'Track groceries' })
+    expect(result.routeTags).toEqual(['fridge', 'grocery', 'inventory', 'groceries'])
+    expect(result.suggestedInstanceAlias).toBe('groceries')
+  })
+
   it('planCalendarActions sends authoritative local time context to the API model', async () => {
     const fetcher = vi.fn(async () =>
       apiResponse({

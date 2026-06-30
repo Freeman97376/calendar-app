@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { calculateProjectProgress } from '../domain/logic/progress'
+import { splitUniqueEventDrafts } from '../domain/logic/eventDeduplication'
 import { getLocalTimeContext } from '../domain/logic/timeContext'
 import { AIProgressToolRequestSchema } from '../domain/schemas/ai.schema'
 import type {
@@ -206,8 +207,14 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
   }, [loadOverview])
 
   useEffect(() => {
-    if (selectedProjectId || !toolProjects.length) return
-    setSelectedProjectId(toolProjects[0].project_id)
+    setLocalError(null)
+    setResult(null)
+    setSelectedProjectId('')
+  }, [options.sourceToolId, options.toolKind])
+
+  useEffect(() => {
+    if (selectedProjectId && toolProjects.some((project) => project.project_id === selectedProjectId)) return
+    setSelectedProjectId(toolProjects[0]?.project_id ?? '')
   }, [selectedProjectId, toolProjects])
 
   useEffect(() => {
@@ -404,28 +411,46 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
   }
 
   async function applyCalendarEvents() {
-    if (!result || !selectedProject) return []
+    if (!result || !selectedProject) return { created: [], skippedDuplicateCount: 0 }
 
     setIsApplyingEvents(true)
     setLocalError(null)
     try {
+      const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(result.calendarEvents, events)
       const created = []
-      for (const event of result.calendarEvents) {
+      for (const event of uniqueDrafts) {
         created.push(await createEvent(event))
       }
       await createToolRun({
-        input: { eventCount: result.calendarEvents.length, toolKind: options.toolKind },
+        input: {
+          eventCount: result.calendarEvents.length,
+          skippedDuplicateCount: duplicateDrafts.length,
+          toolKind: options.toolKind,
+        },
         input_summary: `Apply ${result.calendarEvents.length} ${options.toolName} calendar event(s).`,
         intent: `Apply ${options.toolName} calendar preview`,
-        output: { createdEventIds: created.map((event) => event.id) },
-        output_summary: `Applied ${created.length} calendar event(s).`,
+        output: {
+          createdEventIds: created.map((event) => event.id),
+          skippedDuplicateCount: duplicateDrafts.length,
+          skippedDuplicates: duplicateDrafts.map((duplicate) => ({
+            existingEventId: duplicate.existingEventId,
+            reason: duplicate.reason,
+            title: duplicate.draft.title,
+          })),
+        },
+        output_summary: `Applied ${created.length} calendar event(s).${
+          duplicateDrafts.length ? ` Skipped ${duplicateDrafts.length} duplicate event(s).` : ''
+        }`,
         related_goal_id: selectedProject.goal_id,
         related_project_id: selectedProject.project_id,
         status: 'success',
         tool_name: options.toolName,
       })
       await loadProjectDetails(selectedProject.project_id)
-      return created
+      return {
+        created,
+        skippedDuplicateCount: duplicateDrafts.length,
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to apply calendar events'
       setLocalError(message)

@@ -3,6 +3,23 @@ import { create } from 'zustand'
 import { todayISODate } from '../domain/logic/dateHelpers'
 import type { Event } from '../domain/types'
 
+export type WorkspacePanelId =
+  | 'home'
+  | 'ai'
+  | 'todos'
+  | 'tools'
+  | 'enabled-tools'
+  | 'settings'
+  | 'debug'
+  | 'event-details'
+
+export type WorkspaceMainMode = 'calendar' | 'panel'
+
+type WorkspaceOpenOptions = {
+  mainMode?: WorkspaceMainMode
+  replace?: boolean
+}
+
 export type UIStore = {
   eventModalOpen: boolean
   editingEventId: string | null
@@ -13,22 +30,79 @@ export type UIStore = {
   fridgePanelOpen: boolean
   todoPanelOpen: boolean
   toolsPanelOpen: boolean
+  enabledToolsPanelOpen: boolean
+  activeWorkspacePanel: WorkspacePanelId
+  workspaceMainMode: WorkspaceMainMode
+  workspacePanelHistory: WorkspacePanelId[]
   activeToolId: string
+  activeEnabledToolProjectId: string
   closeDebugPanel: () => void
+  closeEnabledToolsPanel: () => void
   closeToolsPanel: () => void
   openAIPanel: () => void
   openCreateEventModal: (selectedDate: string) => void
+  openCreateEventDetails: (selectedDate: string) => void
   openEditEventModal: (eventId: string, eventSnapshot?: Event) => void
+  openEventDetails: (eventId: string, eventSnapshot?: Event) => void
   closeEventModal: () => void
   closeTodoPanel: () => void
+  closeWorkspacePanel: () => void
+  focusWorkspacePanel: () => void
+  goBackWorkspacePanel: () => void
+  openEnabledToolsPanel: (projectId?: string) => void
+  openWorkspacePanel: (panel: WorkspacePanelId, options?: WorkspaceOpenOptions) => void
+  showWorkspaceCalendar: () => void
   toggleAIPanel: () => void
   toggleDebugPanel: () => void
+  toggleEnabledToolsPanel: () => void
   toggleFridgePanel: () => void
   toggleTodoPanel: () => void
   openToolsPanel: (activeToolId?: string) => void
+  setActiveEnabledToolProjectId: (projectId: string) => void
   setActiveToolId: (activeToolId: string) => void
   toggleToolsPanel: () => void
   reset: () => void
+}
+
+function panelFlags(panel: WorkspacePanelId) {
+  return {
+    aiPanelOpen: panel === 'ai',
+    debugPanelOpen: panel === 'debug',
+    enabledToolsPanelOpen: panel === 'enabled-tools',
+    fridgePanelOpen: false,
+    todoPanelOpen: panel === 'todos',
+    toolsPanelOpen: panel === 'tools' || panel === 'settings',
+  }
+}
+
+function nextHistory(
+  currentPanel: WorkspacePanelId,
+  currentHistory: WorkspacePanelId[],
+  nextPanel: WorkspacePanelId,
+  replace = false,
+): WorkspacePanelId[] {
+  if (nextPanel === 'home') return []
+  if (replace || currentPanel === nextPanel) return currentHistory
+
+  return [...currentHistory, currentPanel]
+}
+
+function workspaceState(
+  panel: WorkspacePanelId,
+  history: WorkspacePanelId[] = [],
+  mainMode: WorkspaceMainMode = panel === 'home' || panel === 'event-details' ? 'calendar' : 'panel',
+) {
+  return {
+    ...panelFlags(panel),
+    activeWorkspacePanel: panel,
+    eventModalOpen: false,
+    workspaceMainMode: mainMode,
+    workspacePanelHistory: history,
+  }
+}
+
+function lastPanel(history: WorkspacePanelId[]): WorkspacePanelId | undefined {
+  return history.length ? history[history.length - 1] : undefined
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -41,80 +115,166 @@ export const useUIStore = create<UIStore>((set) => ({
   fridgePanelOpen: false,
   todoPanelOpen: false,
   toolsPanelOpen: false,
-  activeToolId: 'settings',
-  closeDebugPanel: () => set({ debugPanelOpen: false }),
-  closeToolsPanel: () => set({ toolsPanelOpen: false }),
+  enabledToolsPanelOpen: false,
+  activeWorkspacePanel: 'home',
+  workspaceMainMode: 'calendar',
+  workspacePanelHistory: [],
+  activeToolId: 'fitness-ai',
+  activeEnabledToolProjectId: '',
+  closeDebugPanel: () => set(workspaceState('home')),
+  closeEnabledToolsPanel: () => set(workspaceState('home')),
+  closeToolsPanel: () => set(workspaceState('home')),
   openAIPanel: () =>
-    set({
-      aiPanelOpen: true,
-      fridgePanelOpen: false,
-      todoPanelOpen: false,
-      toolsPanelOpen: false,
-    }),
-  openCreateEventModal: (selectedDate) =>
-    set({
-      eventModalOpen: true,
+    set((state) => workspaceState('ai', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'))),
+  openCreateEventDetails: (selectedDate) =>
+    set((state) => ({
+      ...workspaceState(
+        'event-details',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+      ),
       editingEventId: null,
       editingEventSnapshot: null,
       selectedDate,
-    }),
-  openEditEventModal: (eventId, eventSnapshot = undefined) =>
-    set({
-      eventModalOpen: true,
-      editingEventId: eventId,
-      editingEventSnapshot: eventSnapshot ?? null,
-    }),
-  closeEventModal: () =>
-    set({
-      eventModalOpen: false,
+    })),
+  openCreateEventModal: (selectedDate) =>
+    set((state) => ({
+      ...workspaceState(
+        'event-details',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+      ),
       editingEventId: null,
       editingEventSnapshot: null,
+      selectedDate,
+    })),
+  openEventDetails: (eventId, eventSnapshot = undefined) =>
+    set((state) => ({
+      ...workspaceState(
+        'event-details',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+      ),
+      editingEventId: eventId,
+      editingEventSnapshot: eventSnapshot ?? null,
+    })),
+  openEditEventModal: (eventId, eventSnapshot = undefined) =>
+    set((state) => ({
+      ...workspaceState(
+        'event-details',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+      ),
+      editingEventId: eventId,
+      editingEventSnapshot: eventSnapshot ?? null,
+    })),
+  closeEventModal: () =>
+    set((state) => {
+      const previous = lastPanel(state.workspacePanelHistory) ?? 'home'
+      const history = state.workspacePanelHistory.slice(0, -1)
+
+      return {
+        ...workspaceState(previous, history),
+        editingEventId: null,
+        editingEventSnapshot: null,
+      }
     }),
-  closeTodoPanel: () => set({ todoPanelOpen: false }),
-  toggleAIPanel: () =>
+  closeTodoPanel: () => set(workspaceState('home')),
+  closeWorkspacePanel: () => set(workspaceState('home')),
+  focusWorkspacePanel: () =>
     set((state) => ({
-      aiPanelOpen: !state.aiPanelOpen,
-      fridgePanelOpen: false,
-      todoPanelOpen: false,
-      toolsPanelOpen: false,
+      workspaceMainMode: state.activeWorkspacePanel === 'home' ? 'calendar' : 'panel',
     })),
-  toggleDebugPanel: () =>
+  goBackWorkspacePanel: () =>
+    set((state) => {
+      const previous = lastPanel(state.workspacePanelHistory) ?? 'home'
+      const history = state.workspacePanelHistory.slice(0, -1)
+
+      return workspaceState(previous, history)
+    }),
+  openEnabledToolsPanel: (projectId = '') =>
     set((state) => ({
-      debugPanelOpen: !state.debugPanelOpen,
+      ...workspaceState(
+        'enabled-tools',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'enabled-tools'),
+      ),
+      activeEnabledToolProjectId: projectId || state.activeEnabledToolProjectId,
     })),
-  toggleFridgePanel: () =>
+  openToolsPanel: (activeToolId = 'fitness-ai') =>
     set((state) => ({
-      aiPanelOpen: false,
-      fridgePanelOpen: !state.fridgePanelOpen,
-      todoPanelOpen: false,
-      toolsPanelOpen: false,
-    })),
-  toggleTodoPanel: () =>
-    set((state) => ({
-      aiPanelOpen: false,
-      fridgePanelOpen: false,
-      todoPanelOpen: !state.todoPanelOpen,
-      toolsPanelOpen: false,
-    })),
-  openToolsPanel: (activeToolId = 'settings') =>
-    set({
-      aiPanelOpen: false,
-      fridgePanelOpen: false,
-      todoPanelOpen: false,
-      toolsPanelOpen: true,
+      ...workspaceState(
+        activeToolId === 'settings' ? 'settings' : 'tools',
+        nextHistory(
+          state.activeWorkspacePanel,
+          state.workspacePanelHistory,
+          activeToolId === 'settings' ? 'settings' : 'tools',
+        ),
+      ),
       activeToolId,
+    })),
+  openWorkspacePanel: (panel, options = {}) =>
+    set((state) =>
+      workspaceState(
+        panel,
+        nextHistory(
+          state.activeWorkspacePanel,
+          state.workspacePanelHistory,
+          panel,
+          options.replace,
+        ),
+        options.mainMode,
+      ),
+    ),
+  setActiveEnabledToolProjectId: (activeEnabledToolProjectId) =>
+    set({
+      activeEnabledToolProjectId,
     }),
   setActiveToolId: (activeToolId) =>
     set({
       activeToolId,
     }),
+  showWorkspaceCalendar: () => set({ workspaceMainMode: 'calendar' }),
+  toggleAIPanel: () =>
+    set((state) =>
+      state.activeWorkspacePanel === 'ai'
+        ? workspaceState('home')
+        : workspaceState('ai', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai')),
+    ),
+  toggleDebugPanel: () =>
+    set((state) =>
+      state.activeWorkspacePanel === 'debug'
+        ? workspaceState('home')
+        : workspaceState('debug', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'debug')),
+    ),
+  toggleEnabledToolsPanel: () =>
+    set((state) =>
+      state.activeWorkspacePanel === 'enabled-tools'
+        ? workspaceState('home')
+        : workspaceState(
+            'enabled-tools',
+            nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'enabled-tools'),
+          ),
+    ),
+  toggleFridgePanel: () =>
+    set((state) =>
+      state.activeWorkspacePanel === 'tools'
+        ? workspaceState('home')
+        : {
+            ...workspaceState(
+              'tools',
+              nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'tools'),
+            ),
+            activeToolId: 'fridge',
+          },
+    ),
+  toggleTodoPanel: () =>
+    set((state) =>
+      state.activeWorkspacePanel === 'todos'
+        ? workspaceState('home')
+        : workspaceState('todos', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'todos')),
+    ),
   toggleToolsPanel: () =>
-    set((state) => ({
-      aiPanelOpen: false,
-      fridgePanelOpen: false,
-      todoPanelOpen: false,
-      toolsPanelOpen: !state.toolsPanelOpen,
-    })),
+    set((state) =>
+      state.activeWorkspacePanel === 'tools'
+        ? workspaceState('home')
+        : workspaceState('tools', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'tools')),
+    ),
   reset: () =>
     set({
       eventModalOpen: false,
@@ -126,6 +286,11 @@ export const useUIStore = create<UIStore>((set) => ({
       fridgePanelOpen: false,
       todoPanelOpen: false,
       toolsPanelOpen: false,
-      activeToolId: 'settings',
+      enabledToolsPanelOpen: false,
+      activeWorkspacePanel: 'home',
+      workspaceMainMode: 'calendar',
+      workspacePanelHistory: [],
+      activeToolId: 'fitness-ai',
+      activeEnabledToolProjectId: '',
     }),
 }))

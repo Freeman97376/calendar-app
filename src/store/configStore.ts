@@ -28,7 +28,14 @@ let backendConfigApi: BackendConfigApiService = new BackendConfigApiService(
   (): string => currentConfig.fridgeApiBaseUrl,
 )
 
+function applyDocumentLanguage(config: RuntimeConfig) {
+  if (typeof document === 'undefined') return
+
+  document.documentElement.lang = config.language === 'zh' ? 'zh-CN' : 'en'
+}
+
 function applyRuntimeConfig(config: RuntimeConfig) {
+  applyDocumentLanguage(config)
   configureAIService(createAIService(config), {
     model: modelForProvider(config.aiProvider, config),
     provider: config.aiProvider,

@@ -357,15 +357,76 @@ export const AIProgressToolResultSchema = z.object({
   warnings: z.array(z.string().trim()).default([]),
 })
 
+export const AIToolActivationMessageSchema = z.object({
+  content: z.string().trim().min(1).max(1000),
+  role: z.enum(['assistant', 'user']),
+})
+
+export const AIToolActivationRequestSchema = z.object({
+  capabilityTags: z.array(z.string().trim().min(1)).max(12).default([]),
+  existingInstanceAliases: z.array(z.string().trim().min(1)).max(20).default([]),
+  messages: z.array(AIToolActivationMessageSchema).max(12).default([]),
+  routeTags: z.array(z.string().trim().min(1)).max(16).default([]),
+  sourceToolId: z.string().trim().min(1),
+  templateDescription: z.string().trim().default(''),
+  templateId: z.string().trim().min(1),
+  templateLabel: z.string().trim().min(1),
+  toolName: z.string().trim().min(1),
+})
+
+export const AIToolActivationResultSchema = z.object({
+  activationForm: z.record(z.string()).default({}),
+  activationSummary: z.string().trim().min(1).max(700),
+  assistantReply: z.string().trim().min(1).max(1200),
+  needsMoreInfo: z.boolean().default(false),
+  routeTags: z.array(z.string().trim().min(1)).max(16).default([]),
+  suggestedInstanceAlias: z.string().trim().min(1).max(80),
+  warnings: z.array(z.string().trim()).default([]),
+})
+
+export const AIEnabledToolRouteToolSchema = z.object({
+  activationSummary: z.string().trim().default(''),
+  adapterId: z.string().trim().optional(),
+  instanceAlias: z.string().trim().min(1),
+  projectId: z.string().trim().min(1),
+  routeTags: z.array(z.string().trim().min(1)).max(16).default([]),
+  routingEnabled: z.boolean().default(true),
+  sourceToolId: z.string().trim().min(1),
+  status: z.enum(['active', 'paused', 'completed']),
+  templateId: z.string().trim().min(1),
+  toolName: z.string().trim().min(1),
+})
+
+export const AIEnabledToolRouteRequestSchema = z.object({
+  currentDate: ISODateSchema.optional(),
+  currentDateTime: ISODateTimeSchema.optional(),
+  enabledTools: z.array(AIEnabledToolRouteToolSchema).max(30).default([]),
+  focusedDate: ISODateSchema.optional(),
+  today: ISODateSchema,
+  userMessage: z.string().trim().min(1).max(1000),
+})
+
+export const AIEnabledToolRouteResultSchema = z.object({
+  confidence: z.number().min(0).max(1).default(0),
+  matchedProjectId: z.string().trim().min(1).nullable().default(null),
+  needsConfirmation: z.boolean().default(true),
+  reason: z.string().trim().min(1).max(500),
+  rewrittenInstruction: z.string().trim().min(1).max(1000),
+})
+
 export type AIStep = z.infer<typeof AIStepSchema>
 export type AIBreakdownResult = z.infer<typeof AIBreakdownResultSchema>
 export type AIAction = z.infer<typeof AIActionSchema>
 export type AICalendarActionPlan = z.infer<typeof AICalendarActionPlanSchema>
 export type AICalendarContext = z.infer<typeof AICalendarContextSchema>
 export type AIConversationResult = z.infer<typeof AIConversationResultSchema>
+export type AIEnabledToolRouteRequest = z.infer<typeof AIEnabledToolRouteRequestSchema>
+export type AIEnabledToolRouteResult = z.infer<typeof AIEnabledToolRouteResultSchema>
 export type AIProgressToolActionUpsert = z.infer<typeof AIProgressToolActionUpsertSchema>
 export type AIProgressToolEventDraft = z.infer<typeof AIProgressToolEventDraftSchema>
 export type AIProgressToolKind = z.infer<typeof AIProgressToolKindSchema>
 export type AIProgressToolMilestoneUpsert = z.infer<typeof AIProgressToolMilestoneUpsertSchema>
 export type AIProgressToolRequest = z.infer<typeof AIProgressToolRequestSchema>
 export type AIProgressToolResult = z.infer<typeof AIProgressToolResultSchema>
+export type AIToolActivationRequest = z.infer<typeof AIToolActivationRequestSchema>
+export type AIToolActivationResult = z.infer<typeof AIToolActivationResultSchema>

@@ -5,8 +5,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../../src/domain/types'
@@ -79,6 +83,14 @@ class MockAIService implements IAIService {
   }
 
   async runProgressTool(_request: AIProgressToolRequest): Promise<AIProgressToolResult> {
+    throw new Error('Not used')
+  }
+
+  async runToolActivation(_request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    throw new Error('Not used')
+  }
+
+  async routeEnabledTool(_request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
     throw new Error('Not used')
   }
 }

@@ -15,12 +15,16 @@ export type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolActionUpsert,
   AIProgressToolEventDraft,
   AIProgressToolKind,
   AIProgressToolMilestoneUpsert,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   AIStep,
 } from '../schemas/ai.schema'
 export type {

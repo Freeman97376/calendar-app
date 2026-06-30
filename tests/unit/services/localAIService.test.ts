@@ -154,9 +154,85 @@ describe('LocalAIService', () => {
     })
 
     expect(result.summary).toContain('ship a demo')
-    expect(result.assistantReply).toContain('Confirmed Learn AI agent skills')
+    expect(result.assistantReply).toContain('Confirmed AI agent learning')
     expect(result.milestones.map((milestone) => milestone.title)).toContain('Tool use and structured outputs')
-    expect(result.currentRecommendation).toContain('Start with foundations')
+    expect(result.currentRecommendation).toContain('Start with AI agent foundations')
+  })
+
+  it('generates deterministic enabled tool activation output', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runToolActivation({
+      capabilityTags: ['memory', 'fitness'],
+      existingInstanceAliases: [],
+      messages: [{ content: 'Build strength with dumbbells three times per week.', role: 'user' }],
+      routeTags: ['fitness', 'workout'],
+      sourceToolId: 'fitness-ai',
+      templateDescription: 'Fitness planner',
+      templateId: 'fitness-ai',
+      templateLabel: 'Fitness AI',
+      toolName: 'Fitness AI',
+    })
+
+    expect(result.needsMoreInfo).toBe(false)
+    expect(result.suggestedInstanceAlias).toContain('strength')
+    expect(result.activationForm.goal).toContain('Build strength')
+    expect(result.routeTags).toContain('fitness')
+  })
+
+  it('routes user messages only to supplied enabled tools', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.routeEnabledTool({
+      enabledTools: [
+        {
+          activationSummary: 'Manage SEO lessons',
+          adapterId: 'ai-progress',
+          instanceAlias: 'SEO Coach',
+          projectId: 'project_1',
+          routeTags: ['seo', 'keyword'],
+          routingEnabled: true,
+          sourceToolId: 'seo-learning',
+          status: 'active',
+          templateId: 'seo-learning',
+          toolName: 'Learning Assistant',
+        },
+      ],
+      today: '2026-06-18',
+      userMessage: 'Make a full-week SEO learning plan.',
+    })
+
+    expect(result.matchedProjectId).toBe('project_1')
+    expect(result.confidence).toBeGreaterThan(0.45)
+    expect(result.needsConfirmation).toBe(true)
+  })
+
+  it('routes learning assistant plans to SEO when the module or topic is SEO', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        goal: 'Learn SEO skills',
+        learningTrack: 'SEO skills',
+        outcome: 'build an SEO audit workflow',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'seo-learning',
+      today: '2026-06-18',
+      toolKind: 'agent-learning',
+      toolRuns: [],
+    })
+
+    expect(result.summary).toContain('SEO learning route')
+    expect(result.confirmedRequirements).toContain('Route: SEO')
+    expect(result.milestones.map((milestone) => milestone.title)).toContain(
+      'SEO foundations and keyword research',
+    )
+    expect(result.calendarEvents[0].title).toBe('SEO learning block: baseline audit')
   })
 
   it('generates multiple agent learning sessions for a Chinese full-week request', async () => {

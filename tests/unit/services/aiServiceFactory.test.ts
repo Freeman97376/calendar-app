@@ -5,8 +5,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../../src/domain/types'
@@ -89,6 +93,28 @@ class MockLocalService implements IAIService {
       needsUserConfirmation: false,
       summary: 'Local progress tool',
       warnings: [],
+    }
+  }
+
+  async runToolActivation(_request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    return {
+      activationForm: {},
+      activationSummary: 'Local activation',
+      assistantReply: 'Local activation reply',
+      needsMoreInfo: false,
+      routeTags: [],
+      suggestedInstanceAlias: 'Local tool',
+      warnings: [],
+    }
+  }
+
+  async routeEnabledTool(_request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return {
+      confidence: 0,
+      matchedProjectId: null,
+      needsConfirmation: true,
+      reason: 'No route',
+      rewrittenInstruction: 'No route',
     }
   }
 

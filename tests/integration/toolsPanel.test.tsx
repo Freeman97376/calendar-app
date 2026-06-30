@@ -7,6 +7,10 @@ import { RuntimeConfigService, BackendConfigApiService } from '../../src/service
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
 import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
+import {
+  configureLongTermMemoryClient,
+  type LongTermMemoryClientContract,
+} from '../../src/store/longTermMemoryStore'
 import { useUIStore } from '../../src/store/uiStore'
 
 function backendStatusResponse() {
@@ -40,23 +44,24 @@ describe('Tools panel', () => {
       ),
     )
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_tools_event_types'))
+    configureLongTermMemoryClient({
+      listGoals: vi.fn(async () => []),
+      listProjects: vi.fn(async () => []),
+    } as unknown as LongTermMemoryClientContract)
     useConfigStore.getState().reset()
     useEventTypeStore.getState().reset()
     useUIStore.getState().reset()
   })
 
-  it('toggles closed from the top-level Tools button', async () => {
+  it('opens Tool Templates from the workspace navigation', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: 'Tools' }))
     expect(screen.getByRole('heading', { name: 'Tools' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Tools' }))
-    expect(screen.queryByRole('heading', { name: 'Tools' })).not.toBeInTheDocument()
   })
 
-  it('closes from the panel header', async () => {
+  it('closes back to the workspace home from the panel header', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -64,19 +69,19 @@ describe('Tools panel', () => {
     await user.click(screen.getByRole('button', { name: 'Close' }))
 
     expect(screen.queryByRole('heading', { name: 'Tools' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument()
   })
 
-  it('toggles the Settings shortcut closed when settings is already active', async () => {
+  it('opens Settings from the workspace navigation', async () => {
     const user = userEvent.setup()
     render(<App />)
     const settingsShortcut = screen.getByRole('button', { name: 'Settings' })
 
     await user.click(settingsShortcut)
-    expect(screen.getByRole('heading', { name: 'Tools' })).toBeInTheDocument()
     expect(screen.getByText('Frontend Runtime')).toBeInTheDocument()
 
-    await user.click(settingsShortcut)
-    expect(screen.queryByRole('heading', { name: 'Tools' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByText('Frontend Runtime')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument()
   })
 })

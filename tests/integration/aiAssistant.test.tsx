@@ -8,8 +8,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../src/domain/types'
@@ -25,6 +29,10 @@ import { configureEventTypeService, useEventTypeStore } from '../../src/store/ev
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { LocalTodoService } from '../../src/services/todos/localTodoService'
 import { configureTodoService, useTodoStore } from '../../src/store/todoStore'
+import {
+  configureLongTermMemoryClient,
+  type LongTermMemoryClientContract,
+} from '../../src/store/longTermMemoryStore'
 import { useUIStore } from '../../src/store/uiStore'
 
 const suggestion: AIBreakdownResult = {
@@ -109,6 +117,20 @@ class MockAIService implements IAIService {
     throw new Error('Not used')
   }
 
+  async runToolActivation(_request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    throw new Error('Not used')
+  }
+
+  async routeEnabledTool(_request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return {
+      confidence: 0,
+      matchedProjectId: null,
+      needsConfirmation: true,
+      reason: 'No enabled tool matched.',
+      rewrittenInstruction: 'No route',
+    }
+  }
+
   async continueConversation(
     messages: AIConversationMessage[],
     context: AICalendarContext,
@@ -134,6 +156,28 @@ async function openPanel() {
   return user
 }
 
+async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const directEntry = screen.queryByRole('button', { name })
+  if (directEntry) {
+    await user.click(directEntry)
+    return
+  }
+
+  if (name === 'Todos' && screen.queryByRole('heading', { name: 'To-Do List' })) return
+  if (screen.queryByRole('heading', { name })) return
+
+  const closeButton = screen.queryByRole('button', { name: 'Close' })
+  if (closeButton) {
+    await user.click(closeButton)
+  } else {
+    const backButton = screen.queryByRole('button', { name: 'Back' })
+    if (backButton) {
+      await user.click(backButton)
+    }
+  }
+  await user.click(await screen.findByRole('button', { name }))
+}
+
 describe('AI Assistant - integration', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -142,6 +186,10 @@ describe('AI Assistant - integration', () => {
     configureEventSync(null)
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_ai_event_types'))
     configureTodoService(new LocalTodoService(localStorage, 'test_ai_todos'))
+    configureLongTermMemoryClient({
+      listGoals: vi.fn(async () => []),
+      listProjects: vi.fn(async () => []),
+    } as unknown as LongTermMemoryClientContract)
     useAIStore.getState().reset()
     useCalendarStore.getState().reset({ focusedDate: '2026-05-25', view: 'month' })
     useEventStore.getState().reset()
@@ -468,7 +516,7 @@ describe('AI Assistant - integration', () => {
     })
     expect(screen.getByText('Added 2 tasks from AI result.')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Todos' }))
+    await openWorkspaceEntry(user, 'Todos')
     const reviewCheckbox = await screen.findByRole('button', {
       name: /Mark task Review launch checklist done/i,
     })
@@ -516,7 +564,7 @@ describe('AI Assistant - integration', () => {
     })
     expect(screen.getByText('Added 2 tasks from AI result.')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Todos' }))
+    await openWorkspaceEntry(user, 'Todos')
     const researchCheckbox = await screen.findByRole('button', {
       name: /Mark task Research company done/i,
     })

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { RecurrenceRule, Weekday } from '../../domain/types'
+import { useI18n } from '../../hooks/useI18n'
 
 type RecurrenceSelectorProps = {
   value?: RecurrenceRule
@@ -8,14 +9,14 @@ type RecurrenceSelectorProps = {
   onChange: (rule: RecurrenceRule | undefined) => void
 }
 
-const weekdays: Array<{ value: Weekday; label: string }> = [
-  { value: 'mon', label: 'Mon' },
-  { value: 'tue', label: 'Tue' },
-  { value: 'wed', label: 'Wed' },
-  { value: 'thu', label: 'Thu' },
-  { value: 'fri', label: 'Fri' },
-  { value: 'sat', label: 'Sat' },
-  { value: 'sun', label: 'Sun' },
+const weekdays: Array<{ value: Weekday; labelKey: Parameters<ReturnType<typeof useI18n>['t']>[0] }> = [
+  { value: 'mon', labelKey: 'repeat.weekdayMon' },
+  { value: 'tue', labelKey: 'repeat.weekdayTue' },
+  { value: 'wed', labelKey: 'repeat.weekdayWed' },
+  { value: 'thu', labelKey: 'repeat.weekdayThu' },
+  { value: 'fri', labelKey: 'repeat.weekdayFri' },
+  { value: 'sat', labelKey: 'repeat.weekdaySat' },
+  { value: 'sun', labelKey: 'repeat.weekdaySun' },
 ]
 
 function defaultRule(startDate: string): RecurrenceRule {
@@ -44,6 +45,7 @@ function withEndDate(date: string): RecurrenceRule['endCondition'] {
 }
 
 export default function RecurrenceSelector({ value, startDate, onChange }: RecurrenceSelectorProps) {
+  const { t } = useI18n()
   const rule = value ?? defaultRule(startDate)
   const repeats = Boolean(value)
   const currentDayOfMonth = rule.dayOfMonth ?? Number(startDate.slice(8, 10))
@@ -89,10 +91,10 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
 
   return (
     <fieldset className="space-y-3 rounded-md border border-slate-200 p-3">
-      <legend className="px-1 text-sm font-medium text-slate-700">Repeat</legend>
+      <legend className="px-1 text-sm font-medium text-slate-700">{t('repeat.repeat')}</legend>
 
       <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-frequency">
-        Repeat frequency
+        {t('repeat.frequency')}
         <select
           className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
           id="repeat-frequency"
@@ -106,18 +108,18 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
           }}
           value={repeats ? rule.frequency : 'none'}
         >
-          <option value="none">Does not repeat</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="custom">Custom weekly</option>
+          <option value="none">{t('repeat.doesNotRepeat')}</option>
+          <option value="daily">{t('repeat.daily')}</option>
+          <option value="weekly">{t('repeat.weekly')}</option>
+          <option value="monthly">{t('repeat.monthly')}</option>
+          <option value="custom">{t('repeat.customWeekly')}</option>
         </select>
       </label>
 
       {repeats ? (
         <>
           <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-interval">
-            Every
+            {t('repeat.every')}
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -139,10 +141,10 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
             />
             <span className="text-sm text-slate-600">
               {rule.frequency === 'daily'
-                ? 'day(s)'
+                ? t('repeat.days')
                 : rule.frequency === 'monthly'
-                  ? 'month(s)'
-                  : 'week(s)'}
+                  ? t('repeat.months')
+                  : t('repeat.weeks')}
             </span>
           </div>
 
@@ -158,7 +160,7 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
                     onChange={() => toggleWeekday(day.value)}
                     type="checkbox"
                   />
-                  {day.label}
+                  {t(day.labelKey)}
                 </label>
               ))}
             </div>
@@ -166,7 +168,7 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
 
           {rule.frequency === 'monthly' ? (
             <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-day">
-              Day of month
+              {t('repeat.dayOfMonth')}
               <input
                 className="mt-1 h-10 w-24 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="repeat-day"
@@ -192,7 +194,7 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
 
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-end">
-              Ends
+              {t('repeat.ends')}
               <select
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="repeat-end"
@@ -205,15 +207,15 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
                 }}
                 value={rule.endCondition.type}
               >
-                <option value="never">Never</option>
-                <option value="date">On date</option>
-                <option value="count">After count</option>
+                <option value="never">{t('repeat.never')}</option>
+                <option value="date">{t('repeat.onDate')}</option>
+                <option value="count">{t('repeat.afterCount')}</option>
               </select>
             </label>
 
             {rule.endCondition.type === 'date' ? (
               <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-until">
-                Until
+                {t('repeat.until')}
                 <input
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                   id="repeat-until"
@@ -226,7 +228,7 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
 
             {rule.endCondition.type === 'count' ? (
               <label className="block text-sm font-medium text-slate-700" htmlFor="repeat-count">
-                Occurrences
+                {t('repeat.occurrences')}
                 <input
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                   id="repeat-count"

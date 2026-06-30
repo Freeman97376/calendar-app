@@ -11,6 +11,10 @@ export const RuntimeConfigSchema = z.object({
   aiApiKey: z.string().default(''),
   aiApiBaseUrl: z.string().trim().min(1).default('https://api.deepseek.com'),
   aiApiModel: z.string().trim().min(1).default('deepseek-chat'),
+  confirmEnabledToolRouting: z.boolean().default(true),
+  language: z.enum(['en', 'zh']).default('en'),
+  layoutPanelPosition: z.enum(['left', 'right', 'top', 'bottom']).default('left'),
+  layoutPanelSizePercent: z.coerce.number().min(15).max(40).default(20),
   // Legacy frontend AI fields are retained only so saved runtime config can migrate safely.
   anthropicApiKey: z.string().default(''),
   anthropicModel: z.string().trim().min(1).default('claude-sonnet-4-6'),

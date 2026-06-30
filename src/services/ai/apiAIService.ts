@@ -4,7 +4,9 @@ import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
   AIConversationResultSchema,
+  AIEnabledToolRouteResultSchema,
   AIProgressToolResultSchema,
+  AIToolActivationResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -12,8 +14,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -75,8 +81,23 @@ When userInstruction contains dialogue, treat the latest user message as the act
 If a critical detail is missing, ask one concise question in assistantReply, set needsUserConfirmation to true, and keep existing plan data instead of inventing a full replacement.
 When the user asks for multiple sessions, a full-week plan, or a next-week plan, return one calendarEvents draft per session up to the schema limit. Keep all events in preview only; never imply they are already applied.
 For fitness planning, keep advice general, conservative, and non-medical; add a warning when constraints or injury notes need professional review.
-For agent-learning planning, produce a clear learning route with measurable milestones and practice actions.
+For learning assistant planning, route by sourceToolId, formInput.learningTrack, goal, outcome, and the latest user message. Agent-learning aliases should produce agent/tool-use routes; SEO aliases should produce SEO, keyword, content, technical SEO, and analytics routes.
 For dueDate, output only YYYY-MM-DD strings. If the date is relative, vague, or not known, omit dueDate.
+Use only the documented keys. Omit optional fields instead of returning null.`
+
+const toolActivationSystemPrompt = `You help users turn a reusable tool template into one enabled tool instance.
+Return only a JSON object matching the requested schema.
+Use the conversation to confirm the instance's goal, constraints, cadence, and target outcome.
+If critical details are missing, ask one concise follow-up question in assistantReply and set needsMoreInfo to true.
+When enough details are present, suggest a short editable instance alias, summarize the activation requirements, and return compact routeTags.
+Do not create projects, actions, or calendar events. Use only the documented keys. Omit optional fields instead of returning null.`
+
+const enabledToolRoutingSystemPrompt = `You route an AI Assistant message to one existing enabled tool instance.
+Return only a JSON object matching the requested schema.
+Choose only from enabledTools supplied in the request. Never invent or create a new tool instance.
+Set matchedProjectId to null and confidence to 0 when no active enabled tool clearly matches.
+Use alias, toolName, routeTags, sourceToolId, and activationSummary to decide.
+Preserve the user's request in rewrittenInstruction, only tightening it for the matched tool when helpful.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
 const breakdownJsonShape = `{
@@ -233,6 +254,26 @@ const progressToolJsonShape = `{
   "warnings": []
 }`
 
+const toolActivationJsonShape = `{
+  "assistantReply": "string",
+  "needsMoreInfo": false,
+  "suggestedInstanceAlias": "short editable alias",
+  "activationSummary": "compact requirements summary",
+  "activationForm": {
+    "goal": "optional compact field values inferred from the conversation"
+  },
+  "routeTags": ["compact routing tags"],
+  "warnings": []
+}`
+
+const enabledToolRouteJsonShape = `{
+  "matchedProjectId": "project id string or null",
+  "confidence": 0.85,
+  "reason": "short explanation",
+  "rewrittenInstruction": "compact instruction for the matched enabled tool",
+  "needsConfirmation": true
+}`
+
 type ApiAIServiceOptions = {
   apiKey?: string
   baseUrl?: string
@@ -341,6 +382,38 @@ export class ApiAIService implements IAIService {
       3072,
       undefined,
       normalizeProgressToolOutput,
+    )
+  }
+
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    return this.callJson(
+      AIToolActivationResultSchema as z.ZodType<AIToolActivationResult>,
+      toolActivationSystemPrompt,
+      [
+        'Return JSON matching this shape:',
+        toolActivationJsonShape,
+        '',
+        JSON.stringify(request, null, 2),
+      ].join('\n'),
+      1536,
+      undefined,
+      (value) => normalizeToolActivationOutput(value, request),
+    )
+  }
+
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return this.callJson(
+      AIEnabledToolRouteResultSchema as z.ZodType<AIEnabledToolRouteResult>,
+      enabledToolRoutingSystemPrompt,
+      [
+        'Return JSON matching this shape:',
+        enabledToolRouteJsonShape,
+        '',
+        JSON.stringify(request, null, 2),
+      ].join('\n'),
+      1024,
+      undefined,
+      normalizeEnabledToolRouteOutput,
     )
   }
 
@@ -636,6 +709,113 @@ function normalizeProgressToolOutput(value: unknown): unknown {
   })
 }
 
+function latestActivationUserMessage(request: AIToolActivationRequest): string {
+  return [...request.messages].reverse().find((message) => message.role === 'user')?.content.trim() ?? ''
+}
+
+function fallbackActivationAlias(request: AIToolActivationRequest, latestMessage: string): string {
+  const fromRequirement = latestMessage.match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]?.trim()
+  const base = (fromRequirement || request.templateLabel).replace(/\s+/g, ' ').trim() || request.templateLabel
+  const candidate = base.length > 48 ? base.slice(0, 48).trimEnd() : base
+  const existing = new Set(request.existingInstanceAliases.map((alias) => alias.trim().toLowerCase()))
+
+  if (!existing.has(candidate.toLowerCase())) return candidate
+
+  for (let suffix = 2; suffix < 20; suffix += 1) {
+    const next = `${candidate} ${suffix}`
+    if (!existing.has(next.toLowerCase())) return next
+  }
+
+  return `${candidate} ${Date.now()}`
+}
+
+function fallbackActivationSummary(request: AIToolActivationRequest, latestMessage: string): string {
+  return latestMessage
+    ? `Enabled ${request.templateLabel} for: ${latestMessage}`
+    : `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
+}
+
+function fallbackActivationReply(
+  request: AIToolActivationRequest,
+  latestMessage: string,
+  alias: string,
+): string {
+  return latestMessage
+    ? `I can create "${alias}" from ${request.templateLabel}. Review the alias, then create the enabled tool.`
+    : `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
+}
+
+function uniqueStringArray(values: unknown[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const trimmed = value.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || seen.has(key)) continue
+    seen.add(key)
+    output.push(trimmed)
+  }
+
+  return output.slice(0, 16)
+}
+
+function normalizeToolActivationOutput(value: unknown, request?: AIToolActivationRequest): unknown {
+  const output = unwrapStructuredOutput(value)
+  if (!isRecord(output)) return output
+
+  const latestMessage = request ? latestActivationUserMessage(request) : ''
+  const fallbackAlias = request ? fallbackActivationAlias(request, latestMessage) : undefined
+  const fallbackSummary = request ? fallbackActivationSummary(request, latestMessage) : undefined
+  const fallbackReply = request && fallbackAlias
+    ? fallbackActivationReply(request, latestMessage, fallbackAlias)
+    : undefined
+  const normalizedRouteTags = normalizeStringArray(output.routeTags)
+  const routeTags = Array.isArray(normalizedRouteTags) && normalizedRouteTags.length
+    ? normalizedRouteTags
+    : request
+      ? uniqueStringArray([
+          ...request.routeTags,
+          ...request.capabilityTags,
+          request.templateLabel,
+          request.toolName,
+          fallbackAlias,
+        ])
+      : normalizedRouteTags
+
+  return compactUndefined({
+    ...output,
+    activationForm: isRecord(output.activationForm)
+      ? Object.fromEntries(
+          Object.entries(output.activationForm)
+            .map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : String(entry ?? '')])
+            .filter(([, entry]) => Boolean(entry)),
+        )
+      : undefined,
+    activationSummary: nonEmptyString(output.activationSummary) ?? fallbackSummary,
+    assistantReply: nonEmptyString(output.assistantReply) ?? fallbackReply,
+    needsMoreInfo: booleanFromUnknown(output.needsMoreInfo) ?? (request ? !latestMessage : undefined),
+    routeTags,
+    suggestedInstanceAlias: nonEmptyString(output.suggestedInstanceAlias) ?? fallbackAlias,
+    warnings: normalizeWarnings(output.warnings),
+  })
+}
+
+function normalizeEnabledToolRouteOutput(value: unknown): unknown {
+  const output = unwrapStructuredOutput(value)
+  if (!isRecord(output)) return output
+
+  return compactUndefined({
+    ...output,
+    confidence: numberFromUnknown(output.confidence),
+    matchedProjectId: output.matchedProjectId === '' ? null : output.matchedProjectId,
+    needsConfirmation: booleanFromUnknown(output.needsConfirmation),
+    reason: optionalString(output.reason),
+    rewrittenInstruction: optionalString(output.rewrittenInstruction),
+  })
+}
+
 function normalizeAction(value: unknown): unknown {
   if (!isRecord(value)) return value
 
@@ -722,6 +902,11 @@ function normalizeStringArray(value: unknown): unknown {
   if (typeof value === 'string' && value.trim()) return [value.trim()]
   if (value === null || value === undefined || value === '') return undefined
   return value
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  const normalized = optionalString(value)
+  return typeof normalized === 'string' ? normalized : undefined
 }
 
 function optionalString(value: unknown): unknown {

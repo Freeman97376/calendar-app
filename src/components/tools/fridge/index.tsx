@@ -6,6 +6,11 @@ export const fridgeTool: ToolDefinition = {
   label: 'Fridge',
   category: 'planning',
   description: 'Receipt and fridge planning helper.',
+  activationPrompt: 'Describe the fridge, receipt, meal planning, or inventory workflow this enabled tool should manage.',
+  adapterId: 'generic',
   capabilityTags: ['receipt', 'inventory'],
+  instantiable: true,
+  routeTags: ['fridge', 'receipt', 'inventory', 'meal planning', 'grocery', 'food'],
+  toolName: 'Fridge',
   Component: FridgeTool,
 }

@@ -32,6 +32,11 @@ function aiApiProfileFor(baseUrl: string, model: string): RuntimeConfig['aiApiPr
   return baseUrl === DEFAULT_AI_API_BASE_URL && model === DEFAULT_AI_API_MODEL ? 'deepseek' : 'custom'
 }
 
+function envLanguage(): RuntimeConfig['language'] {
+  const language = import.meta.env.VITE_APP_LANGUAGE ?? import.meta.env.VITE_LANGUAGE
+  return language === 'zh' || language === 'en' ? language : 'en'
+}
+
 function normalizeRuntimeConfigInput(input: RuntimeConfigInput): RuntimeConfigInput {
   const aiProvider =
     input.aiProvider === 'anthropic' || input.aiProvider === 'deepseek' || input.aiProvider === 'ollama'
@@ -65,6 +70,7 @@ function envDefaults(): RuntimeConfig {
     aiApiKey: import.meta.env.VITE_AI_API_KEY ?? import.meta.env.VITE_DEEPSEEK_API_KEY ?? '',
     aiApiBaseUrl,
     aiApiModel,
+    language: envLanguage(),
     anthropicApiKey: '',
     anthropicModel: 'claude-sonnet-4-6',
     defaultEventColor: import.meta.env.VITE_DEFAULT_EVENT_COLOR ?? '#047857',
