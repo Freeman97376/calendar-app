@@ -1,6 +1,6 @@
 # Progress Tracker
 
-> Maintained by: Claude Code / Codex | Last updated: 2026-06-07
+> Maintained by: Claude Code / Codex | Last updated: 2026-07-15
 
 ---
 
@@ -18,7 +18,7 @@
 | 6 | AI Assistant | 100% (13/13) | Done |
 | 7 | Polish & QA | 50% (5/10) | Active sprint |
 
-**Overall:** 6 of 7 development phases complete; Phase 7 polish is in progress, with fridge, to-do, AI action, and settings/tool-layer extensions added. Current verification: ESLint passing, TypeScript build passing, full Vitest passing with 140 tests, backend unittest passing with 15 tests, Python backend compile passing, production Vite build passing with the existing vendor chunk warning, and AI frontend smoke passing.
+**Overall:** Core feature phases are complete. The 2026-07-15 repair release has implemented its security/AI/desktop and long-term-plan/data-integrity changes; final full-suite, real-MySQL, and packaged Windows smoke verification are the remaining release gates.
 
 ---
 
@@ -37,6 +37,17 @@
 | 2026-06-07 | To-do list and editable event/task type extension verified |
 | 2026-06-07 | AI frontend action planning and application verified |
 | 2026-06-08 | Settings and Tools layer verified |
+| 2026-07-15 | Security, AI proxy, account reset, goal-control integrity, reproducible locks and release governance repair implemented |
+
+### 2026-07-15 - Staged repair release
+
+- Added database-backed login throttle buckets, integrity quarantine, composite user-scoped foreign keys, and migration head `20260715_0007`.
+- Normalized AI operation routing and upstream errors; formal calendar/goal planning now use planning limits, while invalid/truncated provider responses cannot masquerade as parse-template failures.
+- Replaced desktop port reservation and command-line token passing with a sidecar-owned socket plus stdout handshake.
+- Added session epochs and one account reset path covering calendar, todos, memory, fridge, Tools, AI drafts, imports, UI and capabilities.
+- Added ISO-week capacity validation, project timezone/DST Check-ins, strict answer payloads, completed-review semantics, rolling summaries, relation validation and evidence-preserving rollback.
+- Removed Firebase and Anthropic from the production runtime, added an operator-only legacy Firebase exporter, upgraded npm security-sensitive dependencies, and generated hash-locked Python environments.
+- Added packaged third-party notices and license resources. Full release verification results must be recorded in `office/testing/test-plan.md` before publishing.
 
 ---
 
@@ -418,6 +429,31 @@
 
 **Next session should start with:** live local Settings test with a real DeepSeek key, then a receipt analysis that requires DeepSeek fallback.
 
+### 2026-07-13 - MySQL multi-user server and login-free desktop modes
+
+**What changed:**
+
+- Replaced split SQLite/JSON personal stores with user-scoped SQLAlchemy repositories and added a forward Alembic revision after `20260708_0001`.
+- Added Argon2 accounts, hashed opaque sessions, CSRF protection, lockout/session revocation, operator-only user CLI, and bilingual login gating without registration.
+- Replaced the old HTTP server with FastAPI/Uvicorn while preserving `python -m backend.server`.
+- Routed calendar, todo, event types, memory, fridge, tool presets, preferences, backup/import, and AI calls through the authenticated API.
+- Added versioned merge/replace backups, safe legacy-browser export, and idempotent SQLite/JSON migration reporting.
+- Added Tauri v2/PyInstaller desktop packaging with a random localhost port, temporary launch token, SQLite data directory, Windows Credential Manager, bundled Tesseract, sidecar shutdown, installer and portable ZIP outputs.
+- Added SQLite/API auth tests, optional real MySQL 8.0 container tests, Cargo validation, and desktop sidecar smoke coverage.
+
+**Verification:**
+
+- `npm.cmd run lint`: passing.
+- `npm.cmd run test:run`: 45 files and 229 tests passing.
+- `python -m unittest discover -s tests\backend`: 29 tests passing with one conditional MySQL skip.
+- `npm.cmd run test:mysql`: MySQL 8.0 empty-database Alembic upgrade and two-user repository isolation passing; container/network removed afterward.
+- Vite production build and Tauri release compile: passing; frontend artifact scan found no MySQL URL, VITE AI-key entry, DeepSeek key assignment, or fixed development API URL.
+- Final packaged sidecar: invalid launch token returns 401, desktop bootstrap is login-free, SQLite data survives restart, and bundled Tesseract 5.5 runs.
+- Final Tauri lifecycle: normal close and simulated parent crash both leave zero sidecar processes.
+- Final outputs: `Calendar App Setup.exe` (49.3 MB) and `Calendar App Portable.zip` (60.5 MB).
+
+**Release order:** backup database, migrate, create administrator, import legacy data, verify a second isolated account, switch frontend API, build/smoke both desktop packages, then deploy documentation.
+
 ### 2026-06-08 - Session 18
 
 **What happened:**
@@ -442,6 +478,66 @@
 
 **Next session should start with:** manual Settings smoke check in the running app, then decide whether Firebase config should support hot reinitialization without reload.
 
+### 2026-07-14 - Long-term goal control and Activated Tools full page
+
+**What changed:**
+
+- Added Alembic revisions `20260714_0003` through `20260714_0005` for goal conversations, metrics, Check-ins, proposals, control policies, plan versions/dependencies, effort, action/event links, and AI usage accounting.
+- Added user-scoped goal-control APIs and transactional activation, deterministic Check-ins, metric confidence/anomaly data, dependency cycle protection, health factors, critical path, version retention/rollback, and backup v2.
+- Added three AI usage modes with global and per-goal selection, administrator clamping, routine/planning models, request token caps, monthly Soft/Hard limits, 90-day raw-event retention, and rules-only degradation.
+- Moved Templates to compact links, added a recoverable goal conversation with selectable `QuestionBatch` replies, and required plan preview confirmation before activation.
+- Expanded Active Tools into a full workspace with planning brief, usage mode, KPI trends, capacity, Milestones, critical path, plan table, Check-in, versions, rollback, and the same goal conversation.
+- Added Settings usage controls and monthly token reporting. Server budgets/models remain operator-owned; desktop budgets are editable locally.
+
+**Verification:**
+
+- `npm.cmd run lint`: passing.
+- `npm.cmd run test:run`: 47 files / 235 tests passing.
+- `npm.cmd run build`: passing.
+- `python -m unittest discover tests.backend`: 36 tests passing; real MySQL skipped when no test URL is configured.
+- Empty SQLite Alembic upgrade reaches `20260714_0005`.
+
+### 2026-07-14 - Goal-control approval and desktop release closeout
+
+**What changed:**
+
+- Routed AI-generated Activated Tool plan edits through version-bound `PlanChangeProposal` records; no Milestone, Action or AI progress note is written until user approval.
+- Added per-difference accept/reject, server-calculated capacity and calendar impact, stale-base protection, partial acceptance and a new confirmed version.
+- Enforced the Standard/Minimum 80% buffered weekly-capacity boundary for activation, accepted proposals and rollback snapshots.
+- Added deterministic medium-sensitivity review triggers, low-confidence/anomaly confirmation warnings, Check-in freshness/blocker health factors and capacity-based critical-path/Milestone predictions.
+- Coalesced continuous manual structural edits into one version for five minutes.
+- Added Tauri native notifications for pending Check-ins; notification discovery remains rule-only and does not call AI.
+
+**Verification:**
+
+- `npm.cmd run lint`: passing.
+- `npm.cmd run test:run`: 47 files / 235 tests passing.
+- `npm.cmd run build`: passing.
+- `python -m unittest discover tests.backend`: 39 tests passing; one real-MySQL contract skipped because Docker/MySQL was unavailable.
+- Fresh SQLite migration and MySQL offline DDL both reach `20260714_0005`.
+- `cargo check --manifest-path src-tauri\Cargo.toml`: passing.
+- `npm.cmd run desktop:build`: produced the standardized installer and portable ZIP.
+- Packaged sidecar smoke: `/api/health` returned `ok`; authenticated desktop bootstrap returned `mode=desktop`, `authRequired=false`.
+- Process-tree shutdown smoke left zero `calendar-backend` processes; `npm.cmd audit --omit=dev` reports zero production dependency vulnerabilities.
+
+### 2026-07-15 - Three-phase security, integrity, and release repair
+
+**What changed:**
+
+- Closed server budget import bypasses, fixed merge/replace replay semantics, and added complete user-session state invalidation with in-flight request cancellation.
+- Added the fixed AI operation contract, routine/planning routing, normalized upstream errors, truncation detection, DB-backed login throttling, trusted-proxy handling, and a single dummy Argon2 hash.
+- Reworked the desktop handshake around backend-owned random-port binding, stdout-only one-time launch tokens, 15-second Tauri readiness checks, and full PyInstaller process-tree cleanup.
+- Added ISO-week capacity enforcement, IANA/DST Check-in scheduling, strict answer schemas, completed-review semantics, rolling summaries, transactional relation validation, composite foreign keys, quarantine, and the integrity audit CLI.
+- Removed Firebase and Anthropic from the production path, added hash-locked server/desktop Python inputs, third-party notices, bundled licenses, and separate deployment/migration documentation.
+
+**Verification:**
+
+- ESLint, Vite production build, Cargo check, 244 Vitest tests, and 53 Python tests passed.
+- Full and production npm audits report zero vulnerabilities.
+- Three clean desktop builds passed from the same lock hash and produced `Calendar App Setup.exe` and `Calendar App Portable.zip`; final sidecar smoke tests used a random port/token, scrubbed the temporary handshake pipe, and left zero backend processes.
+- Production bundle scan found no Firebase marker, Vite AI/Firebase key variable, or MySQL connection URL.
+- Real MySQL 8 Docker testing passed: empty-database Alembic migration reached `20260715_0007`, the multi-user contract passed, and all test container resources were removed.
+
 ### 2026-06-11 - Environment Documentation Update
 
 **What happened:**
@@ -456,3 +552,24 @@
 
 - Documentation-only update; no automated tests run.
 - Current code worktree includes unfinished Tool Sessions implementation work and should be verified before claiming a new green baseline.
+
+### 2026-07-16 - Local-first signed desktop updates
+
+**What changed:**
+
+- Added Tauri's signed updater with a public GitHub Release feed, user-confirmed NSIS installation, restart support, and a fixed release-page command for portable builds.
+- Added a local FastAPI/SQLite pre-update backup endpoint with SHA-256 metadata and three-snapshot retention; it is unavailable in MySQL server mode.
+- Added startup/manual update state, Settings controls, progress/error UI, and a portable-only notification path.
+- Synchronized version `0.2.0` across npm, Tauri, and Cargo; added guarded version scripts and a Windows x64 tag workflow that creates draft releases.
+- Split desktop preparation, Tauri signing/build, and portable/checksum packaging into reusable scripts.
+
+**Release boundary:**
+
+- `0.2.0` must be installed manually. Automatic installed-app updates begin with a published, signed `0.2.1` release.
+- Personal data, OCR, business APIs, and the SQLite snapshot remain local. DeepSeek is contacted by the local sidecar using the Windows Credential Manager key. The optional MySQL web server stays independent and does not synchronize desktop data.
+
+**Verification:**
+
+- 247 Vitest tests and 56 backend tests passed; the optional real-MySQL test was skipped because no test URL was configured.
+- ESLint, production Vite build, Cargo check/format, workflow YAML parsing, version consistency, and `npm audit` passed.
+- A full signed build produced the NSIS installer/signature, portable ZIP, and a SHA-256 manifest whose three entries were independently rechecked.

@@ -14,6 +14,7 @@ export type WorkspacePanelId =
   | 'event-details'
 
 export type WorkspaceMainMode = 'calendar' | 'panel'
+export type ApprovalDrawerSource = 'ai-action-plan' | 'active-tool-calendar-drafts'
 
 type WorkspaceOpenOptions = {
   mainMode?: WorkspaceMainMode
@@ -34,6 +35,8 @@ export type UIStore = {
   activeWorkspacePanel: WorkspacePanelId
   workspaceMainMode: WorkspaceMainMode
   workspacePanelHistory: WorkspacePanelId[]
+  approvalDrawerOpen: boolean
+  approvalDrawerSource: ApprovalDrawerSource | null
   activeToolId: string
   activeEnabledToolProjectId: string
   closeDebugPanel: () => void
@@ -45,11 +48,13 @@ export type UIStore = {
   openEditEventModal: (eventId: string, eventSnapshot?: Event) => void
   openEventDetails: (eventId: string, eventSnapshot?: Event) => void
   closeEventModal: () => void
+  closeApprovalDrawer: () => void
   closeTodoPanel: () => void
   closeWorkspacePanel: () => void
   focusWorkspacePanel: () => void
   goBackWorkspacePanel: () => void
   openEnabledToolsPanel: (projectId?: string) => void
+  openApprovalDrawer: (source: ApprovalDrawerSource) => void
   openWorkspacePanel: (panel: WorkspacePanelId, options?: WorkspaceOpenOptions) => void
   showWorkspaceCalendar: () => void
   toggleAIPanel: () => void
@@ -119,6 +124,8 @@ export const useUIStore = create<UIStore>((set) => ({
   activeWorkspacePanel: 'home',
   workspaceMainMode: 'calendar',
   workspacePanelHistory: [],
+  approvalDrawerOpen: false,
+  approvalDrawerSource: null,
   activeToolId: 'fitness-ai',
   activeEnabledToolProjectId: '',
   closeDebugPanel: () => set(workspaceState('home')),
@@ -175,6 +182,7 @@ export const useUIStore = create<UIStore>((set) => ({
         editingEventSnapshot: null,
       }
     }),
+  closeApprovalDrawer: () => set({ approvalDrawerOpen: false, approvalDrawerSource: null }),
   closeTodoPanel: () => set(workspaceState('home')),
   closeWorkspacePanel: () => set(workspaceState('home')),
   focusWorkspacePanel: () =>
@@ -196,6 +204,12 @@ export const useUIStore = create<UIStore>((set) => ({
       ),
       activeEnabledToolProjectId: projectId || state.activeEnabledToolProjectId,
     })),
+  openApprovalDrawer: (approvalDrawerSource) =>
+    set({
+      approvalDrawerOpen: true,
+      approvalDrawerSource,
+      workspaceMainMode: 'calendar',
+    }),
   openToolsPanel: (activeToolId = 'fitness-ai') =>
     set((state) => ({
       ...workspaceState(
@@ -290,6 +304,8 @@ export const useUIStore = create<UIStore>((set) => ({
       activeWorkspacePanel: 'home',
       workspaceMainMode: 'calendar',
       workspacePanelHistory: [],
+      approvalDrawerOpen: false,
+      approvalDrawerSource: null,
       activeToolId: 'fitness-ai',
       activeEnabledToolProjectId: '',
     }),

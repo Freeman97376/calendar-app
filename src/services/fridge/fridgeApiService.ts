@@ -10,16 +10,17 @@ import type {
   FridgeInventoryUpdate,
   IFridgeService,
 } from './IFridgeService'
+import { authenticatedFetch } from '../appApiClient'
 
 type FridgeApiServiceOptions = {
   baseUrl?: string
   fetcher?: typeof fetch
 }
 
-const defaultFetcher: typeof fetch = (input, init) => globalThis.fetch(input, init)
+const defaultFetcher: typeof fetch = authenticatedFetch
 
 function defaultBaseUrl(): string {
-  return import.meta.env.VITE_FRIDGE_API_BASE_URL ?? 'http://127.0.0.1:8787'
+  return import.meta.env.VITE_FRIDGE_API_BASE_URL ?? ''
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
@@ -96,4 +97,3 @@ export class FridgeApiService implements IFridgeService {
     return FridgeInventoryItemResponseSchema.parse(await parseJsonResponse(response)).item
   }
 }
-

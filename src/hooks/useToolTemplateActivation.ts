@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { createEnabledToolMetadata, enabledToolInstancesFromProjects } from '../domain/logic/enabledTools'
+import { activeToolsFromProjects, createActiveToolMetadata } from '../domain/logic/enabledTools'
 import { getConfiguredAIService } from '../store/aiStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
 import { useEnabledToolsPanel } from './useEnabledToolsPanel'
@@ -35,7 +35,7 @@ function templateToolName(tool: ToolTemplate): string {
 }
 
 export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
-  const enabledToolsPanel = useEnabledToolsPanel()
+  const activeToolsPanel = useEnabledToolsPanel()
   const goals = useLongTermMemoryStore((state) => state.goals)
   const projects = useLongTermMemoryStore((state) => state.projects)
   const createGoal = useLongTermMemoryStore((state) => state.createGoal)
@@ -43,8 +43,8 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
   const error = useLongTermMemoryStore((state) => state.error)
   const isLoading = useLongTermMemoryStore((state) => state.isLoading)
   const loadOverview = useLongTermMemoryStore((state) => state.loadOverview)
-  const enabledInstances = useMemo(
-    () => enabledToolInstancesFromProjects(projects, goals),
+  const activeTools = useMemo(
+    () => activeToolsFromProjects(projects, goals),
     [goals, projects],
   )
   const [messages, setMessages] = useState<TemplateActivationMessage[]>([])
@@ -87,7 +87,7 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
     try {
       const result = await service.runToolActivation({
         capabilityTags: activeTemplate.capabilityTags ?? [],
-        existingInstanceAliases: enabledInstances.map((instance) => instance.instanceAlias),
+        existingInstanceAliases: activeTools.map((instance) => instance.instanceAlias),
         messages: nextMessages,
         routeTags: activeTemplate.routeTags ?? [],
         sourceToolId: activeTemplate.id,
@@ -120,17 +120,21 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
     if (!activeTemplate || !activationResult) return
 
     const alias = aliasDraft.trim() || activationResult.suggestedInstanceAlias
-    const metadata = createEnabledToolMetadata({
+    const metadata = createActiveToolMetadata({
       activationForm: activationResult.activationForm,
       activationSummary: activationResult.activationSummary,
       adapterId: activeTemplate.adapterId ?? 'generic',
       instanceAlias: alias,
+      parentTemplateId: activeTemplate.id,
+      parentTemplateLabel: activeTemplate.label,
+      parentTemplateToolName: templateToolName(activeTemplate),
       routeTags: activationResult.routeTags.length
         ? activationResult.routeTags
         : activeTemplate.routeTags ?? [],
       routingEnabled: true,
       sourceToolId: activeTemplate.id,
       templateId: activeTemplate.id,
+      toolFeatures: activeTemplate.capabilityTags ?? [],
       toolKind: activeTemplate.toolKind,
       toolName: templateToolName(activeTemplate),
     })
@@ -150,11 +154,11 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
         title: alias,
       })
       await loadOverview()
-      setStatus(`Created enabled tool ${alias}.`)
-      enabledToolsPanel.open(project.project_id)
+      setStatus(`Registered active tool ${alias}.`)
+      activeToolsPanel.open(project.project_id)
     } catch (createError) {
       setLocalError(
-        createError instanceof Error ? createError.message : 'Unable to create enabled tool',
+        createError instanceof Error ? createError.message : 'Unable to register active tool',
       )
     }
   }

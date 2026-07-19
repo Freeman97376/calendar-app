@@ -39,7 +39,8 @@ export default function AIScheduleSuggestion({
               <p className="mt-1 text-xs leading-5 text-slate-600">{step.description}</p>
             ) : null}
             <p className="mt-1 text-xs font-medium text-slate-500">
-              {step.durationMinutes} min - {formatStepTiming(step.suggestedDayOffset, step.suggestedHour)}
+              {step.durationMinutes} min - {step.energyNeeded} energy -{' '}
+              {formatStepTiming(step.suggestedDayOffset, step.suggestedHour)}
             </p>
           </article>
         ))}

@@ -17,6 +17,8 @@ describe('Debug panel', () => {
         completedAt: undefined,
         createdAt: '2026-06-17T00:00:00.000Z',
         dueDate: '2026-06-18',
+        energyNeeded: 'medium',
+        etaMinutes: 30,
         eventTypeId: 'general',
         id: 'todo-debug-1',
         priority: 'medium',

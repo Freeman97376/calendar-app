@@ -13,6 +13,8 @@ describe('todoStore', () => {
   it('creates todos in local state', async () => {
     const todo = await useTodoStore.getState().createTodo({
       dueDate: '2026-06-10',
+      energyNeeded: 'high',
+      etaMinutes: 45,
       eventTypeId: 'project',
       title: 'Draft launch plan',
     })
@@ -20,6 +22,8 @@ describe('todoStore', () => {
     expect(useTodoStore.getState().todos).toContainEqual(todo)
     expect(todo).toMatchObject({
       dueDate: '2026-06-10',
+      energyNeeded: 'high',
+      etaMinutes: 45,
       eventTypeId: 'project',
       status: 'todo',
     })

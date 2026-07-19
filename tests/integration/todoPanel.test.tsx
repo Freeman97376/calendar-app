@@ -63,14 +63,21 @@ describe('Todo panel', () => {
     const user = await openTodoPanel()
 
     await user.type(screen.getByLabelText('Task'), 'Draft launch plan')
+    await user.clear(screen.getByLabelText('ETA minutes'))
+    await user.type(screen.getByLabelText('ETA minutes'), '45')
+    await user.selectOptions(screen.getByLabelText('Energy'), 'high')
     await user.type(screen.getByLabelText('Due date'), '2026-06-10')
     await user.click(screen.getByRole('button', { name: 'Add task' }))
 
     expect(await screen.findByText('Draft launch plan')).toBeInTheDocument()
     expect(useTodoStore.getState().todos[0]).toMatchObject({
       dueDate: '2026-06-10',
+      energyNeeded: 'high',
+      etaMinutes: 45,
       title: 'Draft launch plan',
     })
+    expect(screen.getByText('ETA: 45m')).toBeInTheDocument()
+    expect(screen.getByText('Energy: High')).toBeInTheDocument()
   })
 
   it('keeps the todo type list editable by users', async () => {
@@ -100,6 +107,8 @@ describe('Todo panel', () => {
     await user.click(screen.getByRole('button', { name: 'Add type' }))
     await user.selectOptions(screen.getByLabelText('Type'), 'client-work')
     await user.type(screen.getByLabelText('Task'), 'Prepare client deck')
+    await user.clear(screen.getByLabelText('ETA minutes'))
+    await user.type(screen.getByLabelText('ETA minutes'), '45')
     await user.type(screen.getByLabelText('Due date'), '2026-06-11')
     await user.click(screen.getByRole('button', { name: 'Add task' }))
     await user.click(await screen.findByRole('button', { name: 'Schedule' }))
@@ -112,10 +121,14 @@ describe('Todo panel', () => {
     const event = useEventStore.getState().events[0]
 
     expect(event).toMatchObject({
+      allDay: false,
+      endAt: new Date('2026-06-11T09:45:00').toISOString(),
       eventTypeId: 'client-work',
       linkedTodoId: todo.id,
+      startAt: new Date('2026-06-11T09:00:00').toISOString(),
       title: 'Prepare client deck',
     })
+    expect(event.displayDetails).toContain('45 min')
     expect(todo.linkedEventId).toBe(event.id)
   })
 
@@ -357,11 +370,16 @@ describe('Todo panel', () => {
     await user.type(within(dialog).getByLabelText('Task'), 'Edited task')
     await user.clear(within(dialog).getByLabelText('Due date'))
     await user.type(within(dialog).getByLabelText('Due date'), '2026-06-13')
+    await user.clear(within(dialog).getByLabelText('ETA minutes'))
+    await user.type(within(dialog).getByLabelText('ETA minutes'), '60')
+    await user.selectOptions(within(dialog).getByLabelText('Energy'), 'low')
     await user.click(within(dialog).getByRole('button', { name: 'Save task' }))
 
     await waitFor(() => {
       expect(useTodoStore.getState().todos[0]).toMatchObject({
         dueDate: '2026-06-13',
+        energyNeeded: 'low',
+        etaMinutes: 60,
         title: 'Edited task',
       })
     })

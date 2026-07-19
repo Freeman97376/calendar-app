@@ -11,6 +11,7 @@ const validBreakdown = {
     {
       title: 'Research the company',
       durationMinutes: 45,
+      energyNeeded: 'medium',
       suggestedDayOffset: 0,
       suggestedHour: 9,
       priority: 'high',
@@ -77,7 +78,7 @@ describe('ApiAIService', () => {
     const fetcher = vi.fn()
     const service = new ApiAIService({ apiKey: '', fetcher })
 
-    await expect(service.breakdownGoal('Prepare for interview')).rejects.toThrow('VITE_AI_API_KEY')
+    await expect(service.breakdownGoal('Prepare for interview')).rejects.toThrow('AI service is not configured')
     expect(fetcher).not.toHaveBeenCalled()
   })
 
@@ -161,6 +162,52 @@ describe('ApiAIService', () => {
       endAt: expect.stringMatching(/Z$/),
       title: 'Dinner',
       type: 'create_event',
+    })
+  })
+
+  it('planCalendarActions normalizes todo eta, energy, and schedule times', async () => {
+    const service = new ApiAIService({
+      apiKey: 'test-key',
+      fetcher: vi.fn(async () =>
+        apiResponse({
+          summary: 'Plan task work',
+          actions: [
+            {
+              type: 'create_todo',
+              title: 'Draft launch plan',
+              etaMinutes: '45',
+              energyNeeded: 'High',
+              priority: 'Medium',
+            },
+            {
+              type: 'schedule_todo',
+              todoId: 'todo-1',
+              startAt: '2026-06-18T09:00:00',
+              endAt: '2026-06-18T09:45:00',
+            },
+          ],
+        }),
+      ),
+    })
+
+    const result = await service.planCalendarActions('plan launch work', {
+      today: '2026-06-18',
+      timezone: 'America/Los_Angeles',
+      events: [],
+      todos: [],
+      eventTypes: [],
+    })
+
+    expect(result.actions[0]).toMatchObject({
+      energyNeeded: 'high',
+      etaMinutes: 45,
+      priority: 'medium',
+      type: 'create_todo',
+    })
+    expect(result.actions[1]).toMatchObject({
+      endAt: expect.stringMatching(/Z$/),
+      startAt: expect.stringMatching(/Z$/),
+      type: 'schedule_todo',
     })
   })
 
@@ -283,9 +330,9 @@ describe('ApiAIService', () => {
     })
 
     expect(result.activationSummary).toBe(
-      'Enabled Fridge for: Manage groceries.',
+      'Prepared Fridge active tool for: Manage groceries.',
     )
-    expect(result.assistantReply).toContain('I can create')
+    expect(result.assistantReply).toContain('register')
     expect(result.activationForm).toEqual({ requirement: 'Track groceries' })
     expect(result.routeTags).toEqual(['fridge', 'grocery', 'inventory', 'groceries'])
     expect(result.suggestedInstanceAlias).toBe('groceries')

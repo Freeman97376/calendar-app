@@ -42,6 +42,7 @@ const suggestion: AIBreakdownResult = {
       title: 'Research company',
       description: 'Review product pages and recent news.',
       durationMinutes: 45,
+      energyNeeded: 'high',
       suggestedDayOffset: 0,
       suggestedHour: 9,
       priority: 'high',
@@ -49,6 +50,7 @@ const suggestion: AIBreakdownResult = {
     {
       title: 'Practice answers',
       durationMinutes: 60,
+      energyNeeded: 'medium',
       suggestedDayOffset: 1,
       suggestedHour: 10,
       priority: 'medium',
@@ -126,7 +128,7 @@ class MockAIService implements IAIService {
       confidence: 0,
       matchedProjectId: null,
       needsConfirmation: true,
-      reason: 'No enabled tool matched.',
+      reason: 'No active tool matched.',
       rewrittenInstruction: 'No route',
     }
   }
@@ -154,6 +156,26 @@ async function openPanel() {
   render(<App />)
   await user.click(screen.getByRole('button', { name: 'AI Assistant' }))
   return user
+}
+
+async function submitComposer(
+  user: ReturnType<typeof userEvent.setup>,
+  mode: 'chat' | 'plan' | 'goal',
+  message: string,
+) {
+  const modeLabel =
+    mode === 'chat' ? 'Chat' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
+  const submitLabel =
+    mode === 'chat' ? 'Send message' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
+
+  await user.click(screen.getByRole('button', { name: `Mode: ${modeLabel}` }))
+  await user.type(screen.getByLabelText('AI message'), message)
+  await user.click(screen.getByRole('button', { name: submitLabel }))
+}
+
+async function reviewPlan() {
+  await screen.findByRole('button', { name: 'Review plan' })
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Review plan' }))
 }
 
 async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -203,8 +225,7 @@ describe('AI Assistant - integration', () => {
     configureAIService(new MockAIService(() => deferred.promise))
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
 
     expect(screen.getAllByText('Thinking...')).not.toHaveLength(0)
     deferred.resolve(suggestion)
@@ -215,8 +236,7 @@ describe('AI Assistant - integration', () => {
     configureAIService(new MockAIService(async () => suggestion))
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
 
     expect(await screen.findByText('Research company')).toBeInTheDocument()
     expect(screen.getByText('Practice answers')).toBeInTheDocument()
@@ -226,8 +246,7 @@ describe('AI Assistant - integration', () => {
     configureAIService(new MockAIService(async () => suggestion))
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
     await user.click(await screen.findByRole('button', { name: 'Schedule All' }))
 
     await waitFor(() => {
@@ -268,11 +287,11 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Conversation'), 'Help me clarify this task')
-    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    await submitComposer(user, 'chat', 'Help me clarify this task')
 
     expect(await screen.findByText('Which deadline and level of detail should I use?')).toBeInTheDocument()
     expect(screen.getByText('Draft clarified event.')).toBeInTheDocument()
+    await reviewPlan()
     expect(screen.getByText('Clarified planning block')).toBeInTheDocument()
     expect(capturedMessages.at(-1)).toMatchObject({
       content: 'Help me clarify this task',
@@ -324,8 +343,8 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'make calendar changes')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'make calendar changes')
+    await reviewPlan()
     await user.click(await screen.findByRole('button', { name: 'Apply Actions' }))
 
     await waitFor(() => {
@@ -357,6 +376,8 @@ describe('AI Assistant - integration', () => {
               type: 'create_todo',
               title: 'Follow up with client',
               dueDate: '2026-05-27',
+              etaMinutes: 30,
+              energyNeeded: 'medium',
               priority: 'high',
               eventTypeId: 'project',
             },
@@ -381,8 +402,8 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'make task changes')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'make task changes')
+    await reviewPlan()
     await user.click(await screen.findByRole('button', { name: 'Apply Actions' }))
 
     await waitFor(() => {
@@ -409,9 +430,10 @@ describe('AI Assistant - integration', () => {
   it('plans and applies an action with the local provider when no API key is configured', async () => {
     const user = await openPanel()
 
+    await user.click(screen.getByText('Chat settings'))
     await user.selectOptions(screen.getByLabelText('AI provider'), 'local')
-    await user.type(screen.getByLabelText('Calendar or task command'), 'add dinner with friend tomorrow at 7pm')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'add dinner with friend tomorrow at 7pm')
+    await reviewPlan()
     await user.click(await screen.findByLabelText('I reviewed and confirmed the near-term times.'))
     await user.click(await screen.findByRole('button', { name: 'Apply Actions' }))
 
@@ -449,8 +471,8 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'add meeting in one hour')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'add meeting in one hour')
+    await reviewPlan()
 
     const applyButton = await screen.findByRole('button', { name: 'Apply Actions' })
     expect(screen.getByText(/Near-term meeting is scheduled for/i)).toBeInTheDocument()
@@ -478,6 +500,8 @@ describe('AI Assistant - integration', () => {
               type: 'create_todo',
               title: 'Draft launch checklist',
               dueDate: '2026-06-20',
+              etaMinutes: 30,
+              energyNeeded: 'medium',
               priority: 'high',
             },
             {
@@ -494,8 +518,8 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'make a launch checklist')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'make a launch checklist')
+    await reviewPlan()
     await user.click(await screen.findByRole('button', { name: 'Add to Tasks' }))
 
     await waitFor(() => {
@@ -544,8 +568,7 @@ describe('AI Assistant - integration', () => {
     configureAIService(new MockAIService(async () => suggestion))
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
     await user.click(await screen.findByRole('button', { name: 'Add to Tasks' }))
 
     await waitFor(() => {
@@ -624,8 +647,8 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'create overlapping blocks')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'create overlapping blocks')
+    await reviewPlan()
 
     const applyButton = await screen.findByRole('button', { name: 'Apply Actions' })
     expect(screen.getByText(/First block.*overlaps.*Second block/i)).toBeInTheDocument()
@@ -659,8 +682,7 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Calendar or task command'), 'add context check')
-    await user.click(screen.getByRole('button', { name: 'Plan actions' }))
+    await submitComposer(user, 'plan', 'add context check')
 
     await waitFor(() => {
       expect(capturedContext).toMatchObject({
@@ -683,8 +705,7 @@ describe('AI Assistant - integration', () => {
     configureAIService(new MockAIService(async () => suggestion))
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
     await user.click(await screen.findByRole('button', { name: 'Dismiss' }))
 
     expect(screen.queryByText('Research company')).not.toBeInTheDocument()
@@ -699,8 +720,7 @@ describe('AI Assistant - integration', () => {
     )
     const user = await openPanel()
 
-    await user.type(screen.getByLabelText('Goal'), 'Prepare for interview')
-    await user.click(screen.getByRole('button', { name: 'Break down goal' }))
+    await submitComposer(user, 'goal', 'Prepare for interview')
 
     expect(await screen.findByText('AI unavailable')).toBeInTheDocument()
   })
@@ -708,7 +728,8 @@ describe('AI Assistant - integration', () => {
   it('no API key shows setup instructions, not an error', async () => {
     await openPanel()
 
-    expect(screen.getByText(/VITE_DEEPSEEK_API_KEY/i)).toBeInTheDocument()
+    expect(screen.getByText(/AI service is not configured/i)).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Mode: Break down goal' }))
     expect(screen.getByRole('button', { name: 'Break down goal' })).toBeDisabled()
     expect(useAIStore.getState().error).toBeNull()
   })

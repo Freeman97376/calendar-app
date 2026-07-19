@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RuntimeConfigService } from '../../../src/services/config/runtimeConfigService'
+import {
+  BackendConfigApiService,
+  RuntimeConfigService,
+} from '../../../src/services/config/runtimeConfigService'
 
 describe('RuntimeConfigService', () => {
   beforeEach(() => {
@@ -103,5 +106,16 @@ describe('RuntimeConfigService', () => {
       layoutPanelPosition: 'bottom',
       layoutPanelSizePercent: 25,
     })
+  })
+
+  it('reports an actionable error when a config request receives the app HTML shell', async () => {
+    const service = new BackendConfigApiService(
+      () => '',
+      async () => new Response('<!DOCTYPE html><html><body>Calendar App</body></html>'),
+    )
+
+    await expect(service.getStatus()).rejects.toThrow(
+      'The configuration request reached the app page instead of the Calendar backend.',
+    )
   })
 })

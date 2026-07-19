@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import App from '../../src/App'
+import GoalPlannerPanel from '../../src/components/tools/goal-planner/GoalPlannerPanel'
+import { createActiveToolMetadata } from '../../src/domain/logic/enabledTools'
 import type {
   ActionItemStatus,
   CreateActionItemInput,
@@ -229,10 +231,21 @@ class MockLongTermMemoryClient implements LongTermMemoryClientContract {
     return updated
   }
 
-  async updateProject(projectId: string, changes: { status?: ProjectStatus }) {
-    const updated = this.projects.find((project) => project.project_id === projectId)
-    if (!updated) throw new Error('Missing project')
-    Object.assign(updated, changes, { updated_at: timestamp() })
+  async updateProject(
+    projectId: string,
+    changes: Partial<CreateProjectInput> & { status?: ProjectStatus },
+  ) {
+    const current = this.projects.find((project) => project.project_id === projectId)
+    if (!current) throw new Error('Missing project')
+    const updated = {
+      ...current,
+      ...changes,
+      metadata: changes.metadata ?? current.metadata,
+      updated_at: timestamp(),
+    }
+    this.projects = this.projects.map((project) =>
+      project.project_id === projectId ? updated : project,
+    )
     return updated
   }
 }
@@ -263,14 +276,14 @@ describe('Goal Planner tool', () => {
     configureAIService(new LocalAIService(), { model: 'local', provider: 'local' })
   })
 
-  it('creates a Goal Planner enabled tool from the template library', async () => {
+  it('registers a Goal Planner active tool from the template library', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Tools' }))
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
     await user.click(screen.getByRole('button', { name: 'Goal Planner' }))
 
-    expect(screen.getByRole('heading', { name: 'Tools' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tool Templates' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Goal title')).not.toBeInTheDocument()
 
     await user.type(
@@ -278,23 +291,223 @@ describe('Goal Planner tool', () => {
       'Manage durable project memory for a launch plan with milestones and action items.',
     )
     await user.click(screen.getByRole('button', { name: 'Send requirement' }))
-    await user.clear(await screen.findByLabelText('Enabled tool alias'))
-    await user.type(screen.getByLabelText('Enabled tool alias'), 'Planning Ops')
-    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
+    const aliasInput = await screen.findByLabelText('Active tool name')
+    await user.clear(aliasInput)
+    await user.type(aliasInput, 'Planning Ops')
+    await user.click(screen.getByRole('button', { name: 'Register active tool' }))
 
-    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
     expect(screen.getAllByText('Planning Ops').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Goal Planner').length).toBeGreaterThan(0)
     expect(memoryClient.projects[0].metadata).toMatchObject({
       adapterId: 'generic',
+      implementationPath: [],
       instanceAlias: 'Planning Ops',
+      parentTemplateId: 'goal-planner',
+      parentTemplateLabel: 'Goal Planner',
+      roadmapFormatVersion: 1,
       sourceToolId: 'goal-planner',
-      toolCategory: 'enabled-tool',
+      toolCategory: 'active-tool',
       toolName: 'Goal Planner',
     })
     expect(memoryClient.goals[0].metadata).toMatchObject({
       instanceAlias: 'Planning Ops',
-      toolCategory: 'enabled-tool',
+      parentTemplateId: 'goal-planner',
+      roadmapFormatVersion: 1,
+      toolCategory: 'active-tool',
+    })
+
+    const activeToolNameInput = await screen.findByLabelText('Active tool name')
+    expect(screen.getByLabelText('Roadmap')).toBeInTheDocument()
+    expect(screen.getByText('Implementation path')).toBeInTheDocument()
+    expect(activeToolNameInput).toHaveValue('Planning Ops')
+    await user.clear(activeToolNameInput)
+    await user.type(activeToolNameInput, 'Planning Ops Renamed')
+    await user.click(screen.getByRole('button', { name: 'Save name' }))
+
+    expect((await screen.findAllByText('Planning Ops Renamed')).length).toBeGreaterThan(0)
+    expect(memoryClient.projects[0]).toMatchObject({
+      metadata: expect.objectContaining({
+        instanceAlias: 'Planning Ops Renamed',
+        parentTemplateId: 'goal-planner',
+        roadmapFormatVersion: 1,
+      }),
+      title: 'Planning Ops Renamed',
     })
   }, 15_000)
+
+  it('shows and edits the selected project roadmap in Goal Planner', async () => {
+    const user = userEvent.setup()
+    memoryClient.goals = [
+      {
+        created_at: timestamp(),
+        description: 'Coordinate launch outcomes',
+        goal_id: 'goal_1',
+        metadata: {},
+        status: 'active',
+        title: 'Launch goal',
+        updated_at: timestamp(),
+      },
+    ]
+    memoryClient.projects = [
+      {
+        created_at: timestamp(),
+        description: 'Manage the launch project',
+        goal_id: 'goal_1',
+        metadata: {},
+        project_id: 'project_1',
+        status: 'active',
+        title: 'Launch project',
+        updated_at: timestamp(),
+      },
+    ]
+    memoryClient.milestones = [
+      {
+        created_at: timestamp(),
+        description: 'Scope the work',
+        due_date: '2026-07-15',
+        metadata: {},
+        milestone_id: 'milestone_1',
+        project_id: 'project_1',
+        status: 'in_progress',
+        title: 'Discovery',
+        updated_at: timestamp(),
+      },
+    ]
+    memoryClient.actions = [
+      {
+        action_id: 'action_1',
+        created_at: timestamp(),
+        description: 'Draft the constraints',
+        due_date: null,
+        metadata: {},
+        milestone_id: 'milestone_1',
+        project_id: 'project_1',
+        status: 'done',
+        title: 'Draft constraints',
+        updated_at: timestamp(),
+      },
+    ]
+
+    render(<GoalPlannerPanel />)
+
+    expect(await screen.findByLabelText('Roadmap')).toBeInTheDocument()
+    expect(screen.getAllByText('Launch goal').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Discovery').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: 'Edit implementation path' }))
+    const pathInput = screen.getByLabelText(/One step per line/i)
+    await user.clear(pathInput)
+    await user.type(pathInput, 'Research | Map constraints\nDelivery | Ship workflow')
+    await user.click(screen.getByRole('button', { name: 'Save implementation path' }))
+
+    expect(memoryClient.projects[0].metadata).toMatchObject({
+      implementationPath: [
+        { description: 'Map constraints', id: 'path-1', order: 1, title: 'Research' },
+        { description: 'Ship workflow', id: 'path-2', order: 2, title: 'Delivery' },
+      ],
+      roadmapFormatVersion: 1,
+    })
+    expect(await screen.findByText('Saved implementation path for Launch project')).toBeInTheDocument()
+    expect(await screen.findByText(/Research/)).toBeInTheDocument()
+  })
+
+  it('shows a mock plan and edits the long-term plan and tool characteristics in Active Tools', async () => {
+    const user = userEvent.setup()
+    const mockPlan = [
+      {
+        description: 'Document the existing planning workflow',
+        id: 'path-1',
+        order: 1,
+        title: 'Audit current workflow',
+      },
+      {
+        description: 'Validate the first automated review',
+        id: 'path-2',
+        order: 2,
+        title: 'Run pilot review',
+      },
+    ]
+    const metadata = createActiveToolMetadata({
+      activationSummary: 'Keep the planning system aligned with the long-term outcome.',
+      adapterId: 'ai-progress',
+      implementationPath: mockPlan,
+      instanceAlias: 'Planning System',
+      longTermGoalLabel: 'Build a repeatable planning system',
+      parentTemplateId: 'goal-planner',
+      parentTemplateLabel: 'Goal Planner',
+      routeTags: ['planning', 'weekly review'],
+      toolFeatures: ['Durable progress memory', 'Reviewable calendar drafts'],
+      toolName: 'Goal Planner',
+    })
+    memoryClient.goals = [
+      {
+        created_at: timestamp(),
+        description: 'Make planning reliable',
+        goal_id: 'goal_1',
+        metadata,
+        status: 'active',
+        title: 'Planning operations',
+        updated_at: timestamp(),
+      },
+    ]
+    memoryClient.projects = [
+      {
+        created_at: timestamp(),
+        description: 'Operate the planning system',
+        goal_id: 'goal_1',
+        metadata,
+        project_id: 'project_1',
+        status: 'active',
+        title: 'Planning System',
+        updated_at: timestamp(),
+      },
+    ]
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Active Tools' }))
+
+    expect(await screen.findByText('Build a repeatable planning system')).toBeInTheDocument()
+    expect(screen.getByText(/Audit current workflow/)).toBeInTheDocument()
+    expect(screen.getByText('Durable progress memory')).toBeInTheDocument()
+    expect(screen.getByText('Reviewable calendar drafts')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit plan & characteristics' }))
+    const dialog = screen.getByRole('dialog', {
+      name: 'Edit long-term plan and tool characteristics',
+    })
+    const planInput = within(dialog).getByLabelText('Implementation path')
+    const featuresInput = within(dialog).getByLabelText('Tool characteristics')
+
+    await user.clear(planInput)
+    await user.type(
+      planInput,
+      'Prototype workflow | Validate the automation\nShip rollout | Release the planning system',
+    )
+    await user.clear(featuresInput)
+    await user.type(featuresInput, 'Durable progress memory\nWeekly variance review')
+    await user.click(within(dialog).getByRole('button', { name: 'Save plan & characteristics' }))
+
+    expect(await screen.findByText(/Prototype workflow/)).toBeInTheDocument()
+    expect(screen.getByText(/Ship rollout/)).toBeInTheDocument()
+    expect(screen.getByText('Weekly variance review')).toBeInTheDocument()
+    expect(memoryClient.projects[0].metadata).toMatchObject({
+      implementationPath: [
+        {
+          description: 'Validate the automation',
+          id: 'path-1',
+          order: 1,
+          title: 'Prototype workflow',
+        },
+        {
+          description: 'Release the planning system',
+          id: 'path-2',
+          order: 2,
+          title: 'Ship rollout',
+        },
+      ],
+      longTermGoalLabel: 'Build a repeatable planning system',
+      toolFeatures: ['Durable progress memory', 'Weekly variance review'],
+    })
+  })
 })

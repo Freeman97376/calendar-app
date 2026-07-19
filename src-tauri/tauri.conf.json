@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Calendar App",
+  "version": "0.2.0",
+  "identifier": "com.calendarapp.desktop",
+  "build": {
+    "beforeDevCommand": "npm.cmd run dev",
+    "beforeBuildCommand": "npm.cmd run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Calendar App",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://127.0.0.1:*; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "externalBin": ["binaries/calendar-backend"],
+    "resources": {
+      "resources/tesseract/**/*": "tesseract/",
+      "resources/licenses/**/*": "licenses/"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/Freeman97376/calendar-app/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEwRkM5RkQ0Qzk0Q0FBQjEKUldTeHFrekoxSi84b0dmTldRcE1ZZFFORzBSUHowZkRQajAyK0QyZUVYcVUrZlc0U1BRQ2oyWkoK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

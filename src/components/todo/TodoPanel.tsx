@@ -17,6 +17,8 @@ import Button from '../ui/Button'
 
 type TodoFormState = {
   dueDate: string
+  energyNeeded: Todo['energyNeeded']
+  etaMinutes: string
   eventTypeId: string
   longProjectEnabled: boolean
   notes: string
@@ -48,6 +50,8 @@ type DetailItemEditState = {
 function createEmptyTodoForm(config: RuntimeConfig): TodoFormState {
   return {
     dueDate: '',
+    energyNeeded: 'medium',
+    etaMinutes: '30',
     eventTypeId: config.defaultTodoEventTypeId,
     longProjectEnabled: false,
     notes: '',
@@ -66,6 +70,18 @@ function statusLabel(status: Todo['status'], t: ReturnType<typeof useI18n>['t'])
   if (status === 'doing') return t('status.in_progress')
   if (status === 'done') return t('status.done')
   return t('status.todo')
+}
+
+function parseEtaMinutes(value: string): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 30
+  return Math.min(480, Math.max(5, Math.round(parsed / 5) * 5))
+}
+
+function energyLabel(energyNeeded: Todo['energyNeeded'], t: ReturnType<typeof useI18n>['t']): string {
+  if (energyNeeded === 'high') return t('todo.high')
+  if (energyNeeded === 'low') return t('todo.low')
+  return t('todo.medium')
 }
 
 const longProjectActionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
@@ -639,6 +655,8 @@ export default function TodoPanel() {
 
     const todo = await todos.addTodo({
       dueDate: todoDraft.dueDate || undefined,
+      energyNeeded: todoDraft.energyNeeded,
+      etaMinutes: parseEtaMinutes(todoDraft.etaMinutes),
       eventTypeId: todoDraft.eventTypeId,
       longProject: todoDraft.longProjectEnabled
         ? await todoLongProjects.createLink(todoDraft.title.trim(), todoDraft.notes || undefined)
@@ -676,6 +694,8 @@ export default function TodoPanel() {
     setEditingTodo(todo)
     setEditDraft({
       dueDate: todo.dueDate ?? '',
+      energyNeeded: todo.energyNeeded,
+      etaMinutes: String(todo.etaMinutes),
       eventTypeId: todo.eventTypeId,
       longProjectEnabled: Boolean(todo.longProject),
       notes: todo.notes ?? '',
@@ -779,6 +799,8 @@ export default function TodoPanel() {
 
     const updated = await todos.editTodo(editingTodo.id, {
       dueDate: editDraft.dueDate || undefined,
+      energyNeeded: editDraft.energyNeeded,
+      etaMinutes: parseEtaMinutes(editDraft.etaMinutes),
       eventTypeId: editDraft.eventTypeId,
       longProject: editDraft.longProjectEnabled
         ? editingTodo.longProject ??
@@ -895,6 +917,47 @@ export default function TodoPanel() {
             </div>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-eta">
+                {t('todo.etaMinutes')}
+              </label>
+              <input
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                id="todo-eta"
+                max={480}
+                min={5}
+                onChange={(inputEvent) =>
+                  setTodoDraft((current) => ({ ...current, etaMinutes: inputEvent.target.value }))
+                }
+                step={5}
+                type="number"
+                value={todoDraft.etaMinutes}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-energy">
+                {t('todo.energyNeeded')}
+              </label>
+              <select
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                id="todo-energy"
+                onChange={(inputEvent) =>
+                  setTodoDraft((current) => ({
+                    ...current,
+                    energyNeeded: inputEvent.target.value as Todo['energyNeeded'],
+                  }))
+                }
+                value={todoDraft.energyNeeded}
+              >
+                <option value="high">{t('todo.high')}</option>
+                <option value="medium">{t('todo.medium')}</option>
+                <option value="low">{t('todo.low')}</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700" htmlFor="todo-due-date">
               {t('todo.dueDate')}
@@ -994,7 +1057,9 @@ export default function TodoPanel() {
                           </span>
                         ) : null}
                         <span>{formatDueDate(todo, t)}</span>
-                        <span>{todo.priority} priority</span>
+                        <span>{t('todo.etaShort')}: {todo.etaMinutes}m</span>
+                        <span>{t('todo.priority')}: {todo.priority}</span>
+                        <span>{t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}</span>
                         <span>{statusLabel(todo.status, t)}</span>
                       </p>
                       <TodoDetails
@@ -1073,7 +1138,12 @@ export default function TodoPanel() {
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-500 line-through">{todo.title}</p>
-                    <p className="text-xs text-slate-400">{formatDueDate(todo, t)}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                      <span>{formatDueDate(todo, t)}</span>
+                      <span>{t('todo.etaShort')}: {todo.etaMinutes}m</span>
+                      <span>{t('todo.priority')}: {todo.priority}</span>
+                      <span>{t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}</span>
+                    </p>
                     <TodoDetails
                       longProject={{
                         actions: todoLongProjects.actions,
@@ -1189,6 +1259,48 @@ export default function TodoPanel() {
                     )
                   }
                   value={editDraft.priority}
+                >
+                  <option value="high">{t('todo.high')}</option>
+                  <option value="medium">{t('todo.medium')}</option>
+                  <option value="low">{t('todo.low')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-eta">
+                  {t('todo.etaMinutes')}
+                </label>
+                <input
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-edit-eta"
+                  max={480}
+                  min={5}
+                  onChange={(event) =>
+                    setEditDraft((current) => current && { ...current, etaMinutes: event.target.value })
+                  }
+                  step={5}
+                  type="number"
+                  value={editDraft.etaMinutes}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-energy">
+                  {t('todo.energyNeeded')}
+                </label>
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-edit-energy"
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current
+                        ? { ...current, energyNeeded: event.target.value as Todo['energyNeeded'] }
+                        : current,
+                    )
+                  }
+                  value={editDraft.energyNeeded}
                 >
                   <option value="high">{t('todo.high')}</option>
                   <option value="medium">{t('todo.medium')}</option>

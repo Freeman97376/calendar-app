@@ -49,6 +49,14 @@ export type {
   ToolSessionRequest,
   ToolSessionResult,
 } from '../schemas/toolSession.schema'
+export type { AppCapabilities, AppUser, BootstrapResponse } from '../schemas/auth.schema'
+export type {
+  DesktopDistribution,
+  DesktopUpdateInfo,
+  DesktopUpdateProgress,
+  DesktopUpdateStatus,
+  PreUpdateBackup,
+} from './desktopUpdate'
 
 // ── Utility types ────────────────────────────────────────────────────────────
 

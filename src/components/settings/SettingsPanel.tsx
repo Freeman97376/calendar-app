@@ -2,10 +2,14 @@ import { useEffect, useState, type FormEvent } from 'react'
 
 import type { EventType, RuntimeConfig } from '../../domain/types'
 import { useI18n } from '../../hooks/useI18n'
+import { useAuth } from '../../hooks/useAuth'
 import { useEventTypes } from '../../hooks/useEventTypes'
 import { useSettings } from '../../hooks/useSettings'
 import EventTypeSettings from '../eventTypes/EventTypeSettings'
 import Button from '../ui/Button'
+import DataPortabilityPanel from './DataPortabilityPanel'
+import AIUsageSettings from './AIUsageSettings'
+import DesktopUpdateSettings from './DesktopUpdateSettings'
 
 type BackendDraft = {
   deepseekApiKey: string
@@ -33,6 +37,7 @@ function withSelectedEventType(
 
 export default function SettingsPanel() {
   const { t, translateForLanguage } = useI18n()
+  const auth = useAuth()
   const settings = useSettings()
   const eventTypes = useEventTypes()
   const [runtimeDraft, setRuntimeDraft] = useState<RuntimeConfig>(settings.config)
@@ -117,12 +122,18 @@ export default function SettingsPanel() {
 
   async function saveBackend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    await settings.saveBackendConfig({
-      deepseek_api_key: backendDraft.deepseekApiKey || undefined,
-      deepseek_base_url: backendDraft.deepseekBaseUrl,
-      deepseek_model: backendDraft.deepseekModel,
-      fridge_data_dir: backendDraft.fridgeDataDir,
-    })
+    setStatus(null)
+    try {
+      await settings.saveBackendConfig({
+        deepseek_api_key: backendDraft.deepseekApiKey || undefined,
+        deepseek_base_url: backendDraft.deepseekBaseUrl,
+        deepseek_model: backendDraft.deepseekModel,
+        fridge_data_dir: backendDraft.fridgeDataDir,
+      })
+    } catch {
+      // The config store exposes an actionable error in the settings panel.
+      return
+    }
     setBackendDraft((current) => ({ ...current, deepseekApiKey: '' }))
     setStatus(translateForLanguage(runtimeDraft.language, 'settings.saveBackendStatus'))
   }
@@ -155,7 +166,10 @@ export default function SettingsPanel() {
             </div>
           </fieldset>
 
-          <fieldset className="space-y-3 border-t border-slate-200 pt-4">
+          <fieldset
+            className="space-y-3 border-t border-slate-200 pt-4"
+            hidden={auth.capabilities?.serverManagedAI ?? false}
+          >
             <legend className="text-sm font-medium text-slate-800">{t('settings.aiProviders')}</legend>
             <div>
               <label className="block text-sm font-medium text-slate-700" htmlFor="settings-ai-provider">
@@ -344,103 +358,6 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.firebaseStartupConfig')}</legend>
-            <p className="text-xs text-slate-500">
-              {t('settings.firebaseDescription')}
-            </p>
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-api-key">
-                {t('settings.firebaseApiKey')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-api-key"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, firebaseApiKey: event.target.value }))
-                }
-                type="password"
-                value={runtimeDraft.firebaseApiKey}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-auth-domain">
-                {t('settings.firebaseAuthDomain')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-auth-domain"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, firebaseAuthDomain: event.target.value }))
-                }
-                value={runtimeDraft.firebaseAuthDomain}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-project">
-                {t('settings.firebaseProjectId')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-project"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, firebaseProjectId: event.target.value }))
-                }
-                value={runtimeDraft.firebaseProjectId}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-storage">
-                {t('settings.firebaseStorageBucket')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-storage"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({
-                    ...current,
-                    firebaseStorageBucket: event.target.value,
-                  }))
-                }
-                value={runtimeDraft.firebaseStorageBucket}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-sender">
-                {t('settings.firebaseMessagingSenderId')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-sender"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({
-                    ...current,
-                    firebaseMessagingSenderId: event.target.value,
-                  }))
-                }
-                value={runtimeDraft.firebaseMessagingSenderId}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-firebase-app">
-                {t('settings.firebaseAppId')}
-              </label>
-              <input
-                className={inputClass}
-                id="settings-firebase-app"
-                onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, firebaseAppId: event.target.value }))
-                }
-                value={runtimeDraft.firebaseAppId}
-              />
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-3 border-t border-slate-200 pt-4">
             <legend className="text-sm font-medium text-slate-800">{t('settings.fridgeFrontend')}</legend>
             <div>
               <label className="block text-sm font-medium text-slate-700" htmlFor="settings-fridge-api">
@@ -590,9 +507,15 @@ export default function SettingsPanel() {
         </form>
       </section>
 
+      <DesktopUpdateSettings />
+
+      <AIUsageSettings />
+
       <EventTypeSettings title={t('settings.eventAndTaskTypes')} />
 
-      <section className="space-y-3 border-t border-slate-200 pt-4">
+      {auth.capabilities?.dataPortability ? <DataPortabilityPanel /> : null}
+
+      {auth.capabilities?.backendConfigEditable ? <section className="space-y-3 border-t border-slate-200 pt-4">
         <h3 className="text-sm font-semibold text-slate-950">{t('settings.backendDeepSeekFridge')}</h3>
         {settings.backendStatus ? (
           <p className="text-sm text-slate-600">
@@ -671,7 +594,11 @@ export default function SettingsPanel() {
             {t('settings.saveBackendConfig')}
           </Button>
         </form>
-      </section>
+      </section> : (
+        <section className="border-t border-slate-200 pt-4 text-sm text-slate-600">
+          Server AI and storage configuration is managed by the operator. / 服务器 AI 与存储配置由管理员在服务器端维护。
+        </section>
+      )}
 
       {settings.error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{settings.error}</p>

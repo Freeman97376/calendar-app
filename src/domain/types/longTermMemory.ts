@@ -5,6 +5,15 @@ export type ActionItemStatus = 'todo' | 'scheduled' | 'done' | 'blocked' | 'skip
 export type ProgressLogType = 'update' | 'decision' | 'blocker' | 'review' | 'tool_result'
 export type ToolRunStatus = 'success' | 'failed' | 'needs_user_confirmation'
 
+export type ImplementationPathStep = {
+  actionIds?: string[]
+  description?: string
+  id: string
+  milestoneId?: string
+  order: number
+  title: string
+}
+
 export type LongTermGoal = {
   goal_id: string
   title: string
@@ -46,6 +55,10 @@ export type LongTermActionItem = {
   description: string
   due_date: string | null
   status: ActionItemStatus
+  estimated_minutes?: number
+  priority?: 'high' | 'medium' | 'low'
+  energy_needed?: 'high' | 'medium' | 'low'
+  execution_tier?: 'minimum' | 'standard' | 'stretch'
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -121,9 +134,13 @@ export type CreateMilestoneInput = {
 export type CreateActionItemInput = {
   description?: string
   due_date?: string
+  energy_needed?: 'high' | 'medium' | 'low'
+  estimated_minutes?: number
+  execution_tier?: 'minimum' | 'standard' | 'stretch'
   metadata?: Record<string, unknown>
   milestone_id?: string
   project_id: string
+  priority?: 'high' | 'medium' | 'low'
   status?: ActionItemStatus
   title: string
 }

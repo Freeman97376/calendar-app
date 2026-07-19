@@ -9,9 +9,9 @@ import type {
 } from '../domain/types'
 import { AIEnabledToolRouteRequestSchema } from '../domain/schemas/ai.schema'
 import {
-  enabledToolInstancesFromProjects,
-  enabledToolRouteSummary,
-  type EnabledToolInstance,
+  activeToolRouteSummary,
+  activeToolsFromProjects,
+  type ActiveTool,
 } from '../domain/logic/enabledTools'
 import {
   TIME_CONFIRMATION_WARNING_PREFIX,
@@ -50,6 +50,7 @@ export type PendingEnabledToolRoute = {
 }
 
 type EnabledToolRoutingOptions = {
+  allowEnabledToolRouting?: boolean
   confirmEnabledToolRouting?: boolean
 }
 
@@ -133,7 +134,7 @@ function draftActionPlanContext(plan: AICalendarActionPlan): Extract<AIConversat
   }
 }
 
-async function enabledToolInstances(): Promise<EnabledToolInstance[]> {
+async function activeToolInstances(): Promise<ActiveTool[]> {
   const memory = useLongTermMemoryStore.getState()
   try {
     await memory.loadOverview()
@@ -142,7 +143,7 @@ async function enabledToolInstances(): Promise<EnabledToolInstance[]> {
   }
   const latest = useLongTermMemoryStore.getState()
 
-  return enabledToolInstancesFromProjects(latest.projects, latest.goals).filter(
+  return activeToolsFromProjects(latest.projects, latest.goals).filter(
     (instance) => instance.routingEnabled && instance.status === 'active',
   )
 }
@@ -151,14 +152,14 @@ async function findEnabledToolRoute(
   service: IAIService,
   message: string,
   context: AICalendarContext,
-): Promise<{ instance: EnabledToolInstance; route: PendingEnabledToolRoute } | null> {
-  const instances = await enabledToolInstances()
+): Promise<{ instance: ActiveTool; route: PendingEnabledToolRoute } | null> {
+  const instances = await activeToolInstances()
   if (!instances.length) return null
 
   const request = AIEnabledToolRouteRequestSchema.parse({
     currentDate: context.currentDate,
     currentDateTime: context.currentDateTime,
-    enabledTools: instances.map(enabledToolRouteSummary),
+    enabledTools: instances.map(activeToolRouteSummary),
     focusedDate: context.focusedDate,
     today: context.today,
     userMessage: message,
@@ -188,9 +189,9 @@ async function dispatchRoute(
   context: AICalendarContext,
   service: IAIService,
 ) {
-  const instances = await enabledToolInstances()
+  const instances = await activeToolInstances()
   const instance = instances.find((candidate) => candidate.projectId === route.projectId)
-  if (!instance) throw new Error(`Enabled tool not found: ${route.projectId}`)
+  if (!instance) throw new Error(`Active tool not found: ${route.projectId}`)
 
   return dispatchEnabledToolInstance(instance, route.rewrittenInstruction, context, service)
 }
@@ -441,7 +442,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         'assistant',
         `${result.assistantReply}${
           result.calendarEventCount
-            ? ` ${result.calendarEventCount} calendar draft${result.calendarEventCount === 1 ? '' : 's'} are waiting in Enabled Tools.`
+            ? ` ${result.calendarEventCount} calendar draft${result.calendarEventCount === 1 ? '' : 's'} are waiting in Active Tools.`
             : ''
         }`,
       )
@@ -452,7 +453,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingEnabledToolRoute: null,
       }))
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to dispatch enabled tool route'
+      const message = error instanceof Error ? error.message : 'Unable to dispatch active tool route'
       set({ error: message, isLoading: false })
     }
   },
@@ -485,7 +486,8 @@ export const useAIStore = create<AIStore>((set, get) => ({
     }))
 
     try {
-      const canRouteToEnabledTool = !pendingActionPlan && !currentConversationContext
+      const canRouteToEnabledTool =
+        options.allowEnabledToolRouting !== false && !pendingActionPlan && !currentConversationContext
       const routeMatch = canRouteToEnabledTool
         ? await findEnabledToolRoute(aiService, trimmedMessage, context)
         : null
@@ -512,7 +514,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
             dispatchResult.calendarEventCount
               ? ` ${dispatchResult.calendarEventCount} calendar draft${
                   dispatchResult.calendarEventCount === 1 ? '' : 's'
-                } are waiting in Enabled Tools.`
+                } are waiting in Active Tools.`
               : ''
           }`,
         )
@@ -568,7 +570,10 @@ export const useAIStore = create<AIStore>((set, get) => ({
     })
 
     try {
-      const routeMatch = await findEnabledToolRoute(aiService, trimmedCommand, context)
+      const routeMatch =
+        options.allowEnabledToolRouting === false
+          ? null
+          : await findEnabledToolRoute(aiService, trimmedCommand, context)
       if (routeMatch) {
         if (options.confirmEnabledToolRouting !== false) {
           const assistantMessage = createMessage(
@@ -593,7 +598,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
             dispatchResult.calendarEventCount
               ? ` ${dispatchResult.calendarEventCount} calendar draft${
                   dispatchResult.calendarEventCount === 1 ? '' : 's'
-                } are waiting in Enabled Tools.`
+                } are waiting in Active Tools.`
               : ''
           }`,
         )

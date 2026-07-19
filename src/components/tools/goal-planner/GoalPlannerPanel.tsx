@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import type {
   ActionItemStatus,
@@ -9,6 +9,7 @@ import type {
 } from '../../../domain/types/longTermMemory'
 import { useGoalPlannerMemory } from '../../../hooks/useGoalPlannerMemory'
 import Button from '../../ui/Button'
+import ToolRoadmapPanel from '../ToolRoadmapPanel'
 
 const inputClass =
   'mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100'
@@ -43,7 +44,14 @@ export default function GoalPlannerPanel() {
     logType: ProgressLogType
     summary: string
   }>({ details: '', logType: 'update', summary: '' })
+  const [isEditingPath, setIsEditingPath] = useState(false)
+  const [pathDraft, setPathDraft] = useState('')
   const [status, setStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsEditingPath(false)
+    setPathDraft(memory.selectedRoadmapPathText)
+  }, [memory.selectedProject?.project_id, memory.selectedRoadmapPathText])
 
   async function createGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -108,6 +116,20 @@ export default function GoalPlannerPanel() {
     })
     setProgressDraft({ details: '', logType: 'update', summary: '' })
     setStatus(`Logged ${label(progress.log_type)}`)
+  }
+
+  function startEditingPath() {
+    setPathDraft(memory.selectedRoadmapPathText)
+    setIsEditingPath(true)
+  }
+
+  async function saveImplementationPath(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!memory.selectedProject) return
+
+    await memory.saveSelectedImplementationPath(pathDraft)
+    setIsEditingPath(false)
+    setStatus(`Saved implementation path for ${memory.selectedProject.title}`)
   }
 
   return (
@@ -299,6 +321,40 @@ export default function GoalPlannerPanel() {
               <p className="mt-1 text-sm text-slate-500">Loading project details...</p>
             ) : null}
           </div>
+
+          {memory.selectedRoadmap ? <ToolRoadmapPanel roadmap={memory.selectedRoadmap} /> : null}
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h5 className="text-sm font-semibold text-slate-950">Implementation path</h5>
+              <Button onClick={startEditingPath} variant="ghost">
+                Edit implementation path
+              </Button>
+            </div>
+            {isEditingPath ? (
+              <form className="space-y-3" onSubmit={(event) => void saveImplementationPath(event)}>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor="implementation-path">
+                    One step per line. Use "Title | Details" for descriptions.
+                  </label>
+                  <textarea
+                    className={textareaClass}
+                    id="implementation-path"
+                    onChange={(event) => setPathDraft(event.target.value)}
+                    value={pathDraft}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={!pathDraft.trim()} type="submit" variant="primary">
+                    Save implementation path
+                  </Button>
+                  <Button onClick={() => setIsEditingPath(false)} variant="secondary">
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </section>
 
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Tool History</h5>

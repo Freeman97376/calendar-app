@@ -8,6 +8,7 @@ import TodoPanel from '../todo/TodoPanel'
 import EnabledToolsPanel from '../tools/EnabledToolsPanel'
 import ToolsPanel from '../tools/ToolsPanel'
 import Button from '../ui/Button'
+import CheckInInbox from './CheckInInbox'
 
 type WorkspacePanelProps = {
   compact?: boolean
@@ -41,11 +42,6 @@ const entries: Array<{
     panel: 'todos',
   },
   {
-    descriptionKey: 'workspace.entryToolsDescription',
-    labelKey: 'panel.tools',
-    panel: 'tools',
-  },
-  {
     descriptionKey: 'workspace.entryEnabledToolsDescription',
     labelKey: 'panel.enabledTools',
     panel: 'enabled-tools',
@@ -72,6 +68,7 @@ function WorkspaceHome() {
         <h2 className="text-base font-semibold text-slate-950">{t('panel.home')}</h2>
         <p className="mt-1 text-sm text-slate-600">{t('workspace.homeDescription')}</p>
       </div>
+      <CheckInInbox />
       <div className="grid gap-2">
         {entries.map((entry) => {
           const label = t(entry.labelKey)
@@ -92,6 +89,13 @@ function WorkspaceHome() {
           )
         })}
       </div>
+      <button
+        className="text-left text-xs font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-emerald-700"
+        onClick={() => openPanel('tools')}
+        type="button"
+      >
+        {t('panel.toolTemplates')}
+      </button>
     </div>
   )
 }

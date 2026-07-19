@@ -23,6 +23,7 @@ const validBreakdown = {
     {
       title: 'Research the company',
       durationMinutes: 45,
+      energyNeeded: 'medium',
       suggestedDayOffset: 0,
       suggestedHour: 9,
       priority: 'high',

@@ -63,6 +63,12 @@ async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name
   await user.click(await screen.findByRole('button', { name }))
 }
 
+async function submitAIChat(user: ReturnType<typeof userEvent.setup>, message: string) {
+  await user.click(screen.getByRole('button', { name: 'Mode: Chat' }))
+  await user.type(screen.getByLabelText('AI message'), message)
+  await user.click(screen.getByRole('button', { name: 'Send message' }))
+}
+
 class MemoryClient implements LongTermMemoryClientContract {
   actions: LongTermActionItem[] = []
   goals: LongTermGoal[] = []
@@ -295,11 +301,11 @@ describe('Fridge tool template', () => {
     configureAIService(new LocalAIService(), { model: 'local', provider: 'local' })
   })
 
-  it('creates a Fridge enabled tool and records routed generic runs', async () => {
+  it('registers a Fridge active tool and records routed generic runs', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Tools' }))
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
     await user.click(screen.getByRole('button', { name: 'Fridge' }))
     await user.type(
       screen.getByLabelText('Requirements'),
@@ -307,28 +313,27 @@ describe('Fridge tool template', () => {
     )
     await user.click(screen.getByRole('button', { name: 'Send requirement' }))
 
-    await user.clear(await screen.findByLabelText('Enabled tool alias'))
-    await user.type(screen.getByLabelText('Enabled tool alias'), 'Fridge Coach')
-    await user.click(screen.getByRole('button', { name: 'Create enabled tool' }))
+    const aliasInput = await screen.findByLabelText('Active tool name')
+    await user.clear(aliasInput)
+    await user.type(aliasInput, 'Fridge Coach')
+    await user.click(screen.getByRole('button', { name: 'Register active tool' }))
 
-    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
     expect(memoryClient.projects[0].metadata).toMatchObject({
       instanceAlias: 'Fridge Coach',
-      toolCategory: 'enabled-tool',
+      parentTemplateId: 'fridge',
+      parentTemplateLabel: 'Fridge',
+      toolCategory: 'active-tool',
       toolName: 'Fridge',
     })
 
     await openWorkspaceEntry(user, 'AI Assistant')
-    await user.type(
-      screen.getByLabelText('Conversation'),
-      'Update Fridge Coach with this week grocery receipts and expiration reminders.',
-    )
-    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    await submitAIChat(user, 'Update Fridge Coach with this week grocery receipts and expiration reminders.')
 
     expect(await screen.findByText(/Route this to Fridge Coach/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Dispatch' }))
 
-    expect(await screen.findByRole('heading', { name: 'Enabled Tools' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
     expect((await screen.findAllByText('AI Assistant routed a request to Fridge Coach.')).length).toBeGreaterThan(0)
     await waitFor(() => {
       expect(memoryClient.toolRuns[0]).toMatchObject({

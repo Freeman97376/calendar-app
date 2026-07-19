@@ -7,11 +7,10 @@
 ## Prerequisites
 
 - Node.js 20+ and npm 10+.
-- Python 3.11+ for the local fridge backend.
+- Python 3.11+ for the FastAPI backend and desktop sidecar.
 - Tesseract OCR installed for receipt OCR.
-- Optional: frontend AI API key for scheduling AI, or use the built-in local planner.
-- Optional: DeepSeek API key for fridge receipt fallback analysis.
-- Optional: Firebase project for Firestore sync.
+- Optional: MySQL 8.0+ for server-mode development.
+- Optional: DeepSeek API key for AI planning and receipt fallback analysis.
 
 ---
 
@@ -37,6 +36,7 @@ Backend Python venv:
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+python -m pip install --require-hashes -r requirements-server.lock
 ```
 
 If PowerShell blocks venv activation:
@@ -46,7 +46,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-The current backend uses Python standard-library modules. OCR depends on the installed Tesseract program, not a pip package.
+The server and desktop inputs live in `requirements.in` and `requirements-desktop.in`; checked-in lock files contain exact versions and hashes. OCR depends on the installed Tesseract program during development.
 
 ---
 
@@ -59,32 +59,14 @@ Copy-Item .env.example .env.local -ErrorAction SilentlyContinue
 Open `.env.local` and fill only what you use:
 
 ```env
-# Frontend AI
-VITE_AI_PROVIDER=api
-VITE_AI_API_KEY=
-VITE_AI_API_BASE_URL=https://api.deepseek.com
-VITE_AI_API_MODEL=deepseek-chat
-
-# Fridge frontend/backend bridge
-VITE_FRIDGE_API_BASE_URL=http://127.0.0.1:8787
-
-# Backend DeepSeek, no VITE_ prefix
+CALENDAR_APP_MODE=desktop
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 FRIDGE_DATA_DIR=
 ```
 
-Firebase values are optional unless you want Firestore sync:
-
-```env
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-```
+Do not put AI keys or database credentials in `VITE_*` variables. Firebase is available only through the standalone legacy export command documented in `.env.legacy.example`.
 
 ---
 
@@ -132,7 +114,7 @@ Terminal 2, backend:
 cd "C:\Users\Zheng\Desktop\calendar app"
 .\.venv\Scripts\Activate.ps1
 tesseract --version
-python -m backend.server
+python -m backend.server --mode desktop
 ```
 
 Open:
@@ -149,8 +131,8 @@ Open `Tools -> Settings`.
 
 Confirm:
 
-- `Fridge API base URL` is `http://127.0.0.1:8787`.
-- AI API settings are filled if using API-backed scheduling AI, or `local` is selected in Settings.
+- The frontend uses the same-origin Calendar API (Vite proxies it to `127.0.0.1:8787`).
+- AI requests use the Calendar API proxy; no browser AI key is required.
 - DeepSeek key/base URL/model are filled if using fridge fallback analysis.
 - Event/task defaults match your preferred local workflow.
 
@@ -193,7 +175,7 @@ $env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discov
 ```text
 Office/          <- project management, planning, docs, testing notes
 src/             <- React/Vite frontend
-backend/         <- local Python fridge backend
+backend/         <- FastAPI, auth, SQL repositories, migrations and integrity tools
 tests/           <- automated tests
 scratch/         <- temporary files and one-off/manual test scripts
 ```

@@ -12,6 +12,7 @@ import EventDragOverlay from '../event/EventDragOverlay'
 import MonthView from './MonthView'
 import ViewSwitcher from './ViewSwitcher'
 import WeekView from './WeekView'
+import ApprovalDrawer from '../workspace/ApprovalDrawer'
 import WorkspacePanel, { WorkspacePanelContent } from '../workspace/WorkspacePanel'
 
 type LayoutStyle = CSSProperties & {
@@ -131,6 +132,7 @@ export default function CalendarShell() {
       <DragOverlay>
         <EventDragOverlay event={dragDrop.activeEvent} />
       </DragOverlay>
+      <ApprovalDrawer />
     </DndContext>
   )
 }

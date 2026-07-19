@@ -24,17 +24,18 @@ import type {
   ToolSessionResult,
 } from '../../domain/types'
 import type { AIConversationContext, AIConversationMessage, IAIService } from './IAIService'
+import { authenticatedFetch } from '../appApiClient'
 
 export const DEFAULT_AI_API_BASE_URL = 'https://api.deepseek.com'
 export const DEFAULT_AI_API_MODEL = 'deepseek-chat'
 
-const defaultFetcher: typeof fetch = (input, init) => globalThis.fetch(input, init)
+const defaultFetcher: typeof fetch = authenticatedFetch
 
 const breakdownSystemPrompt = `You are a productivity assistant helping users schedule their goals.
 Return only a JSON object matching the requested schema.
 Break each goal into 2-8 concrete, actionable steps that can be scheduled as calendar events.
 Use only the documented keys. Omit optional fields instead of returning null.
-Use lowercase priority values: high, medium, or low.`
+Use lowercase priority and energyNeeded values: high, medium, or low.`
 
 const actionSystemPrompt = `You are a calendar and task assistant.
 Return only a JSON object matching the requested schema.
@@ -48,6 +49,8 @@ Use ISO date strings for todo dueDate or schedule dates, for example 2026-06-18.
 If an event starts within the next 48 hours, add a warning beginning with "Confirm time:" that repeats the interpreted local time.
 When the user asks for a new project/task, create a todo unless they clearly ask for a calendar event.
 When the user asks for dinner, meetings, appointments, or time-bound commitments, create a calendar event.
+For task work, include etaMinutes and energyNeeded when the user supplies enough detail; otherwise use defaults.
+For schedule_todo, include startAt and endAt when an exact time slot is requested or inferred.
 Do not invent event type ids; use an id from context.eventTypes or omit it.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
@@ -75,6 +78,7 @@ Use only the documented keys. Omit optional fields instead of returning null.`
 
 const progressToolSystemPrompt = `You are a memory-backed AI demo tool inside a calendar app.
 Return only a JSON object matching the requested schema.
+Use promptFramework as the stable description of the active tool's long-term goal, characteristics, and execution plan.
 Use the compact project memory, calendar events, and search results to adjust the plan.
 Do not assume unseen calendar availability. Prefer suggesting practical next blocks that avoid supplied calendar event conflicts.
 When userInstruction contains dialogue, treat the latest user message as the active request. Confirm requirements in assistantReply, update the plan, and write progressLog entries for decisions, blockers, or completed work.
@@ -85,18 +89,18 @@ For learning assistant planning, route by sourceToolId, formInput.learningTrack,
 For dueDate, output only YYYY-MM-DD strings. If the date is relative, vague, or not known, omit dueDate.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
-const toolActivationSystemPrompt = `You help users turn a reusable tool template into one enabled tool instance.
+const toolActivationSystemPrompt = `You help users register a reusable parent tool template as one independent active tool.
 Return only a JSON object matching the requested schema.
 Use the conversation to confirm the instance's goal, constraints, cadence, and target outcome.
 If critical details are missing, ask one concise follow-up question in assistantReply and set needsMoreInfo to true.
 When enough details are present, suggest a short editable instance alias, summarize the activation requirements, and return compact routeTags.
 Do not create projects, actions, or calendar events. Use only the documented keys. Omit optional fields instead of returning null.`
 
-const enabledToolRoutingSystemPrompt = `You route an AI Assistant message to one existing enabled tool instance.
+const enabledToolRoutingSystemPrompt = `You route an AI Assistant message to one existing active tool.
 Return only a JSON object matching the requested schema.
-Choose only from enabledTools supplied in the request. Never invent or create a new tool instance.
-Set matchedProjectId to null and confidence to 0 when no active enabled tool clearly matches.
-Use alias, toolName, routeTags, sourceToolId, and activationSummary to decide.
+Choose only from enabledTools supplied in the request. Never invent or create a new active tool.
+Set matchedProjectId to null and confidence to 0 when no active tool clearly matches.
+Use alias, toolName, longTermGoalLabel, toolFeatures, implementationPlan, routeTags, sourceToolId, and activationSummary to decide.
 Preserve the user's request in rewrittenInstruction, only tightening it for the matched tool when helpful.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
@@ -107,6 +111,7 @@ const breakdownJsonShape = `{
       "title": "string",
       "description": "optional string",
       "durationMinutes": 30,
+      "energyNeeded": "high | medium | low",
       "suggestedDayOffset": 0,
       "suggestedHour": 9,
       "priority": "high | medium | low"
@@ -146,6 +151,8 @@ const actionJsonShape = `{
       "title": "string",
       "notes": "optional string",
       "dueDate": "optional ISO date",
+      "etaMinutes": 30,
+      "energyNeeded": "high | medium | low",
       "priority": "high | medium | low",
       "eventTypeId": "optional existing event type id",
       "reason": "optional string"
@@ -153,7 +160,7 @@ const actionJsonShape = `{
     {
       "type": "update_todo",
       "todoId": "existing todo id",
-      "changes": { "title": "optional string", "dueDate": "optional ISO date", "priority": "optional high | medium | low", "status": "optional todo | doing | done" },
+      "changes": { "title": "optional string", "dueDate": "optional ISO date", "etaMinutes": "optional minutes", "energyNeeded": "optional high | medium | low", "priority": "optional high | medium | low", "status": "optional todo | doing | done" },
       "reason": "optional string"
     },
     {
@@ -165,6 +172,8 @@ const actionJsonShape = `{
       "type": "schedule_todo",
       "todoId": "existing todo id",
       "date": "optional ISO date",
+      "startAt": "optional ISO datetime",
+      "endAt": "optional ISO datetime",
       "reason": "optional string"
     }
   ],
@@ -270,7 +279,7 @@ const enabledToolRouteJsonShape = `{
   "matchedProjectId": "project id string or null",
   "confidence": 0.85,
   "reason": "short explanation",
-  "rewrittenInstruction": "compact instruction for the matched enabled tool",
+  "rewrittenInstruction": "compact instruction for the matched active tool",
   "needsConfirmation": true
 }`
 
@@ -297,7 +306,7 @@ export class ApiAIService implements IAIService {
   readonly model: string
 
   constructor(options: ApiAIServiceOptions = {}) {
-    this.apiKey = options.apiKey ?? import.meta.env.VITE_AI_API_KEY ?? import.meta.env.VITE_DEEPSEEK_API_KEY ?? ''
+    this.apiKey = options.apiKey ?? ''
     this.endpoint = chatCompletionsEndpoint(
       options.baseUrl ??
         import.meta.env.VITE_AI_API_BASE_URL ??
@@ -315,12 +324,13 @@ export class ApiAIService implements IAIService {
 
   async breakdownGoal(goal: string): Promise<AIBreakdownResult> {
     return this.callJson(
-      AIBreakdownResultSchema,
+      AIBreakdownResultSchema as z.ZodType<AIBreakdownResult>,
       breakdownSystemPrompt,
       ['Return JSON matching this shape:', breakdownJsonShape, '', `Goal: ${goal}`].join('\n'),
       1024,
       undefined,
       normalizeBreakdownOutput,
+      'goal_plan',
     )
   }
 
@@ -344,6 +354,7 @@ export class ApiAIService implements IAIService {
       2048,
       undefined,
       normalizeActionPlanOutput,
+      'calendar_plan',
     )
   }
 
@@ -363,6 +374,7 @@ export class ApiAIService implements IAIService {
       2048,
       request.llmOptions.model,
       normalizeToolSessionOutput,
+      'calendar_plan',
     )
   }
 
@@ -382,6 +394,7 @@ export class ApiAIService implements IAIService {
       3072,
       undefined,
       normalizeProgressToolOutput,
+      'replan',
     )
   }
 
@@ -398,6 +411,7 @@ export class ApiAIService implements IAIService {
       1536,
       undefined,
       (value) => normalizeToolActivationOutput(value, request),
+      'activation',
     )
   }
 
@@ -414,6 +428,7 @@ export class ApiAIService implements IAIService {
       1024,
       undefined,
       normalizeEnabledToolRouteOutput,
+      'route',
     )
   }
 
@@ -446,6 +461,7 @@ export class ApiAIService implements IAIService {
       2048,
       undefined,
       normalizeConversationOutput,
+      'routine',
     )
   }
 
@@ -456,9 +472,10 @@ export class ApiAIService implements IAIService {
     maxTokens = 1024,
     modelOverride?: string,
     normalize?: (value: unknown) => unknown,
+    operation: CalendarAIOperation = 'routine',
   ): Promise<T> {
     if (!this.isAvailable()) {
-      throw new Error('AI API key is not configured. Add VITE_AI_API_KEY or VITE_DEEPSEEK_API_KEY to .env.local or Settings.')
+      throw new Error('The AI service is not configured for this runtime.')
     }
 
     const response = await this.fetcher(this.endpoint, {
@@ -468,6 +485,7 @@ export class ApiAIService implements IAIService {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
+        _calendarOperation: operation,
         model: modelOverride?.trim() || this.model,
         messages: [
           { role: 'system', content: system },
@@ -496,6 +514,16 @@ export class ApiAIService implements IAIService {
     return parseStructuredOutput(schema, text, normalize)
   }
 }
+
+type CalendarAIOperation =
+  | 'activation'
+  | 'calendar_plan'
+  | 'goal_plan'
+  | 'replan'
+  | 'review'
+  | 'route'
+  | 'routine'
+  | 'weekly_review'
 
 export function chatCompletionsEndpoint(baseUrl: string): string {
   const normalized = baseUrl.trim().replace(/\/$/, '')
@@ -617,6 +645,7 @@ function normalizeBreakdownOutput(value: unknown): unknown {
             ...step,
             description: optionalString(step.description),
             durationMinutes: numberFromUnknown(step.durationMinutes),
+            energyNeeded: enumLowercase(step.energyNeeded),
             priority: enumLowercase(step.priority),
             suggestedDayOffset: numberFromUnknown(step.suggestedDayOffset),
             suggestedHour: numberFromUnknown(step.suggestedHour),
@@ -731,7 +760,7 @@ function fallbackActivationAlias(request: AIToolActivationRequest, latestMessage
 
 function fallbackActivationSummary(request: AIToolActivationRequest, latestMessage: string): string {
   return latestMessage
-    ? `Enabled ${request.templateLabel} for: ${latestMessage}`
+    ? `Prepared ${request.templateLabel} active tool for: ${latestMessage}`
     : `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
 }
 
@@ -741,7 +770,7 @@ function fallbackActivationReply(
   alias: string,
 ): string {
   return latestMessage
-    ? `I can create "${alias}" from ${request.templateLabel}. Review the alias, then create the enabled tool.`
+    ? `I can register "${alias}" from ${request.templateLabel}. Review the name, then register the active tool.`
     : `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
 }
 
@@ -824,6 +853,8 @@ function normalizeAction(value: unknown): unknown {
     description: optionalString(value.description),
     displayDetails: optionalString(value.displayDetails),
     dueDate: optionalDate(value.dueDate),
+    energyNeeded: enumLowercase(value.energyNeeded),
+    etaMinutes: numberFromUnknown(value.etaMinutes),
     eventTypeId: optionalString(value.eventTypeId),
     notes: optionalString(value.notes),
     priority: enumLowercase(value.priority),
@@ -832,7 +863,14 @@ function normalizeAction(value: unknown): unknown {
 
   if (value.type === 'create_event') return normalizeEventLike(base)
   if (value.type === 'create_todo') return compactUndefined(base)
-  if (value.type === 'schedule_todo') return compactUndefined({ ...base, date: optionalDate(value.date) })
+  if (value.type === 'schedule_todo') {
+    return compactUndefined({
+      ...base,
+      date: optionalDate(value.date),
+      endAt: optionalDateTime(value.endAt),
+      startAt: optionalDateTime(value.startAt),
+    })
+  }
 
   if ((value.type === 'update_event' || value.type === 'update_todo') && isRecord(value.changes)) {
     return compactUndefined({
@@ -850,7 +888,9 @@ function normalizeChanges(changes: Record<string, unknown>): Record<string, unkn
     description: optionalString(changes.description),
     displayDetails: optionalString(changes.displayDetails),
     dueDate: optionalDate(changes.dueDate),
+    energyNeeded: enumLowercase(changes.energyNeeded),
     endAt: optionalDateTime(changes.endAt),
+    etaMinutes: numberFromUnknown(changes.etaMinutes),
     eventTypeId: optionalString(changes.eventTypeId),
     notes: optionalString(changes.notes),
     priority: enumLowercase(changes.priority),

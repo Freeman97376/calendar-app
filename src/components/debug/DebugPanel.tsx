@@ -65,7 +65,7 @@ export default function DebugPanel() {
           <Field label="Workspace" value={debug.ui.activeWorkspacePanel} />
           <Field label="AI" value={debug.ui.aiPanelOpen} />
           <Field label="Todos" value={debug.ui.todoPanelOpen} />
-          <Field label="Tools" value={debug.ui.toolsPanelOpen} />
+          <Field label="Tool Templates" value={debug.ui.toolsPanelOpen} />
           <Field label="Debug" value={debug.ui.debugPanelOpen} />
           <Field label="Tool" value={debug.ui.activeToolId} />
         </Section>

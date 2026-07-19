@@ -7,10 +7,14 @@ import { z } from 'zod'
 // See feature spec: office/docs/feature-specs/ai-assistant.md
 // AI output is ALWAYS validated through this schema before use in the app.
 
+const TaskEnergySchema = z.enum(['high', 'medium', 'low'])
+const TaskEtaMinutesSchema = z.coerce.number().int().min(5).max(480)
+
 export const AIStepSchema = z.object({
   title: z.string().trim().min(1).max(100),
   description: z.string().trim().optional(),
   durationMinutes: z.number().int().min(5).max(480),
+  energyNeeded: TaskEnergySchema.default('medium'),
   suggestedDayOffset: z.number().int().min(0).max(30),
   suggestedHour: z.number().int().min(0).max(23).optional(),
   priority: z.enum(['high', 'medium', 'low']),
@@ -44,6 +48,8 @@ const NonEmptyUpdateSchema = z
 const NonEmptyTodoUpdateSchema = z
   .object({
     dueDate: ISODateSchema.optional(),
+    energyNeeded: TaskEnergySchema.optional(),
+    etaMinutes: TaskEtaMinutesSchema.optional(),
     eventTypeId: z.string().trim().min(1).optional(),
     notes: z.string().trim().optional(),
     priority: z.enum(['high', 'medium', 'low']).optional(),
@@ -84,6 +90,8 @@ export const AICreateTodoActionSchema = z.object({
   title: z.string().trim().min(1).max(200),
   notes: z.string().trim().optional(),
   dueDate: ISODateSchema.optional(),
+  energyNeeded: TaskEnergySchema.default('medium'),
+  etaMinutes: TaskEtaMinutesSchema.default(30),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
   eventTypeId: z.string().trim().min(1).optional(),
   reason: z.string().trim().optional(),
@@ -106,6 +114,8 @@ export const AIScheduleTodoActionSchema = z.object({
   type: z.literal('schedule_todo'),
   todoId: z.string().trim().min(1),
   date: ISODateSchema.optional(),
+  startAt: ISODateTimeSchema.optional(),
+  endAt: ISODateTimeSchema.optional(),
   reason: z.string().trim().optional(),
 })
 
@@ -128,6 +138,12 @@ function updateEventTimesAreValid(action: z.infer<typeof AIUpdateEventActionSche
   return new Date(action.changes.endAt).getTime() > new Date(action.changes.startAt).getTime()
 }
 
+function scheduleTodoTimesAreValid(action: z.infer<typeof AIScheduleTodoActionSchema>): boolean {
+  if (!action.startAt && !action.endAt) return true
+  if (!action.startAt || !action.endAt) return false
+  return new Date(action.endAt).getTime() > new Date(action.startAt).getTime()
+}
+
 export const AICalendarActionPlanSchema = z
   .object({
     summary: z.string().trim().min(1).max(500),
@@ -141,6 +157,8 @@ export const AICalendarActionPlanSchema = z
           ? createEventTimesAreValid(action)
           : action.type === 'update_event'
             ? updateEventTimesAreValid(action)
+            : action.type === 'schedule_todo'
+              ? scheduleTodoTimesAreValid(action)
             : true
 
       if (!validTimes) {
@@ -190,6 +208,8 @@ export const AICalendarContextSchema = z.object({
       status: z.enum(['todo', 'doing', 'done']),
       eventTypeId: z.string().min(1).optional(),
       dueDate: ISODateSchema.optional(),
+      energyNeeded: TaskEnergySchema,
+      etaMinutes: TaskEtaMinutesSchema,
       priority: z.enum(['high', 'medium', 'low']),
       linkedEventId: z.string().optional(),
     }),
@@ -294,6 +314,7 @@ export const AIProgressToolRequestSchema = z.object({
   actions: z.array(AIProgressToolActionContextSchema).max(25).default([]),
   progress: z.array(AIProgressToolProgressContextSchema).max(5).default([]),
   project: AIProgressToolProjectSchema.nullable().optional(),
+  promptFramework: z.string().trim().min(1).max(5000).optional(),
   sourceToolId: z.string().trim().min(1),
   timezone: z.string().trim().optional(),
   timezoneName: z.string().trim().optional(),
@@ -387,13 +408,16 @@ export const AIToolActivationResultSchema = z.object({
 export const AIEnabledToolRouteToolSchema = z.object({
   activationSummary: z.string().trim().default(''),
   adapterId: z.string().trim().optional(),
+  implementationPlan: z.array(z.string().trim().min(1)).max(20).default([]),
   instanceAlias: z.string().trim().min(1),
+  longTermGoalLabel: z.string().trim().optional(),
   projectId: z.string().trim().min(1),
   routeTags: z.array(z.string().trim().min(1)).max(16).default([]),
   routingEnabled: z.boolean().default(true),
   sourceToolId: z.string().trim().min(1),
   status: z.enum(['active', 'paused', 'completed']),
   templateId: z.string().trim().min(1),
+  toolFeatures: z.array(z.string().trim().min(1)).max(16).default([]),
   toolName: z.string().trim().min(1),
 })
 

@@ -1,6 +1,6 @@
 # 🧪 Test Plan — Calendar App
 
-> Maintained by: Claude Code | Last updated: 2026-06-07  
+> Maintained by: Claude Code / Codex | Last updated: 2026-07-15
 > All tests in `tests/` are written and maintained by the Supervisor (Claude Code).
 
 ---
@@ -12,7 +12,7 @@
 | **Vitest** | Test runner (replaces Jest, native Vite integration) |
 | **React Testing Library** | Component + hook tests (user-centric queries) |
 | **@testing-library/user-event** | Simulates real user interactions (type, click, drag) |
-| **MSW (Mock Service Worker)** | Mocks backend config and Firebase-style network calls in tests |
+| **MSW (Mock Service Worker)** | Mocks backend and AI network calls in tests |
 | **@testing-library/jest-dom** | DOM assertion matchers (`toBeInTheDocument`, etc.) |
 | **Playwright** | E2E tests against the running dev server (Phase 7) |
 
@@ -25,7 +25,7 @@
 | `domain/logic/` | Unit | **100%** | Pure functions — no excuses |
 | `domain/schemas/` | Unit (Zod parse) | **100%** | Every schema has valid + invalid test cases |
 | `store/` | Unit | **90%+** | Actions, selectors, edge cases |
-| `services/storage/` | Unit + Integration | **85%+** | Adapter unit with mock; integration with Firebase emulator |
+| `services/storage/` | Unit + Integration | **85%+** | API adapter contracts plus isolated legacy-adapter tests |
 | `services/ai/` | Unit (MSW) | **85%+** | Mock API responses; verify Zod validation |
 | `hooks/` | Integration (RTL) | **80%+** | Hook behaviour with mocked store/services |
 | `components/` | Integration (RTL) | **70%+** | User interactions, not implementation details |
@@ -70,7 +70,7 @@
 | Test File | Tests |
 |-----------|-------|
 | `tests/unit/services/localStorageAdapter.test.ts` | CRUD round-trip, serialization, empty state |
-| `tests/unit/services/firestoreAdapter.test.ts` | CRUD with MSW mocking Firebase REST API |
+| `tests/unit/services/firestoreAdapter.test.ts` | Legacy-only adapter CRUD with an injected in-memory client; never used by production startup |
 | `tests/integration/syncManager.test.ts` | Write local → verify synced to remote, offline queue → sync on reconnect |
 
 ### Phase 6 (AI Assistant)
@@ -97,6 +97,17 @@
 | `tests/unit/services/fridgeApiService.test.ts` | Frontend fridge API multipart upload, inventory parsing, structured backend errors |
 | `tests/integration/fridgePanel.test.tsx` | Receipt analysis UI, add analyzed item to inventory, schedule expiration reminder into calendar |
 
+### 2026-07-15 Security, integrity, and packaging repair
+
+| Test File | Contract |
+|-----------|----------|
+| `tests/backend/test_auth_api.py` | Server budget import filtering, replace replay, dummy-hash reuse, IP/username throttles, lockout, CSRF and account isolation |
+| `tests/backend/test_desktop_auth.py` | AI operation enum, planning limit selection, HTML/invalid/truncated upstream responses, desktop token gate and local budget |
+| `tests/backend/test_goal_control.py` | ISO-week capacity, target/dependency boundaries, DST conversion, strict Check-in payloads, review periods, skipped completion, rolling summary and rollback evidence preservation |
+| `tests/backend/test_integrity_audit.py` | Orphan reporting, raw JSON quarantine, repair and clean re-audit |
+| `tests/unit/services/appApiClient.test.ts` | Credentials/CSRF headers, 401 boundary, actionable connection errors and in-flight request abortion on session epoch change |
+| `tests/unit/store/resetUserSession.test.ts` | Account switch clears user data, AI drafts, import status and user-facing navigation state |
+
 ### To-Do and Event Type Extension
 | Test File | Tests |
 |-----------|-------|
@@ -107,7 +118,7 @@
 ### Settings and Tools Extension
 | Test File | Tests |
 |-----------|-------|
-| `tests/integration/settingsPanel.test.tsx` | Frontend runtime config save including AI API profile/model, local provider option visibility, Firebase startup fields, input defaults, and backend DeepSeek/fridge config save |
+| `tests/integration/settingsPanel.test.tsx` | Frontend runtime config save including AI API profile/model, local provider option visibility, input defaults, usage modes, and desktop backend config save |
 | `tests/integration/fridgePanel.test.tsx` | Fridge is opened through the Tools layer before receipt workflows |
 | `tests/unit/components/toolsRegistry.test.ts` | Tools registry includes Settings, Tool Sessions, and Fridge module entries |
 | `tests/unit/domain/toolSessionPresets.test.ts` | Built-in Tool Session presets load from individual preset folders |
@@ -115,7 +126,7 @@
 
 ---
 
-## MSW Setup (AI & Firebase Mocking)
+## MSW Setup (Backend and AI Mocking)
 
 All tests that call external services use **MSW handlers** defined in `tests/mocks/`:
 
@@ -168,5 +179,51 @@ tesseract --version
 | 2026-06-08 | Settings and Tools | 15 Python + 140 Vitest | 0 | Not measured |
 | 2026-06-08 | Expanded Settings | 140 Vitest | 0 | Not measured |
 | 2026-06-18 | AI API/local + tool registry refactor | Pending final run | Pending | Not measured |
+| 2026-07-13 | MySQL multi-user + desktop packaging | 229 Vitest + 29 Python + 1 MySQL contract | 0 | Not measured |
+| 2026-07-14 | Long-term goal control + AI usage modes | 235 Vitest + 39 Python; MySQL conditional | 0 | Not measured |
+| 2026-07-15 | Three-phase security, integrity, and release repair | 244 Vitest + 53 Python + 1 real MySQL contract + 3 clean desktop builds | 0 | Not measured |
 
 *(append after each test run)*
+
+### 2026-07-13 - MySQL multi-user and desktop packaging
+
+- `tests/backend/test_auth_api.py`: login/logout, no registration route, CSRF, lockout, password-session revocation, two-user ID reuse/isolation, backup idempotency.
+- `tests/backend/test_desktop_auth.py`: desktop bootstrap launch-token enforcement and login-free local principal.
+- `tests/backend/test_windowed_server.py`: windowed PyInstaller startup and parent-process watchdog probes.
+- `tests/backend/test_mysql_contract.py`: optional real MySQL 8.0 Alembic-to-head and shared business-ID isolation contract; run with `npm.cmd run test:mysql`.
+- `python -m unittest discover -s tests\backend`: SQLite repository/API contract suite.
+- `cargo check --manifest-path src-tauri\Cargo.toml`: Tauri v2 sidecar lifecycle/runtime compile contract.
+- `npm.cmd run desktop:build`: PyInstaller sidecar, bundled Tesseract, NSIS installer and portable ZIP smoke path.
+
+The expected release gate is: lint, TypeScript/Vite build, full Vitest, backend suite, real MySQL suite, Cargo check, and both desktop artifacts present.
+
+### 2026-07-14 - Goal control and AI usage modes
+
+- `tests/backend/test_goal_control.py`: same-business-ID isolation, complete mock activation plan, dependency-cycle rejection, manual plan change and rollback, mode clamping, Soft/Hard budget behavior, deterministic Check-in, backup v2 inclusion/exclusion.
+- `tests/backend/test_auth_api.py`: authenticated goal activation/dashboard isolation plus server mode/budget restrictions.
+- `tests/backend/test_desktop_auth.py`: desktop local budget editing and automatic `20260714_0005` schema stamp.
+- `tests/unit/domain/goalPlanningPrompt.test.ts`: Economy/Balanced/Quality context windows, rule-only Economy Check-in, approval and safety constraints, and mocked plan parsing.
+- Full result: 47 Vitest files / 235 tests passed; 39 backend tests passed with the real-MySQL contract skipped when `CALENDAR_MYSQL_TEST_URL` is absent.
+- Added coverage for buffered Standard capacity rejection, AI proposal wait/partial approval, five-minute manual version coalescing, rollback, and two-review medium-sensitivity replanning signals.
+- Fresh SQLite upgraded from empty to `20260714_0005`; MySQL 8 static DDL generation reached the same head. A real MySQL rerun remains conditional because the local Docker daemon was unavailable.
+- `cargo check` and `npm.cmd run desktop:build` passed with native notification support. The packaged sidecar smoke returned `health=ok`, `mode=desktop`, and `authRequired=false` using an ephemeral token.
+- `npm.cmd audit --omit=dev` reports zero production dependency vulnerabilities after patch-level overrides for `form-data` and `protobufjs`.
+
+### 2026-07-15 - Three-phase complete repair
+
+- `npm.cmd run test:run`: 50 files / 244 tests passed, including account-session epoch cancellation, goal anchoring, mock activation plan, plan modification, and rollback.
+- `python -m unittest discover tests.backend`: 53 tests passed; one real-MySQL contract was skipped because no MySQL URL was configured.
+- `npm.cmd run lint`, `npm.cmd run build`, and `cargo check`: passed.
+- Full and production-only `npm audit --audit-level=high`: zero vulnerabilities.
+- Three clean `npm.cmd run desktop:build` runs passed with the same hash-locked input (`requirements-desktop.lock` SHA-256 `591D5697B827FB0C510D26913D8636326A8DA4E109544E209847271BCEB08E69`).
+- All final desktop runs passed packaged sidecar random-port/token health checks and left no `calendar-backend` process. Installer, portable ZIP, Tesseract data, and license files were generated.
+- Production frontend scan found no Firebase marker, `VITE_FIREBASE`, `VITE_AI_API_KEY`, or MySQL connection URL.
+- `npm.cmd run test:mysql`: Docker MySQL 8.0 became healthy, Alembic upgraded an empty database through `20260715_0007`, the real multi-user repository contract passed, and the container/network/volume were removed.
+
+### 2026-07-16 - Local-first desktop updater
+
+- `tests/unit/store/desktopUpdateStore.test.ts`: installed update discovery/progress, portable release-page fallback, and one-time automatic checks.
+- `tests/backend/test_update_backup.py`: authenticated backup endpoint, readable SQLite snapshot/checksum, semantic-version path hardening, and three-snapshot retention.
+- `npm.cmd run version:check`: npm, lock file, Tauri JSON, and Cargo versions must match the pushed `v*` tag.
+- Full result: 51 Vitest files / 247 tests passed; 56 backend tests passed with one conditional real-MySQL skip; ESLint, Vite build, Cargo check, signed NSIS/portable packaging, checksum verification, and npm audit passed.
+- Release acceptance requires a draft `0.2.1` install over manually installed `0.2.0`, confirmation UI, a checksummed pre-update snapshot, preserved local data after restart, and no self-install attempt from the portable ZIP.

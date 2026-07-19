@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import {
-  createEnabledToolMetadata,
-  enabledToolInstancesFromProjects,
+  activeToolsFromProjects,
+  createActiveToolMetadata,
   enabledToolProgress,
-  type EnabledToolInstance,
+  type ActiveTool,
 } from '../domain/logic/enabledTools'
 import { splitUniqueEventDrafts } from '../domain/logic/eventDeduplication'
 import type { EventDraft } from '../domain/logic/eventUtils'
+import {
+  buildToolRoadmap,
+  implementationPathFromText,
+  implementationPathToText,
+} from '../domain/logic/toolRoadmap'
+import { buildActiveToolPromptFramework } from '../domain/logic/activeToolPrompt'
 import type {
   ActionItemStatus,
   LongTermToolRun,
@@ -15,14 +21,22 @@ import type {
   ProjectStatus,
 } from '../domain/types/longTermMemory'
 import { useEventStore } from '../store/eventStore'
+import { goalControlGateway } from '../store/goalControlStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
-import { useUIStore } from '../store/uiStore'
 import { useEnabledToolsPanel } from './useEnabledToolsPanel'
 
 type EnabledToolCalendarDraft = EventDraft & {
   endAt: string
   startAt: string
   title: string
+}
+
+export type ActiveToolPlanEditorValue = {
+  activationSummary: string
+  implementationPathText: string
+  longTermGoalLabel: string
+  routeTags: string[]
+  toolFeatures: string[]
 }
 
 function optionalString(value: unknown): string | undefined {
@@ -86,19 +100,41 @@ export function useEnabledTools() {
   const updateMilestoneStatus = useLongTermMemoryStore((state) => state.updateMilestoneStatus)
   const updateProject = useLongTermMemoryStore((state) => state.updateProject)
   const updateProjectStatus = useLongTermMemoryStore((state) => state.updateProjectStatus)
-  const activeWorkspacePanel = useUIStore((state) => state.activeWorkspacePanel)
-  const showWorkspaceCalendar = useUIStore((state) => state.showWorkspaceCalendar)
   const instances = useMemo(
-    () => enabledToolInstancesFromProjects(projects, goals),
+    () => activeToolsFromProjects(projects, goals),
     [goals, projects],
   )
   const activeInstance =
     instances.find((instance) => instance.projectId === panel.activeProjectId) ?? instances[0] ?? null
   const progressSummary = enabledToolProgress(actions, milestones)
+  const roadmap = activeInstance
+    ? buildToolRoadmap(activeInstance.goal, activeInstance.project, milestones, actions, progress, toolRuns)
+    : null
+  const planEditorValue: ActiveToolPlanEditorValue | null = activeInstance && roadmap
+    ? {
+        activationSummary: activeInstance.activationSummary || activeInstance.project.description,
+        implementationPathText: implementationPathToText(
+          activeInstance.implementationPath.length
+            ? activeInstance.implementationPath
+            : roadmap.steps,
+        ),
+        longTermGoalLabel:
+          activeInstance.longTermGoalLabel ?? activeInstance.goal?.title ?? activeInstance.project.title,
+        routeTags: activeInstance.routeTags,
+        toolFeatures: activeInstance.toolFeatures.length
+          ? activeInstance.toolFeatures
+          : activeInstance.routeTags,
+      }
+    : null
+  const promptFramework = activeInstance ? buildActiveToolPromptFramework(activeInstance) : ''
   const calendarDrafts = latestCalendarDrafts(toolRuns)
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
   const [isApplyingCalendarDrafts, setIsApplyingCalendarDrafts] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+
+  async function recordManualVersion(projectId: string, summary: string) {
+    await goalControlGateway.createVersion(projectId, { source: 'manual', summary }).catch(() => undefined)
+  }
 
   useEffect(() => {
     loadOverview().catch(() => undefined)
@@ -115,26 +151,85 @@ export function useEnabledTools() {
     loadProjectDetails(activeInstance.projectId).catch(() => undefined)
   }, [activeInstance, loadProjectDetails])
 
-  useEffect(() => {
-    if (activeWorkspacePanel === 'enabled-tools' && calendarDrafts.length) {
-      showWorkspaceCalendar()
-    }
-  }, [activeWorkspacePanel, calendarDrafts.length, showWorkspaceCalendar])
-
-  async function toggleRouting(instance: EnabledToolInstance) {
-    const metadata = createEnabledToolMetadata({
+  async function toggleRouting(instance: ActiveTool) {
+    const metadata = createActiveToolMetadata({
       activationForm: instance.activationForm,
       activationSummary: instance.activationSummary,
       adapterId: instance.adapterId,
+      implementationPath: instance.implementationPath,
       instanceAlias: instance.instanceAlias,
+      longTermGoalLabel: instance.longTermGoalLabel,
+      parentTemplateId: instance.parentTemplateId,
+      parentTemplateLabel: instance.parentTemplateLabel,
+      parentTemplateToolName: instance.parentTemplateToolName,
+      roadmapFormatVersion: instance.roadmapFormatVersion,
       routeTags: instance.routeTags,
       routingEnabled: !instance.routingEnabled,
       sourceToolId: instance.sourceToolId,
       templateId: instance.templateId,
+      toolFeatures: instance.toolFeatures,
       toolKind: instance.toolKind,
       toolName: instance.toolName,
     })
     await updateProject(instance.projectId, { metadata })
+  }
+
+  async function renameActiveTool(instance: ActiveTool, alias: string) {
+    const instanceAlias = alias.trim()
+    if (!instanceAlias || instanceAlias === instance.instanceAlias) return
+
+    const metadata = createActiveToolMetadata({
+      activationForm: instance.activationForm,
+      activationSummary: instance.activationSummary,
+      adapterId: instance.adapterId,
+      implementationPath: instance.implementationPath,
+      instanceAlias,
+      longTermGoalLabel: instance.longTermGoalLabel,
+      parentTemplateId: instance.parentTemplateId,
+      parentTemplateLabel: instance.parentTemplateLabel,
+      parentTemplateToolName: instance.parentTemplateToolName,
+      roadmapFormatVersion: instance.roadmapFormatVersion,
+      routeTags: instance.routeTags,
+      routingEnabled: instance.routingEnabled,
+      sourceToolId: instance.sourceToolId,
+      templateId: instance.templateId,
+      toolFeatures: instance.toolFeatures,
+      toolKind: instance.toolKind,
+      toolName: instance.toolName,
+    })
+
+    await updateProject(instance.projectId, {
+      metadata,
+      title: instanceAlias,
+    })
+    await recordManualVersion(instance.projectId, 'Renamed active tool.')
+    await loadProjectDetails(instance.projectId)
+  }
+
+  async function updateActiveToolPlan(instance: ActiveTool, changes: ActiveToolPlanEditorValue) {
+    const metadata = createActiveToolMetadata({
+      activationForm: instance.activationForm,
+      activationSummary: changes.activationSummary.trim(),
+      adapterId: instance.adapterId,
+      implementationPath: implementationPathFromText(changes.implementationPathText),
+      instanceAlias: instance.instanceAlias,
+      longTermGoalLabel: changes.longTermGoalLabel.trim(),
+      parentTemplateId: instance.parentTemplateId,
+      parentTemplateLabel: instance.parentTemplateLabel,
+      parentTemplateToolName: instance.parentTemplateToolName,
+      roadmapFormatVersion: instance.roadmapFormatVersion,
+      routeTags: changes.routeTags,
+      routingEnabled: instance.routingEnabled,
+      sourceToolId: instance.sourceToolId,
+      templateId: instance.templateId,
+      toolFeatures: changes.toolFeatures,
+      toolKind: instance.toolKind,
+      toolName: instance.toolName,
+    })
+
+    await updateProject(instance.projectId, { metadata })
+    await recordManualVersion(instance.projectId, 'Updated planning brief and implementation path.')
+    await loadProjectDetails(instance.projectId)
   }
 
   async function setActionStatus(actionId: string, title: string, status: ActionItemStatus) {
@@ -149,6 +244,7 @@ export function useEnabledTools() {
       project_id: activeInstance.projectId,
       summary: `${title}: ${status.replace(/_/g, ' ')}`,
     })
+    await recordManualVersion(activeInstance.projectId, `Updated action status: ${title}.`)
     await loadProjectDetails(activeInstance.projectId)
   }
 
@@ -163,6 +259,7 @@ export function useEnabledTools() {
       project_id: activeInstance.projectId,
       summary: `${title}: ${status.replace(/_/g, ' ')}`,
     })
+    await recordManualVersion(activeInstance.projectId, `Updated milestone status: ${title}.`)
     await loadProjectDetails(activeInstance.projectId)
   }
 
@@ -251,12 +348,19 @@ export function useEnabledTools() {
     milestones,
     progress,
     progressSummary,
+    planEditorValue,
+    promptFramework,
+    roadmap,
+    renameActiveTool,
     setActionStatus,
     setActiveProjectId: panel.setActiveProjectId,
     setMilestoneStatus,
     toolRuns,
     toggleRouting,
-    updateProjectStatus: (projectId: string, status: ProjectStatus) =>
-      updateProjectStatus(projectId, status),
+    updateActiveToolPlan,
+    updateProjectStatus: async (projectId: string, status: ProjectStatus) => {
+      await updateProjectStatus(projectId, status)
+      await recordManualVersion(projectId, `Updated project status to ${status}.`)
+    },
   }
 }

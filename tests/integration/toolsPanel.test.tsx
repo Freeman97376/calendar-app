@@ -57,18 +57,18 @@ describe('Tools panel', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Tools' }))
-    expect(screen.getByRole('heading', { name: 'Tools' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
+    expect(screen.getByRole('heading', { name: 'Tool Templates' })).toBeInTheDocument()
   })
 
   it('closes back to the workspace home from the panel header', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Tools' }))
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
     await user.click(screen.getByRole('button', { name: 'Close' }))
 
-    expect(screen.queryByRole('heading', { name: 'Tools' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tool Templates' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument()
   })
 

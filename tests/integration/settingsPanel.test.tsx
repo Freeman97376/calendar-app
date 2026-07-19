@@ -43,8 +43,6 @@ describe('Settings panel', () => {
     await user.type(screen.getByLabelText('AI API model'), 'deepseek-chat-test')
     await user.clear(screen.getByLabelText('Timezone override'))
     await user.type(screen.getByLabelText('Timezone override'), 'America/Los_Angeles')
-    await user.clear(screen.getByLabelText('Firebase project ID'))
-    await user.type(screen.getByLabelText('Firebase project ID'), 'calendar-test')
     await user.clear(screen.getByLabelText('Default event start'))
     await user.type(screen.getByLabelText('Default event start'), '13:30')
     await user.clear(screen.getByLabelText('Default event end'))
@@ -66,7 +64,6 @@ describe('Settings panel', () => {
       defaultEventEndTime: '14:45',
       defaultEventStartTime: '13:30',
       defaultTodoPriority: 'high',
-      firebaseProjectId: 'calendar-test',
       language: 'zh',
       layoutPanelPosition: 'right',
       layoutPanelSizePercent: 30,

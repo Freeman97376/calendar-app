@@ -159,7 +159,7 @@ describe('LocalAIService', () => {
     expect(result.currentRecommendation).toContain('Start with AI agent foundations')
   })
 
-  it('generates deterministic enabled tool activation output', async () => {
+  it('generates deterministic active tool registration output', async () => {
     const service = new LocalAIService()
 
     const result = await service.runToolActivation({
@@ -180,7 +180,7 @@ describe('LocalAIService', () => {
     expect(result.routeTags).toContain('fitness')
   })
 
-  it('routes user messages only to supplied enabled tools', async () => {
+  it('routes user messages only to supplied active tools', async () => {
     const service = new LocalAIService()
 
     const result = await service.routeEnabledTool({
@@ -188,13 +188,16 @@ describe('LocalAIService', () => {
         {
           activationSummary: 'Manage SEO lessons',
           adapterId: 'ai-progress',
+          implementationPlan: ['Audit keywords', 'Publish content'],
           instanceAlias: 'SEO Coach',
+          longTermGoalLabel: 'Build a repeatable SEO workflow',
           projectId: 'project_1',
           routeTags: ['seo', 'keyword'],
           routingEnabled: true,
           sourceToolId: 'seo-learning',
           status: 'active',
           templateId: 'seo-learning',
+          toolFeatures: ['Keyword research', 'Content planning'],
           toolName: 'Learning Assistant',
         },
       ],

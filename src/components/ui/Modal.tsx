@@ -27,18 +27,19 @@ export default function Modal({ isOpen, title, children, onClose }: ModalProps) 
 
   return (
     <div
+      aria-label={title}
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
       role="dialog"
     >
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+      <div className="flex max-h-[calc(100vh-3rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
           <Button aria-label="Close modal" onClick={onClose} variant="ghost">
             Close
           </Button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
       </div>
     </div>
   )

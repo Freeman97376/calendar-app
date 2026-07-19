@@ -25,6 +25,13 @@ import { useUIStore } from '../store/uiStore'
 
 export type { AIMessage } from '../store/aiStore'
 
+export type AIComposerOptions = {
+  allowActiveToolRouting?: boolean
+  confirmActiveToolRouting?: boolean
+  includeCalendarContext?: boolean
+  includeTodoContext?: boolean
+}
+
 function scheduledStart(focusedDate: string, step: AIStep): Date {
   const [year, month, day] = focusedDate.split('-').map(Number)
   const date = addDays(new Date(year, month - 1, day), step.suggestedDayOffset)
@@ -78,7 +85,10 @@ function actionNotesLine(action: AIAction): string {
   if (action.type === 'update_event') return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
   if (action.type === 'create_todo') return `${action.type}: ${title}${action.dueDate ? ` (due ${action.dueDate})` : ''}`
   if (action.type === 'update_todo') return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
-  if (action.type === 'schedule_todo') return `${action.type}: ${title}${action.date ? ` (${action.date})` : ''}`
+  if (action.type === 'schedule_todo') {
+    const when = action.startAt && action.endAt ? `${action.startAt} - ${action.endAt}` : action.date
+    return `${action.type}: ${title}${when ? ` (${when})` : ''}`
+  }
 
   return `${action.type}: ${title}`
 }
@@ -90,13 +100,31 @@ function actionDueDateFor(action: AIAction): string | undefined {
   }
   if (action.type === 'create_todo') return action.dueDate
   if (action.type === 'update_todo') return action.changes.dueDate
-  if (action.type === 'schedule_todo') return action.date
+  if (action.type === 'schedule_todo') return action.startAt ? localDateFromDateTime(action.startAt) : action.date
   return undefined
 }
 
 function actionPriority(action: AIAction): Todo['priority'] {
   if (action.type === 'create_todo') return action.priority
   if (action.type === 'update_todo' && action.changes.priority) return action.changes.priority
+  return 'medium'
+}
+
+function actionEtaMinutes(action: AIAction): Todo['etaMinutes'] {
+  if (action.type === 'create_todo') return action.etaMinutes
+  if (action.type === 'update_todo' && action.changes.etaMinutes) return action.changes.etaMinutes
+  if (action.type === 'create_event') {
+    const duration = Math.round(
+      (new Date(action.endAt).getTime() - new Date(action.startAt).getTime()) / 60_000,
+    )
+    return Number.isFinite(duration) ? Math.min(480, Math.max(5, duration)) : 30
+  }
+  return 30
+}
+
+function actionEnergyNeeded(action: AIAction): Todo['energyNeeded'] {
+  if (action.type === 'create_todo') return action.energyNeeded
+  if (action.type === 'update_todo' && action.changes.energyNeeded) return action.changes.energyNeeded
   return 'medium'
 }
 
@@ -127,6 +155,8 @@ function actionToTodo(plan: AICalendarActionPlan, action: AIAction, index: numbe
     ]
       .filter(Boolean)
       .join('\n'),
+    energyNeeded: actionEnergyNeeded(action),
+    etaMinutes: actionEtaMinutes(action),
     priority: actionPriority(action),
     title: compactTitle(actionTitle(action)),
   }
@@ -169,6 +199,8 @@ function stepToTodo(
     ]
       .filter(Boolean)
       .join('\n'),
+    energyNeeded: step.energyNeeded,
+    etaMinutes: step.durationMinutes,
     priority: step.priority,
     title: compactTitle(step.title),
   }
@@ -192,14 +224,33 @@ function configWithProviderModel(
   return { ...config, aiApiModel: model }
 }
 
-function toAllDayEventFromTodo(todo: Todo, date: string) {
+function toScheduledEventFromTodo(
+  todo: Todo,
+  options: {
+    date: string
+    defaultStartTime: string
+    endAt?: string
+    startAt?: string
+  },
+) {
+  const startAt =
+    options.startAt ?? new Date(`${options.date}T${options.defaultStartTime}:00`).toISOString()
+  const endAt =
+    options.endAt ?? new Date(new Date(startAt).getTime() + todo.etaMinutes * 60_000).toISOString()
+
   return {
     title: todo.title,
     description: todo.notes,
-    startAt: new Date(`${date}T00:00:00`).toISOString(),
-    endAt: new Date(`${date}T23:59:00`).toISOString(),
-    allDay: true,
-    color: '#2563eb',
+    displayDetails: [
+      todo.notes,
+      `Task metadata: ${todo.etaMinutes} min, ${todo.priority} priority, ${todo.energyNeeded} energy`,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    startAt,
+    endAt,
+    allDay: false,
+    color: priorityColor(todo.priority),
     eventTypeId: todo.eventTypeId,
     linkedTodoId: todo.id,
   }
@@ -262,20 +313,16 @@ export function useAI() {
     loadTodos().catch(() => undefined)
   }, [eventTypes.length, loadEventTypes, loadTodos])
 
-  useEffect(() => {
-    if (pendingActionPlan || pendingEnabledToolRoute) {
-      showWorkspaceCalendar()
-    }
-  }, [pendingActionPlan, pendingEnabledToolRoute, showWorkspaceCalendar])
-
-  function buildContext() {
+  function buildContext(options: AIComposerOptions = {}) {
     const timeContext = getLocalTimeContext(new Date(), config.timezoneOverride)
+    const includeCalendarContext = options.includeCalendarContext !== false
+    const includeTodoContext = options.includeTodoContext !== false
 
     return AICalendarContextSchema.parse({
       ...timeContext,
       focusedDate,
       today: timeContext.currentDate,
-      events: events.map((event) => ({
+      events: includeCalendarContext ? events.map((event) => ({
         id: event.id,
         title: event.title,
         description: event.description,
@@ -284,17 +331,19 @@ export function useAI() {
         endAt: event.endAt,
         allDay: event.allDay,
         eventTypeId: event.eventTypeId,
-      })),
-      todos: todos.map((todo) => ({
+      })) : [],
+      todos: includeTodoContext ? todos.map((todo) => ({
         id: todo.id,
         title: todo.title,
         notes: todo.notes,
         status: todo.status,
         eventTypeId: todo.eventTypeId,
         dueDate: todo.dueDate,
+        energyNeeded: todo.energyNeeded,
+        etaMinutes: todo.etaMinutes,
         priority: todo.priority,
         linkedEventId: todo.linkedEventId,
-      })),
+      })) : [],
       eventTypes: eventTypes.map((eventType) => ({
         id: eventType.id,
         label: eventType.label,
@@ -327,15 +376,19 @@ export function useAI() {
     showWorkspaceCalendar()
   }
 
-  async function sendActionCommand(command: string) {
-    await sendActionCommandToStore(command, buildContext(), {
-      confirmEnabledToolRouting: config.confirmEnabledToolRouting,
+  async function sendActionCommand(command: string, options: AIComposerOptions = {}) {
+    await sendActionCommandToStore(command, buildContext(options), {
+      allowEnabledToolRouting: options.allowActiveToolRouting,
+      confirmEnabledToolRouting:
+        options.confirmActiveToolRouting ?? config.confirmEnabledToolRouting,
     })
   }
 
-  async function sendConversationMessage(message: string) {
-    await sendConversationMessageToStore(message, buildContext(), {
-      confirmEnabledToolRouting: config.confirmEnabledToolRouting,
+  async function sendConversationMessage(message: string, options: AIComposerOptions = {}) {
+    await sendConversationMessageToStore(message, buildContext(options), {
+      allowEnabledToolRouting: options.allowActiveToolRouting,
+      confirmEnabledToolRouting:
+        options.confirmActiveToolRouting ?? config.confirmEnabledToolRouting,
     })
   }
 
@@ -389,6 +442,8 @@ export function useAI() {
         title: action.title,
         notes: action.notes,
         dueDate: action.dueDate,
+        energyNeeded: action.energyNeeded,
+        etaMinutes: action.etaMinutes,
         priority: action.priority,
         eventTypeId: action.eventTypeId,
       })
@@ -408,7 +463,14 @@ export function useAI() {
     const todo = useTodoStore.getState().todos.find((candidate) => candidate.id === action.todoId)
     if (!todo) throw new Error(`Todo not found: ${action.todoId}`)
 
-    const event = await createEvent(toAllDayEventFromTodo(todo, action.date ?? todo.dueDate ?? focusedDate))
+    const event = await createEvent(
+      toScheduledEventFromTodo(todo, {
+        date: action.date ?? todo.dueDate ?? focusedDate,
+        defaultStartTime: config.defaultEventStartTime,
+        endAt: action.endAt,
+        startAt: action.startAt,
+      }),
+    )
     await updateTodo(todo.id, { linkedEventId: event.id })
     return 'applied'
   }

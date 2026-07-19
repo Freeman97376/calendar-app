@@ -64,13 +64,13 @@ export interface IAIService {
 
   /**
    * Runs a short activation conversation for a tool template and returns the
-   * requirements summary used to create an enabled tool instance.
+   * requirements summary used to register an active tool from a parent template.
    */
   runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult>
 
   /**
-   * Chooses an existing enabled tool instance for a user message. This only
-   * routes to supplied enabled tools and must not create new tool instances.
+   * Chooses an existing active tool for a user message. This only routes to
+   * supplied active tools and must not create new active tools.
    */
   routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult>
 

@@ -1,0 +1,17 @@
+services:
+  mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: calendar_test
+      MYSQL_PASSWORD: calendar_test
+      MYSQL_ROOT_PASSWORD: calendar_root_test
+      MYSQL_USER: calendar_test
+    ports:
+      - "33306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ucalendar_test", "-pcalendar_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    tmpfs:
+      - /var/lib/mysql

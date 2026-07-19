@@ -21,6 +21,8 @@ export class LocalTodoService implements ITodoService {
       notes: draft.notes,
       eventTypeId: draft.eventTypeId ?? 'general',
       dueDate: draft.dueDate,
+      etaMinutes: draft.etaMinutes ?? 30,
+      energyNeeded: draft.energyNeeded ?? 'medium',
       longProject: draft.longProject,
       priority: draft.priority ?? 'medium',
       createdAt: timestamp,

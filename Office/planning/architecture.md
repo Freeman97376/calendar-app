@@ -1,6 +1,6 @@
 # 🏗️ Architecture — Calendar App
 
-> Maintained by: Claude Code | Last updated: 2026-05-24
+> Maintained by: Claude Code / Codex | Last updated: 2026-07-15
 
 ---
 
@@ -55,10 +55,10 @@ The application uses a **5-layer architecture** inside `src/`. Each layer has a 
 
 ## Layer 2: `src/services/` — I/O Adapters
 
-**Rule:** May only import from `domain/schemas`, `domain/types`, and firebase config.
+**Rule:** May only import from `domain/schemas`, `domain/types`, and lower-level transport utilities.
 
-**Why:** All external I/O (network, storage, APIs) is isolated here. The rest of the app never touches Firebase or a concrete AI provider directly — it only calls interfaces. This means:
-- Swapping Firebase for Supabase = write a new adapter, change nothing else
+**Why:** All external I/O is isolated here. The production app uses the authenticated same-origin FastAPI API for personal data and AI proxying. Firebase is retained only in an operator-only legacy export tool and isolated adapter tests. This means:
+- Swapping a server repository or API transport does not change domain/components
 - Swapping the API provider = update `apiAIService` configuration or implement `IAIService`, change nothing else
 - Testing = pass a mock adapter, no real network calls
 
@@ -84,11 +84,11 @@ interface IAIService {
 
 | Folder | Contents |
 |--------|---------|
-| `storage/` | `IStorageAdapter.ts`, `localStorageAdapter.ts`, `firestoreAdapter.ts` |
+| `storage/` | Authenticated API storage plus legacy local/Firestore adapters excluded from production startup |
 | `sync/` | `syncManager.ts` — coordinates local-first sync between two adapters |
 | `ai/` | `IAIService.ts`, `apiAIService.ts`, `localAIService.ts`, `fallbackAIService.ts`, `aiServiceFactory.ts` |
 | `fridge/` | Frontend API adapter for the local Python fridge backend |
-| `firebase/` | `firebaseConfig.ts` — Firebase SDK init only |
+| `firebase/` | Legacy migration-test configuration only; never imported by production startup |
 
 ---
 
@@ -161,7 +161,7 @@ Store (store/)
 Service (services/)
     │  validates with schema, reads/writes
     ▼
-Firebase Firestore  ←→  syncManager  ←→  localStorage
+FastAPI API  ←→  SQLAlchemy repositories  ←→  MySQL (server) / SQLite (desktop)
 ```
 
 For AI flow:
@@ -212,7 +212,6 @@ date-fns @4                 # date math
 @dnd-kit/core               # drag and drop
 @dnd-kit/sortable           # sortable lists  
 zod @3                      # schema validation
-firebase @11                # Firestore + Auth
 zod-to-json-schema @3       # schema helper retained for compatibility work
 ```
 
@@ -227,6 +226,7 @@ vitest @3
 @testing-library/user-event
 @testing-library/jest-dom
 msw @2                      # mock API in tests
+firebase @11                # dev-only legacy export tool and adapter tests
 eslint @9
 prettier @3
 tailwindcss @4

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  AICalendarActionPlanSchema,
   AIBreakdownResultSchema,
   AIProgressToolRequestSchema,
   AIProgressToolResultSchema,
@@ -77,6 +78,7 @@ describe('AIBreakdownResultSchema', () => {
     const { notes: _notes, totalEstimatedHours: _totalEstimatedHours, ...minimal } = validResult
 
     expect(AIBreakdownResultSchema.parse(minimal)).toMatchObject(minimal)
+    expect(AIBreakdownResultSchema.parse(minimal).steps[0].energyNeeded).toBe('medium')
   })
 
   it('more than 20 steps fails validation', () => {
@@ -87,6 +89,68 @@ describe('AIBreakdownResultSchema', () => {
           ...validResult.steps[0],
           title: `Step ${index}`,
         })),
+      }),
+    ).toThrow()
+  })
+})
+
+describe('AICalendarActionPlanSchema task metadata', () => {
+  it('validates create/update todo eta and energy fields', () => {
+    const plan = AICalendarActionPlanSchema.parse({
+      summary: 'Create and tune task.',
+      actions: [
+        {
+          type: 'create_todo',
+          title: 'Draft plan',
+          etaMinutes: '45',
+          energyNeeded: 'high',
+          priority: 'medium',
+        },
+        {
+          type: 'update_todo',
+          todoId: 'todo-1',
+          changes: {
+            etaMinutes: 60,
+            energyNeeded: 'low',
+          },
+        },
+      ],
+    })
+
+    expect(plan.actions[0]).toMatchObject({ etaMinutes: 45, energyNeeded: 'high' })
+    expect(plan.actions[1]).toMatchObject({
+      changes: { etaMinutes: 60, energyNeeded: 'low' },
+    })
+  })
+
+  it('validates exact schedule_todo start and end times', () => {
+    expect(
+      AICalendarActionPlanSchema.parse({
+        summary: 'Schedule task.',
+        actions: [
+          {
+            type: 'schedule_todo',
+            todoId: 'todo-1',
+            startAt: '2026-06-18T16:00:00.000Z',
+            endAt: '2026-06-18T16:45:00.000Z',
+          },
+        ],
+      }).actions[0],
+    ).toMatchObject({
+      endAt: '2026-06-18T16:45:00.000Z',
+      startAt: '2026-06-18T16:00:00.000Z',
+    })
+
+    expect(() =>
+      AICalendarActionPlanSchema.parse({
+        summary: 'Bad schedule task.',
+        actions: [
+          {
+            type: 'schedule_todo',
+            todoId: 'todo-1',
+            startAt: '2026-06-18T16:00:00.000Z',
+          },
+        ],
       }),
     ).toThrow()
   })

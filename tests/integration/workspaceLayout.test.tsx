@@ -23,7 +23,7 @@ describe('Workspace layout', () => {
     expect(shell).toHaveStyle('--workspace-panel-size: 20%')
     expect(screen.getByTestId('calendar-main-area')).toBeInTheDocument()
     expect(screen.getByRole('complementary', { name: 'Workspace' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Tools' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tool Templates' })).toBeInTheDocument()
   })
 
   it('focuses selected workspace content in the main area and lets the drawer show the calendar', async () => {

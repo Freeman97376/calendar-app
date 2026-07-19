@@ -9,6 +9,7 @@ import type {
   BackendConfigUpdate,
   RuntimeConfig,
 } from '../../domain/types'
+import { authenticatedFetch } from '../appApiClient'
 
 const CONFIG_KEY = 'calendar_runtime_config'
 const AI_PROVIDER_VALUES = new Set<AIProvider>(['api', 'local'])
@@ -21,6 +22,8 @@ type RuntimeConfigInput = Omit<Partial<RuntimeConfig>, 'aiProvider'> & {
   deepseekApiKey?: string
   deepseekModel?: string
 }
+
+const defaultFetcher: typeof fetch = authenticatedFetch
 
 function envAiProvider(): AIProvider {
   const provider = import.meta.env.VITE_AI_PROVIDER
@@ -67,7 +70,7 @@ function envDefaults(): RuntimeConfig {
   return RuntimeConfigSchema.parse({
     aiProvider: envAiProvider(),
     aiApiProfile,
-    aiApiKey: import.meta.env.VITE_AI_API_KEY ?? import.meta.env.VITE_DEEPSEEK_API_KEY ?? '',
+    aiApiKey: '',
     aiApiBaseUrl,
     aiApiModel,
     language: envLanguage(),
@@ -79,15 +82,9 @@ function envDefaults(): RuntimeConfig {
     defaultEventTypeId: import.meta.env.VITE_DEFAULT_EVENT_TYPE_ID ?? 'general',
     defaultTodoEventTypeId: import.meta.env.VITE_DEFAULT_TODO_EVENT_TYPE_ID ?? 'general',
     defaultTodoPriority: import.meta.env.VITE_DEFAULT_TODO_PRIORITY ?? 'medium',
-    firebaseApiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
-    firebaseAppId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
-    firebaseAuthDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
-    firebaseMessagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
-    firebaseProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '',
-    firebaseStorageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
-    fridgeApiBaseUrl: import.meta.env.VITE_FRIDGE_API_BASE_URL ?? 'http://127.0.0.1:8787',
+    fridgeApiBaseUrl: import.meta.env.VITE_FRIDGE_API_BASE_URL ?? '',
     timezoneOverride: import.meta.env.VITE_TIMEZONE_OVERRIDE ?? '',
-    deepseekApiKey: import.meta.env.VITE_DEEPSEEK_API_KEY ?? '',
+    deepseekApiKey: '',
     deepseekModel: import.meta.env.VITE_DEEPSEEK_MODEL ?? 'deepseek-chat',
     ollamaBaseUrl: 'http://localhost:11434',
     ollamaEnabled: false,
@@ -100,6 +97,10 @@ export class RuntimeConfigService {
     private readonly storage: Storage = localStorage,
     private readonly key = CONFIG_KEY,
   ) {}
+
+  getDefaults(): RuntimeConfig {
+    return envDefaults()
+  }
 
   getConfig(): RuntimeConfig {
     const defaults = envDefaults()
@@ -127,7 +128,7 @@ export class RuntimeConfigService {
 export class BackendConfigApiService {
   constructor(
     private readonly getBaseUrl: () => string,
-    private readonly fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
+    private readonly fetcher: typeof fetch = defaultFetcher,
   ) {}
 
   async getStatus(): Promise<BackendConfigStatus> {
@@ -150,7 +151,18 @@ export class BackendConfigApiService {
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
-  const payload = (await response.json()) as unknown
+  const body = await response.text()
+  let payload: unknown
+  try {
+    payload = body ? JSON.parse(body) as unknown : null
+  } catch {
+    const isHtml = /^\s*<!doctype\s+html|^\s*<html/i.test(body)
+    throw new Error(
+      isHtml
+        ? 'The configuration request reached the app page instead of the Calendar backend. Restart the app and try again.'
+        : `The Calendar configuration API returned an invalid response (status ${response.status}).`,
+    )
+  }
 
   if (!response.ok) {
     const message =

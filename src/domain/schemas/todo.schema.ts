@@ -15,6 +15,8 @@ export const TodoSchema = z.object({
   dueDate: z.string().date().optional(),
   linkedEventId: z.string().min(1).optional(),
   longProject: TodoLongProjectSchema.optional(),
+  etaMinutes: z.coerce.number().int().min(5).max(480).default(30),
+  energyNeeded: z.enum(['high', 'medium', 'low']).default('medium'),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

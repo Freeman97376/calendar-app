@@ -1,11 +1,19 @@
-import { useEnabledTools } from '../../hooks/useEnabledTools'
+import { useEffect, useState } from 'react'
+
 import type {
   ActionItemStatus,
   MilestoneStatus,
   ProjectStatus,
 } from '../../domain/types/longTermMemory'
+import { useApprovalDrawer } from '../../hooks/useApprovalDrawer'
+import { useActiveToolSummaries } from '../../hooks/useActiveToolSummaries'
+import { useEnabledTools } from '../../hooks/useEnabledTools'
 import { useI18n } from '../../hooks/useI18n'
+import { useWorkspacePanel } from '../../hooks/useWorkspacePanel'
 import Button from '../ui/Button'
+import ToolPlanEditorDialog from './ToolPlanEditorDialog'
+import ToolRoadmapPanel from './ToolRoadmapPanel'
+import GoalControlDashboardPanel from './GoalControlDashboard'
 
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
 const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
@@ -35,15 +43,34 @@ function statusClass(status: string): string {
 export default function EnabledToolsPanel() {
   const { locale, t } = useI18n()
   const enabledTools = useEnabledTools()
+  const approvalDrawer = useApprovalDrawer()
+  const workspace = useWorkspacePanel()
   const activeInstance = enabledTools.activeInstance
+  const summaries = useActiveToolSummaries(enabledTools.instances.map((instance) => instance.projectId))
+  const [aliasDraft, setAliasDraft] = useState('')
+  const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const [isPromptDetailsOpen, setIsPromptDetailsOpen] = useState(false)
+
+  useEffect(() => {
+    setAliasDraft(activeInstance?.instanceAlias ?? '')
+    setIsPlanEditorOpen(false)
+    setIsPromptDetailsOpen(false)
+  }, [activeInstance?.instanceAlias, activeInstance?.projectId])
+
+  const canSaveAlias = Boolean(
+    activeInstance && aliasDraft.trim() && aliasDraft.trim() !== activeInstance.instanceAlias,
+  )
+  const visibleToolFeatures = activeInstance?.toolFeatures.length
+    ? activeInstance.toolFeatures
+    : activeInstance?.routeTags ?? []
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white">
       <div className="border-b border-slate-200 px-4 py-4">
-        <h2 className="text-base font-semibold text-slate-950">{t('enabled.header')}</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          {t('enabled.description')}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div><h2 className="text-base font-semibold text-slate-950">{t('enabled.header')}</h2><p className="mt-1 text-sm text-slate-600">{t('enabled.description')}</p></div>
+          <Button onClick={() => workspace.openPanel('tools')} variant="ghost">Templates</Button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
@@ -51,6 +78,11 @@ export default function EnabledToolsPanel() {
           <section className="space-y-2">
             {enabledTools.instances.map((instance) => {
               const active = activeInstance?.projectId === instance.projectId
+              const summary = summaries[instance.projectId]
+              const nextMilestone = summary?.milestones
+                .filter((milestone) => !['done', 'skipped'].includes(milestone.status))
+                .sort((left, right) => String(left.due_date || '9999').localeCompare(String(right.due_date || '9999')))[0]
+              const plannedMinutes = summary?.actions.reduce((total, action) => total + Number(action.estimated_minutes || 0), 0) ?? 0
 
               return (
                 <article
@@ -71,6 +103,10 @@ export default function EnabledToolsPanel() {
                           {instance.instanceAlias}
                         </p>
                         <p className="mt-1 text-xs text-slate-600">{instance.activationSummary}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {t('enabled.parentTemplate')}: {instance.parentTemplateLabel}
+                        </p>
+                        {summary ? <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-slate-600"><span className="rounded bg-white px-1.5 py-0.5">{summary.health.status.replace('_', ' ')}</span><span className="rounded bg-white px-1.5 py-0.5">{summary.policy.active_tier}</span><span className="rounded bg-white px-1.5 py-0.5">AI {summary.usage.effective_mode}</span><span className="rounded bg-white px-1.5 py-0.5">{summary.metrics.length} metrics</span><span className="rounded bg-white px-1.5 py-0.5">{plannedMinutes}/{summary.policy.weekly_capacity_minutes} min</span><span className="rounded bg-white px-1.5 py-0.5">{summary.actions.filter((action) => !['done', 'skipped'].includes(action.status)).length} open</span>{nextMilestone ? <span className="rounded bg-white px-1.5 py-0.5">Next: {nextMilestone.title}</span> : null}</div> : null}
                       </div>
                       <span className="shrink-0 rounded bg-white px-2 py-1 text-xs text-slate-600">
                         {instance.toolName}
@@ -89,7 +125,7 @@ export default function EnabledToolsPanel() {
                         {t('enabled.routingEnabled')}
                       </label>
                       <select
-                        aria-label={`Enabled tool status for ${instance.instanceAlias}`}
+                        aria-label={`Active tool status for ${instance.instanceAlias}`}
                         className={`h-8 rounded-md border border-slate-200 px-2 text-xs ${statusClass(instance.status)}`}
                         onChange={(event) =>
                           void enabledTools.updateProjectStatus(
@@ -119,6 +155,18 @@ export default function EnabledToolsPanel() {
 
         {activeInstance ? (
           <section className="space-y-4 border-t border-slate-200 pt-4">
+            <GoalControlDashboardPanel projectId={activeInstance.projectId} />
+            <details className="rounded-md border border-slate-200 bg-white p-3" onToggle={(event) => setIsPromptDetailsOpen(event.currentTarget.open)}>
+              <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                How AI assists this plan / LLM 如何协助计划
+              </summary>
+              {isPromptDetailsOpen ? <><p className="mt-2 text-xs leading-5 text-slate-500">
+                This is the user-facing operating prompt. System prompts, hidden reasoning, keys, and complete internal context are never shown here.
+              </p>
+              <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs leading-5 text-slate-100">
+                {enabledTools.promptFramework}
+              </pre></> : null}
+            </details>
             <div>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -126,36 +174,98 @@ export default function EnabledToolsPanel() {
                     {activeInstance.instanceAlias}
                   </h3>
                   <p className="mt-1 text-xs text-slate-500">{activeInstance.toolName}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {t('enabled.parentTemplate')}: {activeInstance.parentTemplateLabel}
+                  </p>
                 </div>
-                <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                  {enabledTools.progressSummary.percent}%
+                <span className={`shrink-0 rounded px-2 py-1 text-xs ${statusClass(activeInstance.status)}`}>
+                  {statusLabel(activeInstance.status, t)}
                 </span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  aria-label={`${activeInstance.instanceAlias} progress`}
-                  className="h-full rounded-full bg-emerald-700"
-                  style={{ width: `${enabledTools.progressSummary.percent}%` }}
+              <form
+                className="mt-3 flex flex-col gap-2 sm:flex-row"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  if (!activeInstance || !canSaveAlias) return
+                  void enabledTools.renameActiveTool(activeInstance, aliasDraft)
+                }}
+              >
+                <label className="sr-only" htmlFor="active-tool-alias">
+                  {t('enabled.activeToolName')}
+                </label>
+                <input
+                  className="h-9 min-w-0 flex-1 rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="active-tool-alias"
+                  onChange={(event) => setAliasDraft(event.target.value)}
+                  value={aliasDraft}
                 />
-              </div>
-              <p className="mt-2 text-xs text-slate-500">
-                {t('enabled.completeFrom', {
-                  completed: enabledTools.progressSummary.completed,
-                  source: enabledTools.progressSummary.source,
-                  total: enabledTools.progressSummary.total,
-                })}
-              </p>
+                <Button disabled={!canSaveAlias} type="submit">
+                  {t('enabled.saveName')}
+                </Button>
+              </form>
             </div>
 
-            {activeInstance.routeTags.length ? (
-              <div className="flex flex-wrap gap-1">
-                {activeInstance.routeTags.map((tag) => (
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600" key={tag}>
-                    {tag}
-                  </span>
-                ))}
+            <section
+              aria-label={t('enabled.toolCharacteristics')}
+              className="space-y-3 rounded-md border border-slate-200 bg-white p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-slate-500">
+                    {t('enabled.toolCharacteristics')}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {activeInstance.parentTemplateLabel}
+                    {activeInstance.adapterId ? ` · ${activeInstance.adapterId}` : ''}
+                  </p>
+                </div>
+                <Button onClick={() => setIsPlanEditorOpen(true)} variant="ghost">
+                  {t('enabled.editPlanAndFeatures')}
+                </Button>
               </div>
-            ) : null}
+
+              <div>
+                <h4 className="text-xs font-semibold text-slate-700">{t('enabled.toolPurpose')}</h4>
+                <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-slate-700">
+                  {activeInstance.activationSummary}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-slate-700">
+                  {t('enabled.toolCharacteristics')}
+                </h4>
+                {visibleToolFeatures.length ? (
+                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                    {visibleToolFeatures.map((feature) => (
+                      <li className="flex gap-2" key={feature}>
+                        <span aria-hidden="true" className="text-emerald-700">•</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-500">{t('enabled.noCharacteristics')}</p>
+                )}
+              </div>
+
+              {activeInstance.routeTags.length ? (
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-700">
+                    {t('enabled.routingSignals')}
+                  </h4>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {activeInstance.routeTags.map((tag) => (
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            {enabledTools.roadmap ? <ToolRoadmapPanel roadmap={enabledTools.roadmap} /> : null}
 
             {enabledTools.milestones.length ? (
               <div className="space-y-2">
@@ -244,14 +354,13 @@ export default function EnabledToolsPanel() {
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="text-sm font-semibold text-slate-950">{t('enabled.calendarPreview')}</h4>
                   <Button
-                    disabled={enabledTools.isApplyingCalendarDrafts}
-                    onClick={() => void enabledTools.applyCalendarDrafts()}
+                    onClick={() => approvalDrawer.open('active-tool-calendar-drafts')}
                     variant="primary"
                   >
-                    {enabledTools.isApplyingCalendarDrafts ? t('enabled.applying') : t('enabled.applyToCalendar')}
+                    {t('enabled.reviewPlan')}
                   </Button>
                 </div>
-                {enabledTools.calendarDrafts.map((draft, index) => (
+                {enabledTools.calendarDrafts.slice(0, 3).map((draft, index) => (
                   <article className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${draft.title}-${index}`}>
                     <p className="text-sm font-medium text-slate-900">{draft.title}</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -264,6 +373,11 @@ export default function EnabledToolsPanel() {
                     ) : null}
                   </article>
                 ))}
+                {enabledTools.calendarDrafts.length > 3 ? (
+                  <p className="text-xs font-medium text-slate-500">
+                    +{enabledTools.calendarDrafts.length - 3} more in review
+                  </p>
+                ) : null}
                 <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
                   {t('enabled.draftsPreviewOnly')}
                 </p>
@@ -326,6 +440,15 @@ export default function EnabledToolsPanel() {
           <p className="text-sm text-slate-500">{t('enabled.loadingMemory')}</p>
         ) : null}
       </div>
+
+      {activeInstance && enabledTools.planEditorValue && isPlanEditorOpen ? (
+        <ToolPlanEditorDialog
+          isOpen
+          onClose={() => setIsPlanEditorOpen(false)}
+          onSave={(changes) => enabledTools.updateActiveToolPlan(activeInstance, changes)}
+          value={enabledTools.planEditorValue}
+        />
+      ) : null}
     </div>
   )
 }

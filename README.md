@@ -1,6 +1,120 @@
 # Calendar App
 
-React/Vite calendar app with a small Python backend for fridge receipt analysis.
+React/Vite calendar app with a FastAPI backend. It supports a MySQL multi-user server mode and a login-free Windows desktop mode.
+
+## Run modes
+
+- `server`: MySQL 8.0+ is the only data source. Users sign in with accounts created by the operator; registration does not exist.
+- `desktop`: Tauri starts a bundled FastAPI/PyInstaller sidecar on a random `127.0.0.1` port. SQLite lives in `%LOCALAPPDATA%\CalendarApp`, or `data\` beside a portable build.
+
+The modes do not synchronize automatically. Move personal data only with the versioned backup export/import in Settings.
+
+## MySQL server
+
+Set backend-only values in the service environment. Never put AI keys or database credentials in `VITE_*` variables.
+
+```env
+CALENDAR_APP_MODE=server
+CALENDAR_DATABASE_URL=mysql+pymysql://calendar_user:CHANGE_ME@127.0.0.1:3306/calendar_app?charset=utf8mb4
+CALENDAR_COOKIE_SECURE=true
+CALENDAR_ALLOWED_ORIGINS=
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+AI_REQUESTS_PER_MINUTE=30
+AI_MAX_REQUEST_BYTES=262144
+AI_ROUTINE_MODEL=deepseek-chat
+AI_PLANNING_MODEL=deepseek-chat
+AI_DEFAULT_USAGE_MODE=balanced
+AI_MAX_USAGE_MODE=balanced
+AI_MONTHLY_SOFT_LIMIT=1500000
+AI_MONTHLY_HARD_LIMIT=2000000
+```
+
+Install, migrate, create the first operator account, and start from the repository root:
+
+```powershell
+python -m venv .venv-server
+.\.venv-server\Scripts\python.exe -m pip install --require-hashes -r requirements-server.lock
+.\.venv-server\Scripts\python.exe -m alembic upgrade head
+.\.venv-server\Scripts\python.exe -m backend.manage_users create --username owner --admin
+.\.venv-server\Scripts\python.exe -m backend.server --mode server --host 127.0.0.1 --port 8787
+```
+
+`manage_users` also provides `set-password`, `enable`, `disable`, `unlock`, and `list`. Password input is hidden and is never accepted as a command-line argument. Put the React build at `/` and reverse-proxy `/api` to `127.0.0.1:8787` on the same HTTPS origin. Validate with `GET /api/health`.
+
+## Long-term goal control and AI usage
+
+Open `AI Assistant` and choose `New long-term goal / 新长期目标`. The recoverable goal conversation asks one to three selectable questions per turn. It creates a measurable plan preview only; the Goal, Project, metrics, Milestones, Actions, dependencies, control policy, Check-in schedule, and first version are written in one transaction after confirmation.
+
+`Active Tools` opens the goal as a full workspace with the planning brief, selected/effective AI mode, health factors, metric trends, planned/actual capacity, Milestones, critical path, complete plan table, Check-in, versions/rollback, and the same goal conversation. Templates are a small read-only link in AI Assistant, Active Tools, and the workspace footer rather than a primary home card.
+
+AI-generated Active Tool changes are saved as a `PlanChangeProposal`, not applied directly. The full page shows each Milestone/Action difference, buffered-capacity impact and calendar-draft count; the user can accept all, accept selected items, or reject. Manual structural edits save immediately and coalesce into one plan version during a five-minute editing window. Standard plus Minimum actions cannot exceed the weekly capacity after the configured buffer (20% by default).
+
+Periodic review uses deterministic medium-sensitivity rules for consecutive off-track reviews, seven-day Milestone delay, repeated 20% capacity overrun, leading/lagging metric drift and three missed Minimum actions. Low-confidence, anomalous or safety-boundary readings only request confirmation or suggest a pause; they never replan or pause automatically. The desktop app sends a native notification when pending Check-ins are discovered while the app is open, without an AI call.
+
+AI usage resolution is:
+
+```text
+goal override -> user global default -> server default -> administrator maximum clamp
+```
+
+The Settings page shows Economy, Balanced, and Quality-first behavior, current monthly routine/planning tokens, Soft/Hard limits, and degraded status. Server users cannot change budgets or model names. Desktop users can change local budgets. Reaching the Hard limit stops model calls without blocking Check-ins, charts, manual edits, versions, or local data. AI usage events are not included in backup v2.
+
+The database migration head is `20260715_0007`. Existing servers first upgrade to `20260715_0006`, run `python -m backend.audit_integrity`, archive and repair any reported orphan records with `--archive-and-repair`, and only then upgrade to `head`. Desktop SQLite databases are brought forward and stamped automatically at launch.
+
+### Legacy import
+
+Back up the old files before migrating. After the MySQL migration and first account creation, import the old read-only SQLite/JSON sources:
+
+```powershell
+python -m backend.migrate_legacy --username owner `
+  --calendar-db backend\data\calendar_app.sqlite3 `
+  --memory-db backend\data\long_term_memory.sqlite3 `
+  --fridge-json backend\data\fridge_inventory.json
+```
+
+The command reports read/created/updated/skipped/failed counts and is idempotent. In the old web app, Settings also has `Export legacy browser data`; import that file after signing in.
+
+Firebase is no longer part of the normal Settings page or production bundle. If an old deployment still has Firestore events, copy `.env.legacy.example` values into the current PowerShell environment and run the operator-only exporter:
+
+```powershell
+npm.cmd run legacy:firebase-export -- .\legacy-firebase-backup.json
+```
+
+The generated v1 backup can be imported into the current account. Firebase remains a development-only dependency solely for this exporter and its legacy adapter tests.
+
+## Windows desktop packages
+
+The unified build creates a dedicated `build\desktop-venv`, installs only the hash-locked desktop dependencies, bundles the FastAPI sidecar plus Tesseract/tessdata/licenses, builds the Tauri v2 NSIS app, and creates a portable ZIP:
+
+```powershell
+npm.cmd run desktop:build
+```
+
+Outputs:
+
+- `dist-desktop/Calendar App Setup.exe`
+- `dist-desktop/Calendar App Setup.exe.sig`
+- `dist-desktop/Calendar App Portable.zip`
+- `dist-desktop/SHA256SUMS.txt`
+
+The portable archive contains `portable.mode`. If its directory is read-only, the app shows a warning and uses `%LOCALAPPDATA%\CalendarApp`. The desktop DeepSeek key is stored through Windows Credential Manager and is excluded from SQLite and backup files.
+
+Installed NSIS builds check the public GitHub Release updater after desktop bootstrap and also expose a manual check in Settings. The user must confirm the download and installation. Immediately before installing, the local sidecar creates a consistent SQLite snapshot under `%LOCALAPPDATA%\CalendarApp\backups`, writes its SHA-256 checksum, and retains the three newest pre-update snapshots. Portable builds never self-install; they notify the user and open the latest release page instead. The MySQL server edition has no updater dependency and does not synchronize with the desktop database.
+
+Version `0.2.0` is the updater bootstrap and must be installed manually. Published `0.2.1` and later releases can update installed copies automatically. Keep all manifests synchronized with:
+
+```powershell
+npm.cmd run version:set -- 0.2.1
+npm.cmd run version:check
+```
+
+Pushing the matching `v0.2.1` tag runs `.github/workflows/release-desktop.yml`, builds the Windows x64 artifacts, signs the updater payload, and creates a draft GitHub Release. Before the first tag, add the ignored local `calendar-app-updater.key` content as the repository secret `TAURI_SIGNING_PRIVATE_KEY`, and the ignored `.secrets/updater-password.txt` content as `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Publish the draft only after installing and smoke-testing its NSIS asset on a clean Windows machine.
+
+The sidecar pre-binds its own random loopback socket and emits one stdout handshake containing its port and ephemeral token. The token is never passed in process arguments or environment variables. Tauri waits up to 15 seconds for the handshake and health check.
+
+The build also enables native desktop Check-in notifications. Notification permission is requested by the Tauri shell only when a pending goal Check-in exists.
 
 ## Fridge Receipt Backend
 
@@ -46,7 +160,14 @@ If Tesseract is unavailable or OCR confidence is too low, the pipeline falls bac
 
 ### Run Locally
 
-In one terminal, run the frontend:
+First change to the repository directory. Running `npm.cmd` from `C:\Windows\System32` makes npm try to write `C:\Windows\System32\package-lock.json` and fails with `EPERM`.
+
+```powershell
+Set-Location "C:\Users\Zheng\Desktop\calendar app"
+npm.cmd install
+```
+
+Then, in one terminal, run the frontend:
 
 ```powershell
 & "C:\Program Files\nodejs\npm.cmd" run dev
@@ -55,14 +176,11 @@ In one terminal, run the frontend:
 In another terminal, run the backend:
 
 ```powershell
-python -m backend.server
+python -m pip install --require-hashes -r requirements-server.lock
+python -m backend.server --mode desktop
 ```
 
-The frontend reads the fridge backend URL from:
-
-```env
-VITE_FRIDGE_API_BASE_URL=http://127.0.0.1:8787
-```
+Vite proxies same-origin `/api` requests to `127.0.0.1:8787` during development. Production also uses same-origin `/api`; Tauri injects its random sidecar URL at startup.
 
 ### Example Request
 
@@ -142,7 +260,7 @@ curl.exe -X POST "http://127.0.0.1:8787/api/fridge/receipt/analyze" `
 
 ### Inventory API
 
-The fridge inventory is persisted to `fridge_inventory.json` in `FRIDGE_DATA_DIR` or `backend/data`.
+Fridge inventory is stored per user in the unified SQL database. Shelf-life defaults/cache remain shared resources; receipt images are processed only for the request and are not persisted.
 
 ```text
 GET    http://127.0.0.1:8787/api/fridge/items
@@ -188,10 +306,27 @@ Open the app, click `Fridge`, upload a receipt image, and run analysis. The pane
 - OCR quality depends on image clarity and local Tesseract installation.
 - Shelf-life predictions are estimates, not food-safety guarantees.
 - DeepSeek calls are skipped in tests and should be mocked in automated coverage.
-- The current calendar app does not expose a backend event creation API; the backend returns structured expiration data and reminder suggestions for frontend integration.
+- Shelf-life estimates still require human judgment; the calendar/event API itself is now available through the authenticated backend.
 
 ### Backend Tests
 
 ```powershell
 python -m unittest discover tests/backend
+npm.cmd run test:mysql
 ```
+
+Complete release verification:
+
+```powershell
+npm.cmd run version:check
+npm.cmd run lint
+npm.cmd run test:run
+npm.cmd run build
+python -m unittest discover tests.backend
+npm.cmd run test:mysql       # requires Docker/MySQL or CALENDAR_MYSQL_TEST_URL
+cargo check --manifest-path src-tauri\Cargo.toml
+npm.cmd audit
+npm.cmd run desktop:build
+```
+
+See `office/docs/deployment.md` for the staged server, desktop, and legacy migration release procedure. Third-party notices are in `THIRD_PARTY_NOTICES.md` and are copied into both Windows package formats.
