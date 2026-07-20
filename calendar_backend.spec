@@ -6,6 +6,7 @@ from PyInstaller.utils.hooks import collect_submodules
 ROOT = Path(SPECPATH)
 hidden_imports = collect_submodules("backend")
 datas = [
+    (str(ROOT / "alembic.ini"), "."),
     (str(ROOT / "backend" / "calendar" / "migrations"), "backend/calendar/migrations"),
     (str(ROOT / "backend" / "data" / "shelf_life_defaults.json"), "backend/data"),
 ]

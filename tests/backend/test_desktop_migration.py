@@ -172,6 +172,12 @@ class DesktopMigrationTests(unittest.TestCase):
 
             self.assertEqual(sha256(path), original_hash)
 
+    def test_pyinstaller_bundle_includes_alembic_configuration(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+        spec = (project_root / "calendar_backend.spec").read_text(encoding="utf-8")
+
+        self.assertIn('(str(ROOT / "alembic.ini"), ".")', spec)
+
 
 if __name__ == "__main__":
     unittest.main()

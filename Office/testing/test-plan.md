@@ -193,7 +193,7 @@ tesseract --version
 | 2026-07-13 | MySQL multi-user + desktop packaging                | 229 Vitest + 29 Python + 1 MySQL contract                               | 0       | Not measured |
 | 2026-07-14 | Long-term goal control + AI usage modes             | 235 Vitest + 39 Python; MySQL conditional                               | 0       | Not measured |
 | 2026-07-15 | Three-phase security, integrity, and release repair | 244 Vitest + 53 Python + 1 real MySQL contract + 3 clean desktop builds | 0       | Not measured |
-| 2026-07-19 | 0.2.0 complete stabilization                        | 254 Vitest + 76 Python + 1 MySQL + 9 desktop E2E + 2 server E2E         | 0       | Not measured |
+| 2026-07-19 | 0.2.0 complete stabilization                        | 254 Vitest + 77 Python + 1 MySQL + 9 desktop E2E + 2 server E2E         | 0       | Not measured |
 
 _(append after each test run)_
 
@@ -243,7 +243,7 @@ The expected release gate is: lint, TypeScript/Vite build, full Vitest, backend 
 ### 2026-07-19 - Calendar App 0.2.0 complete stabilization
 
 - `npm.cmd run test:run`: 52 files / 254 tests passed.
-- `python -m unittest discover -s tests/backend -p "test_*.py"`: 76 tests passed; the conditional MySQL test was skipped in this SQLite run.
+- `python -m unittest discover -s tests/backend -p "test_*.py"`: 77 tests passed; the conditional MySQL test was skipped in this SQLite run.
 - A fresh Docker MySQL 8 instance migrated from empty through `20260719_0008`; `tests.backend.test_mysql_contract` passed, then the dedicated container and temporary volume were removed.
 - `npm.cmd run test:e2e:desktop`: 9 Chromium tests passed against an isolated SQLite database.
 - `npm.cmd run test:e2e:server`: 2 Chromium tests passed against MySQL, covering CSRF writes, expired-session draft preservation, no automatic write replay, manual retry, real logout, and two-account isolation.
@@ -252,4 +252,5 @@ The expected release gate is: lint, TypeScript/Vite build, full Vitest, backend 
 - `npm.cmd audit --audit-level=high`: zero vulnerabilities.
 - `pip-audit` reported no known vulnerabilities in `requirements-server.lock` or `requirements-desktop.lock`.
 - The clean-checkout Rust gate now creates and removes only a target-specific sidecar placeholder; release packaging still requires the real prepared sidecar and bundled Tesseract resources.
+- `npm.cmd run desktop:build`: the packaged sidecar migration/health smoke passed; the signed NSIS installer, updater signature, portable ZIP, and SHA-256 manifest were generated and verified; no sidecar process remained afterward.
 - Draft release creation remains blocked until the signed installer and portable package both pass the required clean-Windows migration and recovery smoke test.
