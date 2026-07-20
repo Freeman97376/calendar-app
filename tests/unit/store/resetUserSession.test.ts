@@ -44,7 +44,11 @@ describe('resetUserSessionStores', () => {
     expect(useEventStore.getState().events).toEqual([])
     expect(useAIStore.getState().messages).toEqual([])
     expect(useAIStore.getState().pendingEnabledToolRoute).toBeNull()
-    expect(useDataPortabilityStore.getState()).toMatchObject({ error: null, isBusy: false, status: null })
+    expect(useDataPortabilityStore.getState()).toMatchObject({
+      error: null,
+      isBusy: false,
+      status: null,
+    })
     expect(useUIStore.getState()).toMatchObject({
       activeEnabledToolProjectId: '',
       activeWorkspacePanel: 'home',

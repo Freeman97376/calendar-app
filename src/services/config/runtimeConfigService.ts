@@ -32,17 +32,25 @@ function envAiProvider(): AIProvider {
 }
 
 function aiApiProfileFor(baseUrl: string, model: string): RuntimeConfig['aiApiProfile'] {
-  return baseUrl === DEFAULT_AI_API_BASE_URL && model === DEFAULT_AI_API_MODEL ? 'deepseek' : 'custom'
+  return baseUrl === DEFAULT_AI_API_BASE_URL && model === DEFAULT_AI_API_MODEL
+    ? 'deepseek'
+    : 'custom'
 }
 
 function envLanguage(): RuntimeConfig['language'] {
   const language = import.meta.env.VITE_APP_LANGUAGE ?? import.meta.env.VITE_LANGUAGE
-  return language === 'zh' || language === 'en' ? language : 'en'
+  if (language === 'zh' || language === 'en') return language
+  if (typeof navigator !== 'undefined' && navigator.language.toLocaleLowerCase().startsWith('zh')) {
+    return 'zh'
+  }
+  return 'en'
 }
 
 function normalizeRuntimeConfigInput(input: RuntimeConfigInput): RuntimeConfigInput {
   const aiProvider =
-    input.aiProvider === 'anthropic' || input.aiProvider === 'deepseek' || input.aiProvider === 'ollama'
+    input.aiProvider === 'anthropic' ||
+    input.aiProvider === 'deepseek' ||
+    input.aiProvider === 'ollama'
       ? 'api'
       : input.aiProvider
   const aiApiModel = input.aiApiModel ?? input.deepseekModel ?? DEFAULT_AI_API_MODEL
@@ -154,7 +162,7 @@ async function parseJsonResponse(response: Response): Promise<unknown> {
   const body = await response.text()
   let payload: unknown
   try {
-    payload = body ? JSON.parse(body) as unknown : null
+    payload = body ? (JSON.parse(body) as unknown) : null
   } catch {
     const isHtml = /^\s*<!doctype\s+html|^\s*<html/i.test(body)
     throw new Error(

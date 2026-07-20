@@ -33,9 +33,12 @@ function shellClass(position: 'left' | 'right' | 'top' | 'bottom'): string {
 function workspaceFrameClass(position: 'left' | 'right' | 'top' | 'bottom'): string {
   const base = 'min-h-0 min-w-0 shrink-0 bg-white'
 
-  if (position === 'left') return `${base} h-80 border-t border-slate-200 xl:h-auto xl:border-r xl:border-t-0 xl:[width:var(--workspace-panel-size)]`
-  if (position === 'right') return `${base} h-80 border-t border-slate-200 xl:h-auto xl:border-l xl:border-t-0 xl:[width:var(--workspace-panel-size)]`
-  if (position === 'bottom') return `${base} border-t border-slate-200 [height:var(--workspace-panel-size)]`
+  if (position === 'left')
+    return `${base} h-80 border-t border-slate-200 xl:h-auto xl:border-r xl:border-t-0 xl:[width:var(--workspace-panel-size)]`
+  if (position === 'right')
+    return `${base} h-80 border-t border-slate-200 xl:h-auto xl:border-l xl:border-t-0 xl:[width:var(--workspace-panel-size)]`
+  if (position === 'bottom')
+    return `${base} border-t border-slate-200 [height:var(--workspace-panel-size)]`
 
   return `${base} border-b border-slate-200 [height:var(--workspace-panel-size)]`
 }

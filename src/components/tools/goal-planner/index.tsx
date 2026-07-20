@@ -6,7 +6,8 @@ export const goalPlannerTool: ToolDefinition = {
   label: 'Goal Planner',
   category: 'planning',
   description: 'SQLite-backed goals, projects, milestones, and actions.',
-  activationPrompt: 'Describe the long-running goal or project workflow this active tool should manage.',
+  activationPrompt:
+    'Describe the long-running goal or project workflow this active tool should manage.',
   adapterId: 'generic',
   capabilityTags: ['memory', 'progress'],
   instantiable: true,

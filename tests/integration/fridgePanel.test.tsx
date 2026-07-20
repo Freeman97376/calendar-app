@@ -251,7 +251,11 @@ class MemoryClient implements LongTermMemoryClientContract {
   ): Promise<LongTermGoal> {
     const goal = this.goals.find((candidate) => candidate.goal_id === goalId)
     if (!goal) throw new Error('Missing goal')
-    Object.assign(goal, { ...changes, metadata: changes.metadata ?? goal.metadata, updated_at: timestamp() })
+    Object.assign(goal, {
+      ...changes,
+      metadata: changes.metadata ?? goal.metadata,
+      updated_at: timestamp(),
+    })
     return goal
   }
 
@@ -276,7 +280,11 @@ class MemoryClient implements LongTermMemoryClientContract {
   ): Promise<LongTermProject> {
     const project = this.projects.find((candidate) => candidate.project_id === projectId)
     if (!project) throw new Error('Missing project')
-    Object.assign(project, { ...changes, metadata: changes.metadata ?? project.metadata, updated_at: timestamp() })
+    Object.assign(project, {
+      ...changes,
+      metadata: changes.metadata ?? project.metadata,
+      updated_at: timestamp(),
+    })
     return project
   }
 }
@@ -287,9 +295,13 @@ describe('Fridge tool template', () => {
   beforeEach(() => {
     localStorage.clear()
     memoryClient = new MemoryClient()
-    configureConfigServices(new RuntimeConfigService(localStorage, 'test_fridge_template_runtime_config'))
+    configureConfigServices(
+      new RuntimeConfigService(localStorage, 'test_fridge_template_runtime_config'),
+    )
     configureEventSync(null)
-    configureEventTypeService(new LocalEventTypeService(localStorage, 'test_fridge_template_event_types'))
+    configureEventTypeService(
+      new LocalEventTypeService(localStorage, 'test_fridge_template_event_types'),
+    )
     configureLongTermMemoryClient(memoryClient)
     useAIStore.getState().reset()
     useCalendarStore.getState().reset({ focusedDate: '2026-06-07', view: 'month' })
@@ -328,13 +340,18 @@ describe('Fridge tool template', () => {
     })
 
     await openWorkspaceEntry(user, 'AI Assistant')
-    await submitAIChat(user, 'Update Fridge Coach with this week grocery receipts and expiration reminders.')
+    await submitAIChat(
+      user,
+      'Update Fridge Coach with this week grocery receipts and expiration reminders.',
+    )
 
     expect(await screen.findByText(/Route this to Fridge Coach/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Dispatch' }))
 
     expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
-    expect((await screen.findAllByText('AI Assistant routed a request to Fridge Coach.')).length).toBeGreaterThan(0)
+    expect(
+      (await screen.findAllByText('AI Assistant routed a request to Fridge Coach.')).length,
+    ).toBeGreaterThan(0)
     await waitFor(() => {
       expect(memoryClient.toolRuns[0]).toMatchObject({
         status: 'needs_user_confirmation',

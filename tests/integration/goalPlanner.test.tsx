@@ -24,7 +24,10 @@ import type {
   ProjectStatus,
 } from '../../src/domain/types/longTermMemory'
 import { LocalAIService } from '../../src/services/ai/localAIService'
-import { RuntimeConfigService, BackendConfigApiService } from '../../src/services/config/runtimeConfigService'
+import {
+  RuntimeConfigService,
+  BackendConfigApiService,
+} from '../../src/services/config/runtimeConfigService'
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { configureAIService, useAIStore } from '../../src/store/aiStore'
 import { useCalendarStore } from '../../src/store/calendarStore'
@@ -408,7 +411,9 @@ describe('Goal Planner tool', () => {
       ],
       roadmapFormatVersion: 1,
     })
-    expect(await screen.findByText('Saved implementation path for Launch project')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Saved implementation path for Launch project'),
+    ).toBeInTheDocument()
     expect(await screen.findByText(/Research/)).toBeInTheDocument()
   })
 

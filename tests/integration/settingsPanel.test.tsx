@@ -6,10 +6,7 @@ import App from '../../src/App'
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { RuntimeConfigService } from '../../src/services/config/runtimeConfigService'
 import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
-import {
-  configureEventTypeService,
-  useEventTypeStore,
-} from '../../src/store/eventTypeStore'
+import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
 import { useUIStore } from '../../src/store/uiStore'
 
 async function openSettings() {

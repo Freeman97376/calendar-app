@@ -100,32 +100,41 @@ export function useEnabledTools() {
   const updateMilestoneStatus = useLongTermMemoryStore((state) => state.updateMilestoneStatus)
   const updateProject = useLongTermMemoryStore((state) => state.updateProject)
   const updateProjectStatus = useLongTermMemoryStore((state) => state.updateProjectStatus)
-  const instances = useMemo(
-    () => activeToolsFromProjects(projects, goals),
-    [goals, projects],
-  )
+  const instances = useMemo(() => activeToolsFromProjects(projects, goals), [goals, projects])
   const activeInstance =
-    instances.find((instance) => instance.projectId === panel.activeProjectId) ?? instances[0] ?? null
+    instances.find((instance) => instance.projectId === panel.activeProjectId) ??
+    instances[0] ??
+    null
   const progressSummary = enabledToolProgress(actions, milestones)
   const roadmap = activeInstance
-    ? buildToolRoadmap(activeInstance.goal, activeInstance.project, milestones, actions, progress, toolRuns)
+    ? buildToolRoadmap(
+        activeInstance.goal,
+        activeInstance.project,
+        milestones,
+        actions,
+        progress,
+        toolRuns,
+      )
     : null
-  const planEditorValue: ActiveToolPlanEditorValue | null = activeInstance && roadmap
-    ? {
-        activationSummary: activeInstance.activationSummary || activeInstance.project.description,
-        implementationPathText: implementationPathToText(
-          activeInstance.implementationPath.length
-            ? activeInstance.implementationPath
-            : roadmap.steps,
-        ),
-        longTermGoalLabel:
-          activeInstance.longTermGoalLabel ?? activeInstance.goal?.title ?? activeInstance.project.title,
-        routeTags: activeInstance.routeTags,
-        toolFeatures: activeInstance.toolFeatures.length
-          ? activeInstance.toolFeatures
-          : activeInstance.routeTags,
-      }
-    : null
+  const planEditorValue: ActiveToolPlanEditorValue | null =
+    activeInstance && roadmap
+      ? {
+          activationSummary: activeInstance.activationSummary || activeInstance.project.description,
+          implementationPathText: implementationPathToText(
+            activeInstance.implementationPath.length
+              ? activeInstance.implementationPath
+              : roadmap.steps,
+          ),
+          longTermGoalLabel:
+            activeInstance.longTermGoalLabel ??
+            activeInstance.goal?.title ??
+            activeInstance.project.title,
+          routeTags: activeInstance.routeTags,
+          toolFeatures: activeInstance.toolFeatures.length
+            ? activeInstance.toolFeatures
+            : activeInstance.routeTags,
+        }
+      : null
   const promptFramework = activeInstance ? buildActiveToolPromptFramework(activeInstance) : ''
   const calendarDrafts = latestCalendarDrafts(toolRuns)
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
@@ -133,7 +142,9 @@ export function useEnabledTools() {
   const [localError, setLocalError] = useState<string | null>(null)
 
   async function recordManualVersion(projectId: string, summary: string) {
-    await goalControlGateway.createVersion(projectId, { source: 'manual', summary }).catch(() => undefined)
+    await goalControlGateway
+      .createVersion(projectId, { source: 'manual', summary })
+      .catch(() => undefined)
   }
 
   useEffect(() => {
@@ -305,8 +316,13 @@ export function useEnabledTools() {
       })
       await createProgress({
         details: [
-          ...uniqueDrafts.map((draft) => `Applied ${draft.title}: ${draft.startAt} - ${draft.endAt}`),
-          ...duplicateDrafts.map((duplicate) => `Skipped duplicate ${duplicate.draft.title}: ${duplicate.draft.startAt} - ${duplicate.draft.endAt}`),
+          ...uniqueDrafts.map(
+            (draft) => `Applied ${draft.title}: ${draft.startAt} - ${draft.endAt}`,
+          ),
+          ...duplicateDrafts.map(
+            (duplicate) =>
+              `Skipped duplicate ${duplicate.draft.title}: ${duplicate.draft.startAt} - ${duplicate.draft.endAt}`,
+          ),
         ].join('\n'),
         goal_id: activeInstance.goalId,
         log_type: 'tool_result',
@@ -319,13 +335,16 @@ export function useEnabledTools() {
       await loadProjectDetails(activeInstance.projectId)
       setApplyStatus(
         `Applied ${created.length} calendar event${created.length === 1 ? '' : 's'}.${
-          duplicateDrafts.length ? ` Skipped ${duplicateDrafts.length} duplicate${duplicateDrafts.length === 1 ? '' : 's'}.` : ''
+          duplicateDrafts.length
+            ? ` Skipped ${duplicateDrafts.length} duplicate${duplicateDrafts.length === 1 ? '' : 's'}.`
+            : ''
         }`,
       )
 
       return created
     } catch (applyError) {
-      const message = applyError instanceof Error ? applyError.message : 'Unable to apply calendar drafts'
+      const message =
+        applyError instanceof Error ? applyError.message : 'Unable to apply calendar drafts'
       setLocalError(message)
       throw applyError
     } finally {

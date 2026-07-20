@@ -4,7 +4,10 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import GoalConversationPanel from '../../src/components/ai/GoalConversationPanel'
-import type { GoalConversationMessage, GoalConversationThread } from '../../src/domain/types/goalControl'
+import type {
+  GoalConversationMessage,
+  GoalConversationThread,
+} from '../../src/domain/types/goalControl'
 import { server } from '../mocks/server'
 
 describe('long-term goal current-situation anchoring', () => {
@@ -25,7 +28,10 @@ describe('long-term goal current-situation anchoring', () => {
       http.get('*/api/goal-conversations', () => HttpResponse.json({ success: true, threads: [] })),
       http.post('*/api/goal-conversations', () => HttpResponse.json({ success: true, thread })),
       http.post('*/api/goal-conversations/:threadId/messages', async ({ request }) => {
-        const body = await request.json() as Pick<GoalConversationMessage, 'role' | 'content' | 'structured'>
+        const body = (await request.json()) as Pick<
+          GoalConversationMessage,
+          'role' | 'content' | 'structured'
+        >
         const message: GoalConversationMessage = {
           ...body,
           message_id: `message-${messages.length + 1}`,
@@ -55,7 +61,9 @@ describe('long-term goal current-situation anchoring', () => {
     await user.click(screen.getByRole('button', { name: /Schedule or energy/ }))
     await user.click(screen.getByRole('button', { name: /Continue/ }))
 
-    expect(await screen.findByRole('heading', { name: /Current situation anchor/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: /Current situation anchor/ }),
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/Weight 82 kg/).length).toBeGreaterThan(0)
     expect(await screen.findByText(/What result matters most/)).toBeInTheDocument()
   })

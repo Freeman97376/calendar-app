@@ -95,7 +95,9 @@ function nextHistory(
 function workspaceState(
   panel: WorkspacePanelId,
   history: WorkspacePanelId[] = [],
-  mainMode: WorkspaceMainMode = panel === 'home' || panel === 'event-details' ? 'calendar' : 'panel',
+  mainMode: WorkspaceMainMode = panel === 'home' || panel === 'event-details'
+    ? 'calendar'
+    : 'panel',
 ) {
   return {
     ...panelFlags(panel),
@@ -132,7 +134,12 @@ export const useUIStore = create<UIStore>((set) => ({
   closeEnabledToolsPanel: () => set(workspaceState('home')),
   closeToolsPanel: () => set(workspaceState('home')),
   openAIPanel: () =>
-    set((state) => workspaceState('ai', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'))),
+    set((state) =>
+      workspaceState(
+        'ai',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'),
+      ),
+    ),
   openCreateEventDetails: (selectedDate) =>
     set((state) => ({
       ...workspaceState(
@@ -248,13 +255,19 @@ export const useUIStore = create<UIStore>((set) => ({
     set((state) =>
       state.activeWorkspacePanel === 'ai'
         ? workspaceState('home')
-        : workspaceState('ai', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai')),
+        : workspaceState(
+            'ai',
+            nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'),
+          ),
     ),
   toggleDebugPanel: () =>
     set((state) =>
       state.activeWorkspacePanel === 'debug'
         ? workspaceState('home')
-        : workspaceState('debug', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'debug')),
+        : workspaceState(
+            'debug',
+            nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'debug'),
+          ),
     ),
   toggleEnabledToolsPanel: () =>
     set((state) =>
@@ -281,13 +294,19 @@ export const useUIStore = create<UIStore>((set) => ({
     set((state) =>
       state.activeWorkspacePanel === 'todos'
         ? workspaceState('home')
-        : workspaceState('todos', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'todos')),
+        : workspaceState(
+            'todos',
+            nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'todos'),
+          ),
     ),
   toggleToolsPanel: () =>
     set((state) =>
       state.activeWorkspacePanel === 'tools'
         ? workspaceState('home')
-        : workspaceState('tools', nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'tools')),
+        : workspaceState(
+            'tools',
+            nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'tools'),
+          ),
     ),
   reset: () =>
     set({

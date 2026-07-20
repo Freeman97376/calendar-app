@@ -84,11 +84,7 @@ export function isSameCalendarDay(left: string, right: string): boolean {
   return left === right
 }
 
-export function shiftCalendarDate(
-  isoDate: string,
-  view: CalendarViewUnit,
-  amount: number,
-): string {
+export function shiftCalendarDate(isoDate: string, view: CalendarViewUnit, amount: number): string {
   const date = parseCalendarDate(isoDate)
 
   if (view === 'month') {
@@ -220,6 +216,6 @@ export function getCalendarSubtitle(
 
   const date = parseCalendarDate(isoDate)
   return dateFnsIsToday(date)
-    ? labels.today ?? 'Today'
+    ? (labels.today ?? 'Today')
     : formatDatePart(date, locale, { weekday: 'long' })
 }

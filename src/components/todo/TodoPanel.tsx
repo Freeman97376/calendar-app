@@ -78,13 +78,22 @@ function parseEtaMinutes(value: string): number {
   return Math.min(480, Math.max(5, Math.round(parsed / 5) * 5))
 }
 
-function energyLabel(energyNeeded: Todo['energyNeeded'], t: ReturnType<typeof useI18n>['t']): string {
+function energyLabel(
+  energyNeeded: Todo['energyNeeded'],
+  t: ReturnType<typeof useI18n>['t'],
+): string {
   if (energyNeeded === 'high') return t('todo.high')
   if (energyNeeded === 'low') return t('todo.low')
   return t('todo.medium')
 }
 
-const longProjectActionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
+const longProjectActionStatuses: ActionItemStatus[] = [
+  'todo',
+  'scheduled',
+  'done',
+  'blocked',
+  'skipped',
+]
 const longProjectMilestoneStatuses: MilestoneStatus[] = [
   'not_started',
   'in_progress',
@@ -253,11 +262,7 @@ function replaceTodoDetailItem(notes: string, itemIndex: number, nextValue: stri
     .join('\n')
 }
 
-function setTodoDetailItemCompletion(
-  notes: string,
-  itemIndex: number,
-  completed: boolean,
-): string {
+function setTodoDetailItemCompletion(notes: string, itemIndex: number, completed: boolean): string {
   let section: 'intro' | 'items' | 'warnings' | 'json' = 'intro'
   let currentItemIndex = 0
 
@@ -330,14 +335,20 @@ function LongProjectDetails({
   const { t } = useI18n()
 
   if (!isActive) {
-    return <p className="rounded bg-slate-50 p-2 text-xs text-slate-500">Open to load project progress.</p>
+    return (
+      <p className="rounded bg-slate-50 p-2 text-xs text-slate-500">
+        Open to load project progress.
+      </p>
+    )
   }
 
   return (
     <section className="space-y-3 rounded-md border border-emerald-100 bg-emerald-50 p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase text-emerald-800">{t('todo.longProject')}</p>
+          <p className="text-xs font-semibold uppercase text-emerald-800">
+            {t('todo.longProject')}
+          </p>
           <p className="mt-1 text-xs text-emerald-900">
             {t('enabled.completeFrom', {
               completed: progressSummary.completed,
@@ -351,7 +362,10 @@ function LongProjectDetails({
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-white">
-        <div className="h-full rounded-full bg-emerald-700" style={{ width: `${progressSummary.percent}%` }} />
+        <div
+          className="h-full rounded-full bg-emerald-700"
+          style={{ width: `${progressSummary.percent}%` }}
+        />
       </div>
       {isLoading ? <p className="text-xs text-emerald-800">{t('enabled.loadingMemory')}</p> : null}
 
@@ -359,18 +373,25 @@ function LongProjectDetails({
         <div className="space-y-2">
           <p className="text-xs font-semibold text-emerald-950">{t('enabled.milestones')}</p>
           {milestones.map((milestone) => (
-            <div className="rounded-md border border-emerald-100 bg-white p-2" key={milestone.milestone_id}>
+            <div
+              className="rounded-md border border-emerald-100 bg-white p-2"
+              key={milestone.milestone_id}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold text-slate-900">{milestone.title}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {milestone.due_date ? `${t('todo.dueDate')}: ${milestone.due_date}` : t('todo.noDueDate')}
+                    {milestone.due_date
+                      ? `${t('todo.dueDate')}: ${milestone.due_date}`
+                      : t('todo.noDueDate')}
                   </p>
                 </div>
                 <select
                   aria-label={`Long project milestone status for ${milestone.title}`}
                   className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs"
-                  onChange={(event) => onSetMilestoneStatus(milestone, event.target.value as MilestoneStatus)}
+                  onChange={(event) =>
+                    onSetMilestoneStatus(milestone, event.target.value as MilestoneStatus)
+                  }
                   value={milestone.status}
                 >
                   {longProjectMilestoneStatuses.map((status) => (
@@ -389,18 +410,25 @@ function LongProjectDetails({
         <div className="space-y-2">
           <p className="text-xs font-semibold text-emerald-950">{t('enabled.actions')}</p>
           {actions.map((action) => (
-            <div className="rounded-md border border-emerald-100 bg-white p-2" key={action.action_id}>
+            <div
+              className="rounded-md border border-emerald-100 bg-white p-2"
+              key={action.action_id}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold text-slate-900">{action.title}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {action.due_date ? `${t('todo.dueDate')}: ${action.due_date}` : t('todo.noDueDate')}
+                    {action.due_date
+                      ? `${t('todo.dueDate')}: ${action.due_date}`
+                      : t('todo.noDueDate')}
                   </p>
                 </div>
                 <select
                   aria-label={`Long project action status for ${action.title}`}
                   className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs"
-                  onChange={(event) => onSetActionStatus(action, event.target.value as ActionItemStatus)}
+                  onChange={(event) =>
+                    onSetActionStatus(action, event.target.value as ActionItemStatus)
+                  }
                   value={action.status}
                 >
                   {longProjectActionStatuses.map((status) => (
@@ -457,8 +485,10 @@ function TodoDetails({
   if (!todo.notes && !todo.longProject) return null
 
   const details = parseTodoDetails(todo.notes ?? '')
-  const hasStructuredDetails = details.intro.length || details.items.length || details.warnings.length
-  const allItemsSelected = details.items.length > 0 && selectedItemIndexes.length >= details.items.length
+  const hasStructuredDetails =
+    details.intro.length || details.items.length || details.warnings.length
+  const allItemsSelected =
+    details.items.length > 0 && selectedItemIndexes.length >= details.items.length
   const longProjectActive =
     Boolean(todo.longProject) && longProject.activeProjectId === todo.longProject?.memoryProjectId
 
@@ -523,7 +553,9 @@ function TodoDetails({
                         aria-label={`Select ${details.itemLabel.toLowerCase()} ${index + 1} for AI`}
                         checked={selectedItemIndexes.includes(index)}
                         className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
-                        onChange={(event) => onToggleItemSelection(todo, index, event.target.checked)}
+                        onChange={(event) =>
+                          onToggleItemSelection(todo, index, event.target.checked)
+                        }
                         type="checkbox"
                       />
                       <span>
@@ -621,7 +653,9 @@ export default function TodoPanel() {
   const [editDraft, setEditDraft] = useState<TodoFormState | null>(null)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [editingDetailItem, setEditingDetailItem] = useState<DetailItemEditState | null>(null)
-  const [selectedDetailItemsByTodoId, setSelectedDetailItemsByTodoId] = useState<Record<string, number[]>>({})
+  const [selectedDetailItemsByTodoId, setSelectedDetailItemsByTodoId] = useState<
+    Record<string, number[]>
+  >({})
   const [todoDraft, setTodoDraft] = useState(() => createEmptyTodoForm(runtimeConfig))
   const [status, setStatus] = useState<string | null>(null)
   const firstTodoTypeId =
@@ -771,7 +805,9 @@ export default function TodoPanel() {
       todoTitle: todo.title,
     })
     setSelectedDetailItemsByTodoId((current) => ({ ...current, [todo.id]: [] }))
-    setStatus(`Sent ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'} to AI Assistant.`)
+    setStatus(
+      `Sent ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'} to AI Assistant.`,
+    )
   }
 
   async function openLongProject(todo: Todo) {
@@ -780,7 +816,10 @@ export default function TodoPanel() {
     await todoLongProjects.load(todo.longProject)
   }
 
-  async function setLongProjectActionStatus(action: LongTermActionItem, nextStatus: ActionItemStatus) {
+  async function setLongProjectActionStatus(
+    action: LongTermActionItem,
+    nextStatus: ActionItemStatus,
+  ) {
     await todoLongProjects.setActionStatus(action, nextStatus)
     setStatus(`Updated ${action.title} to ${longProjectStatusLabel(nextStatus, t)}.`)
   }
@@ -803,8 +842,8 @@ export default function TodoPanel() {
       etaMinutes: parseEtaMinutes(editDraft.etaMinutes),
       eventTypeId: editDraft.eventTypeId,
       longProject: editDraft.longProjectEnabled
-        ? editingTodo.longProject ??
-          (await todoLongProjects.createLink(editDraft.title.trim(), editDraft.notes || undefined))
+        ? (editingTodo.longProject ??
+          (await todoLongProjects.createLink(editDraft.title.trim(), editDraft.notes || undefined)))
         : undefined,
       notes: editDraft.notes || undefined,
       priority: editDraft.priority,
@@ -825,7 +864,9 @@ export default function TodoPanel() {
       editingDetailItem.value,
     )
     await todos.editTodo(editingDetailItem.todo.id, { notes: updatedNotes })
-    setStatus(`Updated ${editingDetailItem.itemLabel.toLowerCase()} ${editingDetailItem.itemIndex + 1}.`)
+    setStatus(
+      `Updated ${editingDetailItem.itemLabel.toLowerCase()} ${editingDetailItem.itemIndex + 1}.`,
+    )
     closeEditDetailItem()
   }
 
@@ -854,213 +895,319 @@ export default function TodoPanel() {
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4">
-        <form className="space-y-3" onSubmit={createTodo}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="todo-title">
-              {t('todo.task')}
-            </label>
-            <input
-              className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-              id="todo-title"
-              onChange={(inputEvent) =>
-                setTodoDraft((current) => ({ ...current, title: inputEvent.target.value }))
-              }
-              type="text"
-              value={todoDraft.title}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+          <form className="space-y-3" onSubmit={createTodo}>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-type">
-                {t('todo.type')}
-              </label>
-              <select
-                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                id="todo-type"
-                onChange={(inputEvent) =>
-                  setTodoDraft((current) => ({ ...current, eventTypeId: inputEvent.target.value }))
-                }
-                value={todoDraft.eventTypeId}
-              >
-                {todos.todoEventTypes.length ? (
-                  todos.todoEventTypes.map((eventType) => (
-                    <option key={eventType.id} value={eventType.id}>
-                      {eventType.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="general">{t('todo.general')}</option>
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-priority">
-                {t('todo.priority')}
-              </label>
-              <select
-                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                id="todo-priority"
-                onChange={(inputEvent) =>
-                  setTodoDraft((current) => ({
-                    ...current,
-                    priority: inputEvent.target.value as Todo['priority'],
-                  }))
-                }
-                value={todoDraft.priority}
-              >
-                <option value="high">{t('todo.high')}</option>
-                <option value="medium">{t('todo.medium')}</option>
-                <option value="low">{t('todo.low')}</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-eta">
-                {t('todo.etaMinutes')}
+              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-title">
+                {t('todo.task')}
               </label>
               <input
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                id="todo-eta"
-                max={480}
-                min={5}
+                id="todo-title"
                 onChange={(inputEvent) =>
-                  setTodoDraft((current) => ({ ...current, etaMinutes: inputEvent.target.value }))
+                  setTodoDraft((current) => ({ ...current, title: inputEvent.target.value }))
                 }
-                step={5}
-                type="number"
-                value={todoDraft.etaMinutes}
+                type="text"
+                value={todoDraft.title}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-type">
+                  {t('todo.type')}
+                </label>
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-type"
+                  onChange={(inputEvent) =>
+                    setTodoDraft((current) => ({
+                      ...current,
+                      eventTypeId: inputEvent.target.value,
+                    }))
+                  }
+                  value={todoDraft.eventTypeId}
+                >
+                  {todos.todoEventTypes.length ? (
+                    todos.todoEventTypes.map((eventType) => (
+                      <option key={eventType.id} value={eventType.id}>
+                        {eventType.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="general">{t('todo.general')}</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-priority">
+                  {t('todo.priority')}
+                </label>
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-priority"
+                  onChange={(inputEvent) =>
+                    setTodoDraft((current) => ({
+                      ...current,
+                      priority: inputEvent.target.value as Todo['priority'],
+                    }))
+                  }
+                  value={todoDraft.priority}
+                >
+                  <option value="high">{t('todo.high')}</option>
+                  <option value="medium">{t('todo.medium')}</option>
+                  <option value="low">{t('todo.low')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-eta">
+                  {t('todo.etaMinutes')}
+                </label>
+                <input
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-eta"
+                  max={480}
+                  min={5}
+                  onChange={(inputEvent) =>
+                    setTodoDraft((current) => ({ ...current, etaMinutes: inputEvent.target.value }))
+                  }
+                  step={5}
+                  type="number"
+                  value={todoDraft.etaMinutes}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-energy">
+                  {t('todo.energyNeeded')}
+                </label>
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  id="todo-energy"
+                  onChange={(inputEvent) =>
+                    setTodoDraft((current) => ({
+                      ...current,
+                      energyNeeded: inputEvent.target.value as Todo['energyNeeded'],
+                    }))
+                  }
+                  value={todoDraft.energyNeeded}
+                >
+                  <option value="high">{t('todo.high')}</option>
+                  <option value="medium">{t('todo.medium')}</option>
+                  <option value="low">{t('todo.low')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-due-date">
+                {t('todo.dueDate')}
+              </label>
+              <input
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                id="todo-due-date"
+                onChange={(inputEvent) =>
+                  setTodoDraft((current) => ({ ...current, dueDate: inputEvent.target.value }))
+                }
+                type="date"
+                value={todoDraft.dueDate}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-energy">
-                {t('todo.energyNeeded')}
+              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-notes">
+                {t('todo.notes')}
               </label>
-              <select
-                className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                id="todo-energy"
+              <textarea
+                className="mt-1 min-h-16 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                id="todo-notes"
+                onChange={(inputEvent) =>
+                  setTodoDraft((current) => ({ ...current, notes: inputEvent.target.value }))
+                }
+                value={todoDraft.notes}
+              />
+            </div>
+
+            <label className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <input
+                checked={todoDraft.longProjectEnabled}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
                 onChange={(inputEvent) =>
                   setTodoDraft((current) => ({
                     ...current,
-                    energyNeeded: inputEvent.target.value as Todo['energyNeeded'],
+                    longProjectEnabled: inputEvent.target.checked,
                   }))
                 }
-                value={todoDraft.energyNeeded}
-              >
-                <option value="high">{t('todo.high')}</option>
-                <option value="medium">{t('todo.medium')}</option>
-                <option value="low">{t('todo.low')}</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="todo-due-date">
-              {t('todo.dueDate')}
-            </label>
-            <input
-              className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-              id="todo-due-date"
-              onChange={(inputEvent) =>
-                setTodoDraft((current) => ({ ...current, dueDate: inputEvent.target.value }))
-              }
-              type="date"
-              value={todoDraft.dueDate}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="todo-notes">
-              {t('todo.notes')}
-            </label>
-            <textarea
-              className="mt-1 min-h-16 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-              id="todo-notes"
-              onChange={(inputEvent) =>
-                setTodoDraft((current) => ({ ...current, notes: inputEvent.target.value }))
-              }
-              value={todoDraft.notes}
-            />
-          </div>
-
-          <label className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-            <input
-              checked={todoDraft.longProjectEnabled}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
-              onChange={(inputEvent) =>
-                setTodoDraft((current) => ({
-                  ...current,
-                  longProjectEnabled: inputEvent.target.checked,
-                }))
-              }
-              type="checkbox"
-            />
-            <span>
-              {t('todo.longProject')}
-              <span className="mt-1 block text-xs text-slate-500">
-                {t('todo.longProjectDescription')}
+                type="checkbox"
+              />
+              <span>
+                {t('todo.longProject')}
+                <span className="mt-1 block text-xs text-slate-500">
+                  {t('todo.longProjectDescription')}
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
 
-          <Button disabled={!todoDraft.title.trim()} type="submit" variant="primary">
-            {t('todo.addTask')}
-          </Button>
-        </form>
+            <Button disabled={!todoDraft.title.trim()} type="submit" variant="primary">
+              {t('todo.addTask')}
+            </Button>
+          </form>
 
-        {todos.error ? (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{todos.error}</p>
-        ) : null}
-        {todoLongProjects.error ? (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {todoLongProjects.error}
-          </p>
-        ) : null}
-        {status ? (
-          <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{status}</p>
-        ) : null}
-
-        <section aria-label={t('todo.openTasks')} className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-950">{t('todo.openTasks')}</h3>
-          {todos.isLoading ? <p className="text-sm text-slate-500">{t('todo.loading')}</p> : null}
-          {!todos.openTodos.length && !todos.isLoading ? (
-            <p className="text-sm text-slate-500">{t('todo.noOpenTasks')}</p>
+          {todos.error ? (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{todos.error}</p>
           ) : null}
-          <div className="space-y-2">
-            {todos.openTodos.map((todo) => {
-              const eventType = todos.eventTypesById.get(todo.eventTypeId)
+          {todoLongProjects.error ? (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {todoLongProjects.error}
+            </p>
+          ) : null}
+          {status ? (
+            <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{status}</p>
+          ) : null}
 
-              return (
+          <section aria-label={t('todo.openTasks')} className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-950">{t('todo.openTasks')}</h3>
+            {todos.isLoading ? <p className="text-sm text-slate-500">{t('todo.loading')}</p> : null}
+            {!todos.openTodos.length && !todos.isLoading ? (
+              <p className="text-sm text-slate-500">{t('todo.noOpenTasks')}</p>
+            ) : null}
+            <div className="space-y-2">
+              {todos.openTodos.map((todo) => {
+                const eventType = todos.eventTypesById.get(todo.eventTypeId)
+
+                return (
+                  <div className="rounded-md border border-slate-200 bg-white p-3" key={todo.id}>
+                    <div className="flex items-start gap-3">
+                      <button
+                        aria-label={`Mark task ${todo.title} done`}
+                        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs text-white hover:border-emerald-700 hover:bg-emerald-700"
+                        onClick={() => void completeTodo(todo)}
+                        type="button"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-950">
+                          {todo.title}
+                        </p>
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          {eventType ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span
+                                aria-hidden="true"
+                                className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-200"
+                                style={{ backgroundColor: eventType.color }}
+                              />
+                              {eventType.label}
+                            </span>
+                          ) : null}
+                          <span>{formatDueDate(todo, t)}</span>
+                          <span>
+                            {t('todo.etaShort')}: {todo.etaMinutes}m
+                          </span>
+                          <span>
+                            {t('todo.priority')}: {todo.priority}
+                          </span>
+                          <span>
+                            {t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}
+                          </span>
+                          <span>{statusLabel(todo.status, t)}</span>
+                        </p>
+                        <TodoDetails
+                          longProject={{
+                            actions: todoLongProjects.actions,
+                            activeProjectId: todoLongProjects.activeProjectId,
+                            isLoading: todoLongProjects.isDetailLoading,
+                            milestones: todoLongProjects.milestones,
+                            progressSummary: todoLongProjects.progressSummary,
+                          }}
+                          onEditItem={openEditDetailItem}
+                          onOpenLongProject={(candidate) => void openLongProject(candidate)}
+                          onSetAllItemSelection={setAllDetailItemSelection}
+                          onSendSelectedToAI={sendSelectedDetailItemsToAI}
+                          onSetLongProjectActionStatus={(action, nextStatus) =>
+                            void setLongProjectActionStatus(action, nextStatus)
+                          }
+                          onSetLongProjectMilestoneStatus={(milestone, nextStatus) =>
+                            void setLongProjectMilestoneStatus(milestone, nextStatus)
+                          }
+                          onToggleItemCompletion={(candidate, itemIndex, itemLabel, completed) =>
+                            void toggleDetailItemCompletion(
+                              candidate,
+                              itemIndex,
+                              itemLabel,
+                              completed,
+                            )
+                          }
+                          onToggleItemSelection={toggleDetailItemSelection}
+                          selectedItemIndexes={selectedDetailItemsByTodoId[todo.id] ?? []}
+                          todo={todo}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {todo.status === 'todo' ? (
+                        <Button
+                          onClick={() => todos.editTodo(todo.id, { status: 'doing' })}
+                          variant="secondary"
+                        >
+                          {t('todo.start')}
+                        </Button>
+                      ) : null}
+                      <Button
+                        disabled={Boolean(todo.linkedEventId)}
+                        onClick={() => scheduleTodo(todo)}
+                        variant="secondary"
+                      >
+                        {todo.linkedEventId ? t('todo.scheduled') : t('todo.schedule')}
+                      </Button>
+                      <Button onClick={() => void deleteTodo(todo)} variant="ghost">
+                        {t('todo.delete')}
+                      </Button>
+                      <Button onClick={() => openEditTodo(todo)} variant="ghost">
+                        {t('todo.edit')}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          <section aria-label={t('todo.completed')} className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-950">{t('todo.completed')}</h3>
+            {!todos.doneTodos.length ? (
+              <p className="text-sm text-slate-500">{t('todo.noCompletedTasks')}</p>
+            ) : null}
+            <div className="space-y-2">
+              {todos.doneTodos.map((todo) => (
                 <div className="rounded-md border border-slate-200 bg-white p-3" key={todo.id}>
                   <div className="flex items-start gap-3">
                     <button
-                      aria-label={`Mark task ${todo.title} done`}
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs text-white hover:border-emerald-700 hover:bg-emerald-700"
-                      onClick={() => void completeTodo(todo)}
+                      aria-label={`Reopen task ${todo.title}`}
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-700 bg-emerald-700 text-xs text-white"
+                      onClick={() => void reopenTodo(todo)}
                       type="button"
-                    />
+                    >
+                      <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
+                    </button>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-950">{todo.title}</p>
-                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        {eventType ? (
-                          <span className="inline-flex items-center gap-1">
-                            <span
-                              aria-hidden="true"
-                              className="inline-block h-3 w-3 shrink-0 rounded-full border border-slate-200"
-                              style={{ backgroundColor: eventType.color }}
-                            />
-                            {eventType.label}
-                          </span>
-                        ) : null}
+                      <p className="truncate text-sm font-medium text-slate-500 line-through">
+                        {todo.title}
+                      </p>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                         <span>{formatDueDate(todo, t)}</span>
-                        <span>{t('todo.etaShort')}: {todo.etaMinutes}m</span>
-                        <span>{t('todo.priority')}: {todo.priority}</span>
-                        <span>{t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}</span>
-                        <span>{statusLabel(todo.status, t)}</span>
+                        <span>
+                          {t('todo.etaShort')}: {todo.etaMinutes}m
+                        </span>
+                        <span>
+                          {t('todo.priority')}: {todo.priority}
+                        </span>
+                        <span>
+                          {t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}
+                        </span>
                       </p>
                       <TodoDetails
                         longProject={{
@@ -1081,7 +1228,12 @@ export default function TodoPanel() {
                           void setLongProjectMilestoneStatus(milestone, nextStatus)
                         }
                         onToggleItemCompletion={(candidate, itemIndex, itemLabel, completed) =>
-                          void toggleDetailItemCompletion(candidate, itemIndex, itemLabel, completed)
+                          void toggleDetailItemCompletion(
+                            candidate,
+                            itemIndex,
+                            itemLabel,
+                            completed,
+                          )
                         }
                         onToggleItemSelection={toggleDetailItemSelection}
                         selectedItemIndexes={selectedDetailItemsByTodoId[todo.id] ?? []}
@@ -1089,22 +1241,9 @@ export default function TodoPanel() {
                       />
                     </div>
                   </div>
-
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {todo.status === 'todo' ? (
-                      <Button
-                        onClick={() => todos.editTodo(todo.id, { status: 'doing' })}
-                        variant="secondary"
-                      >
-                        {t('todo.start')}
-                      </Button>
-                    ) : null}
-                    <Button
-                      disabled={Boolean(todo.linkedEventId)}
-                      onClick={() => scheduleTodo(todo)}
-                      variant="secondary"
-                    >
-                      {todo.linkedEventId ? t('todo.scheduled') : t('todo.schedule')}
+                    <Button onClick={() => void reopenTodo(todo)} variant="ghost">
+                      {t('todo.reopen')}
                     </Button>
                     <Button onClick={() => void deleteTodo(todo)} variant="ghost">
                       {t('todo.delete')}
@@ -1114,81 +1253,12 @@ export default function TodoPanel() {
                     </Button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
 
-        <section aria-label={t('todo.completed')} className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-950">{t('todo.completed')}</h3>
-          {!todos.doneTodos.length ? (
-            <p className="text-sm text-slate-500">{t('todo.noCompletedTasks')}</p>
-          ) : null}
-          <div className="space-y-2">
-            {todos.doneTodos.map((todo) => (
-              <div className="rounded-md border border-slate-200 bg-white p-3" key={todo.id}>
-                <div className="flex items-start gap-3">
-                  <button
-                    aria-label={`Reopen task ${todo.title}`}
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-700 bg-emerald-700 text-xs text-white"
-                    onClick={() => void reopenTodo(todo)}
-                    type="button"
-                  >
-                    <span aria-hidden="true" className="h-2 w-2 rounded-full bg-white" />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-500 line-through">{todo.title}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                      <span>{formatDueDate(todo, t)}</span>
-                      <span>{t('todo.etaShort')}: {todo.etaMinutes}m</span>
-                      <span>{t('todo.priority')}: {todo.priority}</span>
-                      <span>{t('todo.energyNeeded')}: {energyLabel(todo.energyNeeded, t)}</span>
-                    </p>
-                    <TodoDetails
-                      longProject={{
-                        actions: todoLongProjects.actions,
-                        activeProjectId: todoLongProjects.activeProjectId,
-                        isLoading: todoLongProjects.isDetailLoading,
-                        milestones: todoLongProjects.milestones,
-                        progressSummary: todoLongProjects.progressSummary,
-                      }}
-                      onEditItem={openEditDetailItem}
-                      onOpenLongProject={(candidate) => void openLongProject(candidate)}
-                      onSetAllItemSelection={setAllDetailItemSelection}
-                      onSendSelectedToAI={sendSelectedDetailItemsToAI}
-                      onSetLongProjectActionStatus={(action, nextStatus) =>
-                        void setLongProjectActionStatus(action, nextStatus)
-                      }
-                      onSetLongProjectMilestoneStatus={(milestone, nextStatus) =>
-                        void setLongProjectMilestoneStatus(milestone, nextStatus)
-                      }
-                      onToggleItemCompletion={(candidate, itemIndex, itemLabel, completed) =>
-                        void toggleDetailItemCompletion(candidate, itemIndex, itemLabel, completed)
-                      }
-                      onToggleItemSelection={toggleDetailItemSelection}
-                      selectedItemIndexes={selectedDetailItemsByTodoId[todo.id] ?? []}
-                      todo={todo}
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button onClick={() => void reopenTodo(todo)} variant="ghost">
-                    {t('todo.reopen')}
-                  </Button>
-                  <Button onClick={() => void deleteTodo(todo)} variant="ghost">
-                    {t('todo.delete')}
-                  </Button>
-                  <Button onClick={() => openEditTodo(todo)} variant="ghost">
-                    {t('todo.edit')}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <EventTypeSettings />
-      </div>
+          <EventTypeSettings />
+        </div>
       </div>
 
       {editingTodo && editDraft ? (
@@ -1216,21 +1286,28 @@ export default function TodoPanel() {
               <input
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="todo-edit-title"
-                onChange={(event) => setEditDraft((current) => current && { ...current, title: event.target.value })}
+                onChange={(event) =>
+                  setEditDraft((current) => current && { ...current, title: event.target.value })
+                }
                 value={editDraft.title}
               />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-type">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="todo-edit-type"
+                >
                   {t('todo.type')}
                 </label>
                 <select
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                   id="todo-edit-type"
                   onChange={(event) =>
-                    setEditDraft((current) => current && { ...current, eventTypeId: event.target.value })
+                    setEditDraft(
+                      (current) => current && { ...current, eventTypeId: event.target.value },
+                    )
                   }
                   value={editDraft.eventTypeId}
                 >
@@ -1247,7 +1324,10 @@ export default function TodoPanel() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-priority">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="todo-edit-priority"
+                >
                   {t('todo.priority')}
                 </label>
                 <select
@@ -1255,7 +1335,9 @@ export default function TodoPanel() {
                   id="todo-edit-priority"
                   onChange={(event) =>
                     setEditDraft((current) =>
-                      current ? { ...current, priority: event.target.value as Todo['priority'] } : current,
+                      current
+                        ? { ...current, priority: event.target.value as Todo['priority'] }
+                        : current,
                     )
                   }
                   value={editDraft.priority}
@@ -1278,7 +1360,9 @@ export default function TodoPanel() {
                   max={480}
                   min={5}
                   onChange={(event) =>
-                    setEditDraft((current) => current && { ...current, etaMinutes: event.target.value })
+                    setEditDraft(
+                      (current) => current && { ...current, etaMinutes: event.target.value },
+                    )
                   }
                   step={5}
                   type="number"
@@ -1287,7 +1371,10 @@ export default function TodoPanel() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-energy">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="todo-edit-energy"
+                >
                   {t('todo.energyNeeded')}
                 </label>
                 <select
@@ -1310,13 +1397,18 @@ export default function TodoPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-edit-due-date">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="todo-edit-due-date"
+              >
                 {t('todo.dueDate')}
               </label>
               <input
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="todo-edit-due-date"
-                onChange={(event) => setEditDraft((current) => current && { ...current, dueDate: event.target.value })}
+                onChange={(event) =>
+                  setEditDraft((current) => current && { ...current, dueDate: event.target.value })
+                }
                 type="date"
                 value={editDraft.dueDate}
               />
@@ -1329,7 +1421,9 @@ export default function TodoPanel() {
               <textarea
                 className="mt-1 min-h-32 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="todo-edit-notes"
-                onChange={(event) => setEditDraft((current) => current && { ...current, notes: event.target.value })}
+                onChange={(event) =>
+                  setEditDraft((current) => current && { ...current, notes: event.target.value })
+                }
                 value={editDraft.notes}
               />
             </div>
@@ -1373,7 +1467,10 @@ export default function TodoPanel() {
             role="dialog"
           >
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-slate-950" id="todo-detail-item-edit-title">
+              <h2
+                className="text-base font-semibold text-slate-950"
+                id="todo-detail-item-edit-title"
+              >
                 Edit {editingDetailItem.itemLabel} {editingDetailItem.itemIndex + 1}
               </h2>
               <Button onClick={closeEditDetailItem} variant="ghost">
@@ -1382,7 +1479,10 @@ export default function TodoPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="todo-detail-item-edit-value">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="todo-detail-item-edit-value"
+              >
                 {editingDetailItem.itemLabel} details
               </label>
               <textarea

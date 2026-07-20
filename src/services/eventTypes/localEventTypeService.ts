@@ -115,4 +115,3 @@ export class LocalEventTypeService implements IEventTypeService {
     this.storage.setItem(this.key, JSON.stringify(EventTypeSchema.array().parse(eventTypes)))
   }
 }
-

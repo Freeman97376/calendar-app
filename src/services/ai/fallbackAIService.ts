@@ -64,11 +64,15 @@ export class FallbackAIService implements IAIService {
   }
 
   async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
-    return this.runWithProvider(this.defaultProvider, (service) => service.runToolActivation(request))
+    return this.runWithProvider(this.defaultProvider, (service) =>
+      service.runToolActivation(request),
+    )
   }
 
   async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
-    return this.runWithProvider(this.defaultProvider, (service) => service.routeEnabledTool(request))
+    return this.runWithProvider(this.defaultProvider, (service) =>
+      service.routeEnabledTool(request),
+    )
   }
 
   async continueConversation(

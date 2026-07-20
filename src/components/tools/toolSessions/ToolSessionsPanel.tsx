@@ -28,7 +28,9 @@ export default function ToolSessionsPanel() {
   const toolSessions = useToolSessions()
   const [selectedPresetId, setSelectedPresetId] = useState('')
   const selectedPreset = useMemo(
-    () => toolSessions.presets.find((preset) => preset.id === selectedPresetId) ?? toolSessions.presets[0],
+    () =>
+      toolSessions.presets.find((preset) => preset.id === selectedPresetId) ??
+      toolSessions.presets[0],
     [selectedPresetId, toolSessions.presets],
   )
   const [inputs, setInputs] = useState<Record<string, string>>({})
@@ -64,8 +66,8 @@ export default function ToolSessionsPanel() {
 
   const canRun = Boolean(
     selectedPreset &&
-      !toolSessions.isRunning &&
-      selectedPreset.fields.every((field) => !field.required || inputs[field.id]?.trim()),
+    !toolSessions.isRunning &&
+    selectedPreset.fields.every((field) => !field.required || inputs[field.id]?.trim()),
   )
 
   async function runSession(event: FormEvent<HTMLFormElement>) {
@@ -180,13 +182,18 @@ export default function ToolSessionsPanel() {
               <input
                 className={inputClass}
                 id="tool-copy-label"
-                onChange={(event) => setEditDraft((current) => ({ ...current, label: event.target.value }))}
+                onChange={(event) =>
+                  setEditDraft((current) => ({ ...current, label: event.target.value }))
+                }
                 value={editDraft.label}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="tool-copy-description">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="tool-copy-description"
+              >
                 Preset description
               </label>
               <textarea
@@ -200,19 +207,27 @@ export default function ToolSessionsPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="tool-copy-prompt">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="tool-copy-prompt"
+              >
                 Prompt
               </label>
               <textarea
                 className={textAreaClass}
                 id="tool-copy-prompt"
-                onChange={(event) => setEditDraft((current) => ({ ...current, prompt: event.target.value }))}
+                onChange={(event) =>
+                  setEditDraft((current) => ({ ...current, prompt: event.target.value }))
+                }
                 value={editDraft.prompt}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="tool-copy-fields">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="tool-copy-fields"
+              >
                 Input fields JSON
               </label>
               <textarea
@@ -238,12 +253,18 @@ export default function ToolSessionsPanel() {
       ) : null}
 
       {selectedPreset ? (
-        <form className="space-y-5 border-t border-slate-200 pt-4" onSubmit={(event) => void runSession(event)}>
+        <form
+          className="space-y-5 border-t border-slate-200 pt-4"
+          onSubmit={(event) => void runSession(event)}
+        >
           <fieldset className="space-y-3">
             <legend className="text-sm font-semibold text-slate-950">Inputs</legend>
             {selectedPreset.fields.map((field) => (
               <div key={field.id}>
-                <label className="block text-sm font-medium text-slate-700" htmlFor={`tool-input-${field.id}`}>
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor={`tool-input-${field.id}`}
+                >
                   {field.label}
                 </label>
                 {field.type === 'textarea' ? (
@@ -312,17 +333,17 @@ export default function ToolSessionsPanel() {
 
             {llmOptions.provider !== 'local' ? (
               <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="tool-model">
-                Model override
-              </label>
-              <input
-                className={inputClass}
-                id="tool-model"
-                onChange={(event) =>
-                  setLlmOptions((current) => ({ ...current, model: event.target.value }))
-                }
-                value={llmOptions.model ?? ''}
-              />
+                <label className="block text-sm font-medium text-slate-700" htmlFor="tool-model">
+                  Model override
+                </label>
+                <input
+                  className={inputClass}
+                  id="tool-model"
+                  onChange={(event) =>
+                    setLlmOptions((current) => ({ ...current, model: event.target.value }))
+                  }
+                  value={llmOptions.model ?? ''}
+                />
               </div>
             ) : null}
           </fieldset>
@@ -349,13 +370,19 @@ export default function ToolSessionsPanel() {
 
           <div className="space-y-2">
             {toolSessions.result.events.map((event, index) => (
-              <div className="rounded-md border border-slate-200 p-3" key={`${event.title}-${index}`}>
+              <div
+                className="rounded-md border border-slate-200 p-3"
+                key={`${event.title}-${index}`}
+              >
                 <p className="text-sm font-semibold text-slate-950">{event.title}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {new Date(event.startAt).toLocaleString()} - {new Date(event.endAt).toLocaleTimeString()}
+                  {new Date(event.startAt).toLocaleString()} -{' '}
+                  {new Date(event.endAt).toLocaleTimeString()}
                 </p>
                 {event.displayDetails ? (
-                  <p className="mt-2 whitespace-pre-line text-xs text-slate-700">{event.displayDetails}</p>
+                  <p className="mt-2 whitespace-pre-line text-xs text-slate-700">
+                    {event.displayDetails}
+                  </p>
                 ) : null}
               </div>
             ))}

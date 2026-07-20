@@ -62,10 +62,7 @@ export function useTodos() {
     loadTodos().catch(() => undefined)
   }, [loadTodos])
 
-  const openTodos = useMemo(
-    () => todos.filter((todo) => todo.status !== 'done'),
-    [todos],
-  )
+  const openTodos = useMemo(() => todos.filter((todo) => todo.status !== 'done'), [todos])
   const doneTodos = useMemo(() => todos.filter((todo) => todo.status === 'done'), [todos])
 
   async function addTodo(draft: Parameters<typeof createTodo>[0]) {
@@ -80,7 +77,9 @@ export function useTodos() {
   }
 
   async function scheduleTodo(todo: Todo) {
-    const event = await createEvent(toScheduledEventDraft(todo, runtimeConfig.defaultEventStartTime))
+    const event = await createEvent(
+      toScheduledEventDraft(todo, runtimeConfig.defaultEventStartTime),
+    )
     await updateTodo(todo.id, { linkedEventId: event.id })
     setScheduledCount((count) => count + 1)
     return event

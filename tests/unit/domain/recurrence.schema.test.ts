@@ -25,14 +25,10 @@ describe('RecurrenceRuleSchema', () => {
   })
 
   it('rejects invalid day of month', () => {
-    expect(() =>
-      RecurrenceRuleSchema.parse({ frequency: 'monthly', dayOfMonth: 32 }),
-    ).toThrow()
+    expect(() => RecurrenceRuleSchema.parse({ frequency: 'monthly', dayOfMonth: 32 })).toThrow()
   })
 
   it('rejects weekly rule with an empty daysOfWeek array', () => {
-    expect(() =>
-      RecurrenceRuleSchema.parse({ frequency: 'weekly', daysOfWeek: [] }),
-    ).toThrow()
+    expect(() => RecurrenceRuleSchema.parse({ frequency: 'weekly', daysOfWeek: [] })).toThrow()
   })
 })

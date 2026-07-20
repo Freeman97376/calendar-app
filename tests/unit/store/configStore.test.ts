@@ -21,20 +21,34 @@ describe('runtime AI proxy configuration', () => {
   })
 
   it('routes chat through the Calendar API instead of connecting to DeepSeek from the browser', async () => {
-    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
-      choices: [{ message: { content: JSON.stringify({
-        goal: 'Test',
-        steps: [{
-          title: 'First step',
-          durationMinutes: 30,
-          energyNeeded: 'medium',
-          priority: 'medium',
-          suggestedDayOffset: 0,
-          suggestedHour: 9,
-        }],
-        totalEstimatedHours: 0.5,
-      }) } }],
-    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const fetcher = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    goal: 'Test',
+                    steps: [
+                      {
+                        title: 'First step',
+                        durationMinutes: 30,
+                        energyNeeded: 'medium',
+                        priority: 'medium',
+                        suggestedDayOffset: 0,
+                        suggestedHour: 9,
+                      },
+                    ],
+                    totalEstimatedHours: 0.5,
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    )
     vi.stubGlobal('fetch', fetcher)
 
     configureRuntimeEnvironment({
@@ -51,13 +65,27 @@ describe('runtime AI proxy configuration', () => {
   })
 
   it('saves backend configuration to the injected Calendar API instead of the editable fridge URL', async () => {
-    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
-      success: true,
-      deepseek: { configured: true, base_url: 'https://api.deepseek.com', model: 'deepseek-chat' },
-      fridge: { data_dir: 'backend/data' },
-    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const fetcher = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            deepseek: {
+              configured: true,
+              base_url: 'https://api.deepseek.com',
+              model: 'deepseek-chat',
+            },
+            fridge: { data_dir: 'backend/data' },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    )
     vi.stubGlobal('fetch', fetcher)
-    configureApiRuntime({ baseUrl: 'http://127.0.0.1:49152', csrfToken: '', desktopToken: 'launch-token' })
+    configureApiRuntime({
+      baseUrl: 'http://127.0.0.1:49152',
+      csrfToken: '',
+      desktopToken: 'launch-token',
+    })
     configureConfigServices(new RuntimeConfigService(localStorage, 'test_runtime_config'))
     initializeRuntimeConfig({ fridgeApiBaseUrl: 'http://wrong-fridge-host:9999' })
 

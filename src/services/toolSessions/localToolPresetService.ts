@@ -38,7 +38,9 @@ export class LocalToolPresetService implements IToolPresetService {
     if (!raw) return []
 
     try {
-      return ToolPresetSchema.array().parse(JSON.parse(raw)).filter((preset) => !preset.isBuiltIn)
+      return ToolPresetSchema.array()
+        .parse(JSON.parse(raw))
+        .filter((preset) => !preset.isBuiltIn)
     } catch {
       return []
     }
@@ -47,7 +49,9 @@ export class LocalToolPresetService implements IToolPresetService {
   private writeAll(presets: ToolPreset[]) {
     this.storage.setItem(
       this.key,
-      JSON.stringify(ToolPresetSchema.array().parse(presets.map((preset) => ({ ...preset, isBuiltIn: false })))),
+      JSON.stringify(
+        ToolPresetSchema.array().parse(presets.map((preset) => ({ ...preset, isBuiltIn: false }))),
+      ),
     )
   }
 }

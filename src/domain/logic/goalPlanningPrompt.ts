@@ -30,9 +30,8 @@ function confirmedUserContext(messages: GoalConversationMessage[]) {
     Object.assign(answers, batch)
   }
 
-  const pick = (ids: Set<string>) => Object.fromEntries(
-    Object.entries(answers).filter(([id]) => ids.has(id)),
-  )
+  const pick = (ids: Set<string>) =>
+    Object.fromEntries(Object.entries(answers).filter(([id]) => ids.has(id)))
 
   return {
     currentSituation: pick(currentSituationIds),
@@ -63,12 +62,46 @@ export function buildGoalPlanningPrompt(input: {
         confirmedUserContext: confirmedUserContext(input.messages),
         recentConversation: recent,
         responseSchema: {
-          title: 'string', summary: 'string', rollingSummary: 'concise durable summary preserving baseline, target, safety rules, capacity, constraints, and confirmed decisions', target_date: 'YYYY-MM-DD', template_id: 'string', template_label: 'string',
-          tool_features: ['string'], route_tags: ['string'],
-          policy: { weekly_capacity_minutes: 'integer', buffer_percent: 20, active_tier: 'standard', planning_brief: {} },
-          metrics: [{ name: 'string', role: 'leading|lagging', unit: 'string', direction: 'increase|decrease|range|maintain', baseline_value: 'number|null', target_value: 'number|null', cadence: 'daily|weekly|monthly', is_required: 'boolean' }],
+          title: 'string',
+          summary: 'string',
+          rollingSummary:
+            'concise durable summary preserving baseline, target, safety rules, capacity, constraints, and confirmed decisions',
+          target_date: 'YYYY-MM-DD',
+          template_id: 'string',
+          template_label: 'string',
+          tool_features: ['string'],
+          route_tags: ['string'],
+          policy: {
+            weekly_capacity_minutes: 'integer',
+            buffer_percent: 20,
+            active_tier: 'standard',
+            planning_brief: {},
+          },
+          metrics: [
+            {
+              name: 'string',
+              role: 'leading|lagging',
+              unit: 'string',
+              direction: 'increase|decrease|range|maintain',
+              baseline_value: 'number|null',
+              target_value: 'number|null',
+              cadence: 'daily|weekly|monthly',
+              is_required: 'boolean',
+            },
+          ],
           milestones: [{ title: 'string', description: 'string', due_date: 'YYYY-MM-DD|null' }],
-          actions: [{ title: 'string', description: 'string', milestone_title: 'string|null', due_date: 'YYYY-MM-DD required for minimum and standard', estimated_minutes: 'integer', priority: 'high|medium|low', energy_needed: 'high|medium|low', execution_tier: 'minimum|standard|stretch' }],
+          actions: [
+            {
+              title: 'string',
+              description: 'string',
+              milestone_title: 'string|null',
+              due_date: 'YYYY-MM-DD required for minimum and standard',
+              estimated_minutes: 'integer',
+              priority: 'high|medium|low',
+              energy_needed: 'high|medium|low',
+              execution_tier: 'minimum|standard|stretch',
+            },
+          ],
           dependencies: [{ predecessor_title: 'string', successor_title: 'string' }],
         },
       }),
@@ -80,8 +113,13 @@ export function parseGoalActivationPlan(content: string): GoalActivationPlan {
   const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]
   const candidate = fenced ?? content.slice(content.indexOf('{'), content.lastIndexOf('}') + 1)
   const value = JSON.parse(candidate) as GoalActivationPlan
-  if (!value.title?.trim() || !value.summary?.trim()) throw new Error('Planning response is missing a title or summary.')
-  if (!Array.isArray(value.metrics) || !Array.isArray(value.milestones) || !Array.isArray(value.actions)) {
+  if (!value.title?.trim() || !value.summary?.trim())
+    throw new Error('Planning response is missing a title or summary.')
+  if (
+    !Array.isArray(value.metrics) ||
+    !Array.isArray(value.milestones) ||
+    !Array.isArray(value.actions)
+  ) {
     throw new Error('Planning response is missing metrics, milestones, or actions.')
   }
   return value
@@ -101,7 +139,8 @@ export function buildCheckInSummaryPrompt(input: {
   return [
     {
       role: 'system',
-      content: 'Summarize one answered long-term-goal check-in for the user. Use no more than three brief highlights. Do not change the plan, calendar, tier, goal status, or safety rules. If adjustment is warranted, ask one direction question; approval is still required.',
+      content:
+        'Summarize one answered long-term-goal check-in for the user. Use no more than three brief highlights. Do not change the plan, calendar, tier, goal status, or safety rules. If adjustment is warranted, ask one direction question; approval is still required.',
     },
     {
       role: 'user',

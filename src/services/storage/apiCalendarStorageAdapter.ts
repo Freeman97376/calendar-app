@@ -3,6 +3,19 @@ import type { DateRange, Event } from '../../domain/types'
 import type { CalendarApiClient } from '../calendarApiClient'
 import type { IStorageAdapter } from './IStorageAdapter'
 
+function eventCreateDto(event: Event) {
+  return EventSchema.parse(event)
+}
+
+function eventUpdateDto(event: Event) {
+  const parsed = EventSchema.parse(event)
+  const { createdAt: _createdAt, id, ...changes } = parsed
+  return {
+    changes,
+    id,
+  }
+}
+
 export class ApiCalendarStorageAdapter implements IStorageAdapter {
   constructor(private readonly client: CalendarApiClient) {}
 
@@ -23,14 +36,20 @@ export class ApiCalendarStorageAdapter implements IStorageAdapter {
   }
 
   async saveEvent(event: Event): Promise<void> {
-    await this.client.post<{ success: true; event: unknown }>('/api/calendar/events', EventSchema.parse(event))
+    const response = await this.client.post<{ success: true; event: unknown }>(
+      '/api/calendar/events',
+      eventCreateDto(event),
+    )
+    EventSchema.parse(response.event)
   }
 
   async updateEvent(event: Event): Promise<void> {
-    await this.client.patch<{ success: true; event: unknown }>(
-      `/api/calendar/events/${event.id}`,
-      EventSchema.parse(event),
+    const dto = eventUpdateDto(event)
+    const response = await this.client.patch<{ success: true; event: unknown }>(
+      `/api/calendar/events/${dto.id}`,
+      dto.changes,
     )
+    EventSchema.parse(response.event)
   }
 
   async deleteEvent(id: string): Promise<void> {

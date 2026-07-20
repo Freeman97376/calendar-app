@@ -11,4 +11,3 @@ export const EventTypeSchema = z.object({
 })
 
 export type EventType = z.infer<typeof EventTypeSchema>
-

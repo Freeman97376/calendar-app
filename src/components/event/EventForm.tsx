@@ -55,7 +55,9 @@ export default function EventForm({
       (eventType) => eventType.id === event.eventTypeId,
     )
 
-    return selectedType && !selectedIsListed ? [selectedType, ...calendarEventTypes] : calendarEventTypes
+    return selectedType && !selectedIsListed
+      ? [selectedType, ...calendarEventTypes]
+      : calendarEventTypes
   }, [calendarEventTypes, event?.eventTypeId, eventTypesById])
   const initialValues = useMemo<EventFormValues>(
     () => ({
@@ -242,7 +244,9 @@ export default function EventForm({
 
       {isRecurringEdit ? (
         <fieldset className="space-y-2 rounded-md border border-slate-200 p-3">
-          <legend className="px-1 text-sm font-medium text-slate-700">{t('event.applyChangesTo')}</legend>
+          <legend className="px-1 text-sm font-medium text-slate-700">
+            {t('event.applyChangesTo')}
+          </legend>
           {[
             { value: 'this', label: t('event.thisEvent') },
             { value: 'following', label: t('event.thisAndFollowing') },
@@ -266,7 +270,9 @@ export default function EventForm({
         </fieldset>
       ) : null}
 
-      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
 
       <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-between">
         <div>

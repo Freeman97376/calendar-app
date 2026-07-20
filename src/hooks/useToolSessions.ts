@@ -63,7 +63,10 @@ export function useToolSessions() {
   async function applyResult() {
     if (!result) return { created: [], skippedDuplicateCount: 0 }
 
-    const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(result.events as EventDraft[], events)
+    const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(
+      result.events as EventDraft[],
+      events,
+    )
     const created = []
     for (const draft of uniqueDrafts) {
       created.push(await createEvent(draft as EventDraft))

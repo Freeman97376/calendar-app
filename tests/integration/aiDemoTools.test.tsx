@@ -218,7 +218,11 @@ class MemoryClient implements LongTermMemoryClientContract {
   async search(query: string): Promise<LongTermMemorySearchResult[]> {
     const lower = query.toLowerCase()
     return this.projects
-      .filter((project) => project.title.toLowerCase().includes(lower) || lower.includes(project.title.toLowerCase()))
+      .filter(
+        (project) =>
+          project.title.toLowerCase().includes(lower) ||
+          lower.includes(project.title.toLowerCase()),
+      )
       .map((project) => ({
         description: project.description,
         entity_type: 'project',
@@ -231,7 +235,10 @@ class MemoryClient implements LongTermMemoryClientContract {
       }))
   }
 
-  async updateAction(actionId: string, changes: Partial<CreateActionItemInput> & { status?: ActionItemStatus }) {
+  async updateAction(
+    actionId: string,
+    changes: Partial<CreateActionItemInput> & { status?: ActionItemStatus },
+  ) {
     const action = this.actions.find((candidate) => candidate.action_id === actionId)
     if (!action) throw new Error('Missing action')
     Object.assign(action, {
@@ -247,7 +254,11 @@ class MemoryClient implements LongTermMemoryClientContract {
   async updateGoal(goalId: string, changes: Partial<CreateGoalInput> & { status?: GoalStatus }) {
     const goal = this.goals.find((candidate) => candidate.goal_id === goalId)
     if (!goal) throw new Error('Missing goal')
-    Object.assign(goal, { ...changes, metadata: changes.metadata ?? goal.metadata, updated_at: timestamp() })
+    Object.assign(goal, {
+      ...changes,
+      metadata: changes.metadata ?? goal.metadata,
+      updated_at: timestamp(),
+    })
     return goal
   }
 
@@ -266,10 +277,17 @@ class MemoryClient implements LongTermMemoryClientContract {
     return milestone
   }
 
-  async updateProject(projectId: string, changes: Partial<CreateProjectInput> & { status?: ProjectStatus }) {
+  async updateProject(
+    projectId: string,
+    changes: Partial<CreateProjectInput> & { status?: ProjectStatus },
+  ) {
     const project = this.projects.find((candidate) => candidate.project_id === projectId)
     if (!project) throw new Error('Missing project')
-    Object.assign(project, { ...changes, metadata: changes.metadata ?? project.metadata, updated_at: timestamp() })
+    Object.assign(project, {
+      ...changes,
+      metadata: changes.metadata ?? project.metadata,
+      updated_at: timestamp(),
+    })
     return project
   }
 }
@@ -346,7 +364,9 @@ describe('AI demo tools and Todo long projects', () => {
     await waitFor(() => {
       expect(useEventStore.getState().events).toHaveLength(5)
     })
-    expect(await screen.findByText('Applied 0 calendar events. Skipped 5 duplicates.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Applied 0 calendar events. Skipped 5 duplicates.'),
+    ).toBeInTheDocument()
     expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain('Fitness AI')
   }, 15_000)
 
@@ -376,7 +396,9 @@ describe('AI demo tools and Todo long projects', () => {
 
     expect(await screen.findByText('SEO foundations and keyword research')).toBeInTheDocument()
     expect(screen.getByText('SEO learning block: baseline audit')).toBeInTheDocument()
-    expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain('Learning Assistant')
+    expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain(
+      'Learning Assistant',
+    )
   }, 15_000)
 
   it('creates a Todo long project and updates progress from expanded details', async () => {
@@ -396,7 +418,10 @@ describe('AI demo tools and Todo long projects', () => {
     expect(details).toBeInTheDocument()
     expect(screen.getByText('0/1 complete from actions')).toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText('Long project action status for Define first milestone'), 'done')
+    await user.selectOptions(
+      screen.getByLabelText('Long project action status for Define first milestone'),
+      'done',
+    )
 
     await waitFor(() => {
       expect(screen.getByText('1/1 complete from actions')).toBeInTheDocument()

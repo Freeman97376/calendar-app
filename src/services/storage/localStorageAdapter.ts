@@ -19,7 +19,9 @@ export class LocalStorageAdapter implements IStorageAdapter {
         const overlapsRange =
           new Date(event.endAt) >= rangeStart && new Date(event.startAt) <= rangeEnd
 
-        return event.recurrenceRule ? new Date(event.startAt) <= rangeEnd : startsInRange || overlapsRange
+        return event.recurrenceRule
+          ? new Date(event.startAt) <= rangeEnd
+          : startsInRange || overlapsRange
       })
       .sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime())
   }

@@ -47,7 +47,8 @@ type TimezoneContext = {
 function toISODateTime(date: string, hour: number, minute = 0, context?: TimezoneContext): string {
   const [year, month, day] = date.split('-').map(Number)
   if (typeof context?.timezoneOffsetMinutes === 'number') {
-    const utcTime = Date.UTC(year, month - 1, day, hour, minute, 0, 0) - context.timezoneOffsetMinutes * 60_000
+    const utcTime =
+      Date.UTC(year, month - 1, day, hour, minute, 0, 0) - context.timezoneOffsetMinutes * 60_000
 
     return new Date(utcTime).toISOString()
   }
@@ -125,7 +126,9 @@ function parseRequestedSessionCount(value: string): number | undefined {
   if (/\b(daily|every day)\b|每天/.test(value.toLowerCase())) return 7
   if (/\bweekdays?\b|工作日/.test(value.toLowerCase())) return 5
 
-  const digitMatch = value.match(/(\d{1,2})\s*(?:sessions?|blocks?|workouts?|lessons?|classes?|times?|hours?|hrs?|次|节|个|小时)/i)
+  const digitMatch = value.match(
+    /(\d{1,2})\s*(?:sessions?|blocks?|workouts?|lessons?|classes?|times?|hours?|hrs?|次|节|个|小时)/i,
+  )
   if (digitMatch) return Number(digitMatch[1])
 
   const chineseCounts: Array<[RegExp, number]> = [
@@ -160,7 +163,9 @@ function latestProgressToolMessage(request: AIProgressToolRequest): string {
   const instruction = request.userInstruction?.trim()
   if (!instruction) return ''
 
-  const match = instruction.match(/Latest user message:\s*([\s\S]*?)(?:\n\nRecent tool conversation:|\n\nTask:|$)/i)
+  const match = instruction.match(
+    /Latest user message:\s*([\s\S]*?)(?:\n\nRecent tool conversation:|\n\nTask:|$)/i,
+  )
   return truncateText((match?.[1] ?? instruction).trim(), 220)
 }
 
@@ -195,7 +200,12 @@ function learningRouteArticle(kind: LearningRouteKind): string {
   return kind === 'agent' ? 'an' : 'a'
 }
 
-function learningMilestones(kind: LearningRouteKind, outcome: string, today: string, hasExisting: boolean) {
+function learningMilestones(
+  kind: LearningRouteKind,
+  outcome: string,
+  today: string,
+  hasExisting: boolean,
+) {
   if (kind === 'seo') {
     return [
       {
@@ -206,7 +216,8 @@ function learningMilestones(kind: LearningRouteKind, outcome: string, today: str
       },
       {
         title: 'On-page and technical SEO',
-        description: 'Practice page titles, internal links, crawlability, performance, and indexability checks.',
+        description:
+          'Practice page titles, internal links, crawlability, performance, and indexability checks.',
         dueDate: addDays(today, 14),
         status: 'not_started',
       },
@@ -253,7 +264,12 @@ function learningMilestones(kind: LearningRouteKind, outcome: string, today: str
   ] as const
 }
 
-function learningSessionTopic(index: number, outcome: string, goal: string, kind: LearningRouteKind) {
+function learningSessionTopic(
+  index: number,
+  outcome: string,
+  goal: string,
+  kind: LearningRouteKind,
+) {
   const seoTopics = [
     {
       actionTitle: 'Create the SEO baseline audit',
@@ -271,21 +287,24 @@ function learningSessionTopic(index: number, outcome: string, goal: string, kind
     },
     {
       actionTitle: 'Draft an on-page SEO checklist',
-      description: 'Practice titles, headings, internal links, schema candidates, and content relevance checks.',
+      description:
+        'Practice titles, headings, internal links, schema candidates, and content relevance checks.',
       eventTitle: 'SEO learning block: on-page optimization',
       focus: 'on-page optimization and reusable checklist design',
       milestoneTitle: 'On-page and technical SEO',
     },
     {
       actionTitle: 'Run technical SEO checks',
-      description: 'Review crawlability, indexability, performance, mobile usability, and broken-link risks.',
+      description:
+        'Review crawlability, indexability, performance, mobile usability, and broken-link risks.',
       eventTitle: 'SEO learning block: technical checks',
       focus: 'technical SEO checks and remediation notes',
       milestoneTitle: 'On-page and technical SEO',
     },
     {
       actionTitle: 'Create a content plan and analytics loop',
-      description: 'Turn keyword groups into content briefs, publishing cadence, and analytics checkpoints.',
+      description:
+        'Turn keyword groups into content briefs, publishing cadence, and analytics checkpoints.',
       eventTitle: 'SEO learning block: content analytics',
       focus: 'content planning, measurement, and weekly review',
       milestoneTitle: 'Content strategy and analytics',
@@ -309,14 +328,16 @@ function learningSessionTopic(index: number, outcome: string, goal: string, kind
     },
     {
       actionTitle: 'Practice prompt and task framing',
-      description: 'Turn one broad request into a precise task, inputs, constraints, and acceptance checks.',
+      description:
+        'Turn one broad request into a precise task, inputs, constraints, and acceptance checks.',
       eventTitle: 'AI agent skill block: prompt framing',
       focus: 'prompt shape, task boundaries, and acceptance criteria',
       milestoneTitle: 'Foundations and task framing',
     },
     {
       actionTitle: 'Implement one structured tool call exercise',
-      description: 'Create a small JSON schema, mock a tool response, validate it, and handle failures.',
+      description:
+        'Create a small JSON schema, mock a tool response, validate it, and handle failures.',
       eventTitle: 'AI agent skill block: tool use',
       focus: 'tool calls, schemas, validation, and review-before-apply behavior',
       milestoneTitle: 'Tool use and structured outputs',
@@ -386,7 +407,8 @@ function currentWallClockFromContext(context: TimezoneContext): {
     }
   }
 
-  const now = 'today' in context ? currentDateTimeFromContext(context as AICalendarContext) : new Date()
+  const now =
+    'today' in context ? currentDateTimeFromContext(context as AICalendarContext) : new Date()
 
   return {
     date: context.currentDate ?? context.today ?? toISODate(now),
@@ -437,7 +459,11 @@ function parseDate(command: string, today: string): string {
   return addDays(today, dayOffset)
 }
 
-function parseTime(command: string, context: AICalendarContext, date: string): { hour: number; minute: number } {
+function parseTime(
+  command: string,
+  context: AICalendarContext,
+  date: string,
+): { hour: number; minute: number } {
   const lower = command.toLowerCase()
   const meridiemMatch = command.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
   const atMatch = meridiemMatch ? null : command.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i)
@@ -567,7 +593,10 @@ function cleanupTitle(command: string): string {
     .replace(/\b(create|add|schedule|make|new|please)\b/gi, '')
     .replace(/\b(a|an|the)\b/gi, '')
     .replace(/\b(calendar\s+event|event|meeting|appointment|todo|task|to-do)\b/gi, '')
-    .replace(/\b(later today|today|tomorrow|tonight|soon|later|this|next|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
+    .replace(
+      /\b(later today|today|tomorrow|tonight|soon|later|this|next|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+      '',
+    )
     .replace(/\bin\s+(\d+|a|an|one)\s*(minutes?|mins?|hours?|hrs?)\b/gi, '')
     .replace(/\bhalf\s+an\s+hour\b/gi, '')
     .replace(/\b\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
@@ -608,10 +637,13 @@ function eventTypeIdFromCommand(command: string, context: AICalendarContext): st
 }
 
 function activationLatestMessage(request: AIToolActivationRequest): string {
-  return request.messages
-    .slice()
-    .reverse()
-    .find((message) => message.role === 'user')?.content.trim() ?? ''
+  return (
+    request.messages
+      .slice()
+      .reverse()
+      .find((message) => message.role === 'user')
+      ?.content.trim() ?? ''
+  )
 }
 
 function uniqueTags(values: string[]): string[] {
@@ -678,7 +710,10 @@ function activationForm(request: AIToolActivationRequest, latest: string): Recor
   }
 }
 
-function routeScore(message: string, tool: AIEnabledToolRouteRequest['enabledTools'][number]): number {
+function routeScore(
+  message: string,
+  tool: AIEnabledToolRouteRequest['enabledTools'][number],
+): number {
   const lower = message.toLowerCase()
   const fields = [
     tool.instanceAlias,
@@ -706,13 +741,22 @@ function routeScore(message: string, tool: AIEnabledToolRouteRequest['enabledToo
     }
   }
 
-  if (/\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) && tool.sourceToolId.includes('fitness')) {
+  if (
+    /\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) &&
+    tool.sourceToolId.includes('fitness')
+  ) {
     score += 3
   }
-  if (/\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) && tool.sourceToolId.includes('seo')) {
+  if (
+    /\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) &&
+    tool.sourceToolId.includes('seo')
+  ) {
     score += 3
   }
-  if (/\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) && tool.sourceToolId.includes('agent')) {
+  if (
+    /\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) &&
+    tool.sourceToolId.includes('agent')
+  ) {
     score += 3
   }
 
@@ -771,7 +815,9 @@ export class LocalAIService implements IAIService {
     }
 
     if (lower.includes('complete') || lower.includes('done') || lower.includes('finish')) {
-      return todo ? this.planTodoAction(command, context, todo) : this.planEventAction(command, context, event)
+      return todo
+        ? this.planTodoAction(command, context, todo)
+        : this.planEventAction(command, context, event)
     }
 
     return this.planEventAction(command, context, event)
@@ -858,15 +904,13 @@ export class LocalAIService implements IAIService {
   ): Promise<AIConversationResult> {
     const latest = messages[messages.length - 1]?.content.trim() ?? ''
     const lower = latest.toLowerCase()
-    const wantsSchedulablePlan = /\b(schedule|calendar|plan|add|create|time|tomorrow|today|date)\b/i.test(
-      latest,
-    )
+    const wantsSchedulablePlan =
+      /\b(schedule|calendar|plan|add|create|time|tomorrow|today|date)\b/i.test(latest)
 
     if (conversationContext?.kind === 'todo-step-refinement') {
       const selected = conversationContext.selectedItems
-      const wantsRewrite = /\b(rewrite|refine|edit|change|improve|simplify|split|shorten|clarify)\b/i.test(
-        latest,
-      )
+      const wantsRewrite =
+        /\b(rewrite|refine|edit|change|improve|simplify|split|shorten|clarify)\b/i.test(latest)
 
       if (wantsSchedulablePlan) {
         return {
@@ -903,12 +947,14 @@ export class LocalAIService implements IAIService {
     if (conversationContext?.kind === 'draft-action-plan') {
       if (!wantsSchedulablePlan && /\b(unclear|not sure|clarify|question)\b/i.test(latest)) {
         return {
-          reply: 'Which part of the draft should change: time, duration, order, title, or priority?',
+          reply:
+            'Which part of the draft should change: time, duration, order, title, or priority?',
         }
       }
 
       return {
-        reply: 'Kept the current draft available for review. Use Plan actions for precise local edits.',
+        reply:
+          'Kept the current draft available for review. Use Plan actions for precise local edits.',
         actionPlan: conversationContext.actionPlan,
       }
     }
@@ -925,7 +971,8 @@ export class LocalAIService implements IAIService {
     }
 
     return {
-      reply: 'I can help clarify this. What part is uncertain: timing, task scope, priority, or the exact next action?',
+      reply:
+        'I can help clarify this. What part is uncertain: timing, task scope, priority, or the exact next action?',
     }
   }
 
@@ -948,8 +995,12 @@ export class LocalAIService implements IAIService {
           displayDetails: [
             `Guests: ${guests}`,
             request.inputs.budget ? `Budget: ${request.inputs.budget}` : '',
-            isCooking ? 'Prepare ingredients and confirm dietary constraints.' : 'Confirm reservation, route, and guest count.',
-          ].filter(Boolean).join('\n'),
+            isCooking
+              ? 'Prepare ingredients and confirm dietary constraints.'
+              : 'Confirm reservation, route, and guest count.',
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: addMinutes(diningStart, isCooking ? -180 : -120),
           endAt: addMinutes(diningStart, isCooking ? -120 : -90),
           allDay: false,
@@ -963,7 +1014,9 @@ export class LocalAIService implements IAIService {
             `Meal type: ${mealType}`,
             `Guests: ${guests}`,
             request.inputs.dietaryNotes ? `Dietary notes: ${request.inputs.dietaryNotes}` : '',
-          ].filter(Boolean).join('\n'),
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: isCooking ? addMinutes(diningStart, -90) : diningStart,
           endAt: isCooking ? diningStart : addMinutes(diningStart, 90),
           allDay: false,
@@ -1029,13 +1082,18 @@ export class LocalAIService implements IAIService {
     const equipment = request.formInput.equipment || 'bodyweight'
     const constraints = request.formInput.constraints || 'none listed'
     const frequency = request.formInput.frequency || '3 times per week'
-    const durationMinutes = Math.min(120, Math.max(20, Number(request.formInput.sessionLength || 45)))
+    const durationMinutes = Math.min(
+      120,
+      Math.max(20, Number(request.formInput.sessionLength || 45)),
+    )
     const preferredTime = request.formInput.preferredTime || '07:00'
     const latestMessage = latestProgressToolMessage(request)
     const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
     const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
     const sessionCount = clampSessionCount(
-      parseRequestedSessionCount(latestMessage) ?? parseRequestedSessionCount(frequency) ?? (fullWeekRequested ? 5 : 2),
+      parseRequestedSessionCount(latestMessage) ??
+        parseRequestedSessionCount(frequency) ??
+        (fullWeekRequested ? 5 : 2),
     )
     const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
       const date = addDays(startDate, offset)
@@ -1049,13 +1107,16 @@ export class LocalAIService implements IAIService {
     }
 
     if (/\b(pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(constraints)) {
-      warnings.push('Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.')
+      warnings.push(
+        'Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.',
+      )
     }
 
     return AIProgressToolResultSchema.parse({
-      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-        ? `Confirmed: ${latestMessage}. I updated the workout plan, next actions, and progress log.`
-        : `Confirmed ${goal}: ${level}, ${frequency}, ${durationMinutes} minute sessions.`,
+      assistantReply:
+        latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+          ? `Confirmed: ${latestMessage}. I updated the workout plan, next actions, and progress log.`
+          : `Confirmed ${goal}: ${level}, ${frequency}, ${durationMinutes} minute sessions.`,
       confirmedRequirements: [
         `Goal: ${goal}`,
         `Level: ${level}`,
@@ -1094,7 +1155,8 @@ export class LocalAIService implements IAIService {
               : `Complete workout session ${session.index + 1}`,
           description: `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
           dueDate: session.date,
-          milestoneTitle: session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
+          milestoneTitle:
+            session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
           status: 'scheduled' as const,
         })),
         {
@@ -1162,7 +1224,7 @@ export class LocalAIService implements IAIService {
     const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
     const sessionCount = clampSessionCount(
       parseRequestedSessionCount(latestMessage) ??
-        (fullWeekRequested ? parseRequestedSessionCount(weeklyTime) ?? 5 : 1),
+        (fullWeekRequested ? (parseRequestedSessionCount(weeklyTime) ?? 5) : 1),
     )
     const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
       const date = addDays(startDate, offset)
@@ -1176,9 +1238,10 @@ export class LocalAIService implements IAIService {
     }
 
     return AIProgressToolResultSchema.parse({
-      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-        ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
-        : `Confirmed ${routeLabel} learning for ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
+      assistantReply:
+        latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+          ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
+          : `Confirmed ${routeLabel} learning for ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
       confirmedRequirements: [
         `Goal: ${goal}`,
         `Route: ${routeLabel}`,
@@ -1189,7 +1252,12 @@ export class LocalAIService implements IAIService {
       ],
       summary: `Built ${learningRouteArticle(routeKind)} ${routeLabel} learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
       currentRecommendation: `Start with ${routeLabel} foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
-      milestones: learningMilestones(routeKind, outcome, request.today, Boolean(request.milestones.length)),
+      milestones: learningMilestones(
+        routeKind,
+        outcome,
+        request.today,
+        Boolean(request.milestones.length),
+      ),
       actions: scheduledSessions.map((session) => {
         const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
         return {
@@ -1207,9 +1275,10 @@ export class LocalAIService implements IAIService {
             : ''
         }Search context: ${request.memorySearchResults.map((result) => result.title).join(', ')}`,
         logType: 'tool_result',
-        summary: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-          ? `Updated local ${routeLabel} learning route from conversation.`
-          : `Generated a local ${routeLabel} learning route.`,
+        summary:
+          latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+            ? `Updated local ${routeLabel} learning route from conversation.`
+            : `Generated a local ${routeLabel} learning route.`,
       },
       calendarEvents: scheduledSessions.map((session) => {
         const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
@@ -1260,7 +1329,9 @@ export class LocalAIService implements IAIService {
 
       return AICalendarActionPlanSchema.parse({
         summary: `Update event "${event.title}".`,
-        actions: [{ type: 'update_event', eventId: event.id, changes, reason: 'Matched by title.' }],
+        actions: [
+          { type: 'update_event', eventId: event.id, changes, reason: 'Matched by title.' },
+        ],
       })
     }
 
@@ -1297,7 +1368,9 @@ export class LocalAIService implements IAIService {
     }
 
     if (todo && /\b(schedule|calendar)\b/i.test(command)) {
-      const explicitStartAt = hasExplicitTime(command) ? parseCommandStartAt(command, context) : undefined
+      const explicitStartAt = hasExplicitTime(command)
+        ? parseCommandStartAt(command, context)
+        : undefined
       return AICalendarActionPlanSchema.parse({
         summary: `Schedule task "${todo.title}".`,
         actions: [
@@ -1396,7 +1469,8 @@ export class LocalAIService implements IAIService {
 function localRefinedStepText(value: string, instruction: string): string {
   const cleaned = value.replace(/\s+/g, ' ').trim()
 
-  if (instruction.includes('shorten')) return cleaned.length > 80 ? `${cleaned.slice(0, 77)}...` : cleaned
+  if (instruction.includes('shorten'))
+    return cleaned.length > 80 ? `${cleaned.slice(0, 77)}...` : cleaned
   if (instruction.includes('simplify')) return `Clarify the next action for: ${cleaned}`
   if (instruction.includes('split')) return `Break into smaller follow-up tasks: ${cleaned}`
 

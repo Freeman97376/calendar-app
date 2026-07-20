@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { getEventsInRange, groupEventsByDate, type EventDraft } from '../domain/logic/eventUtils'
 import type { DateRange, Event, RecurrenceRule } from '../domain/types'
@@ -40,6 +40,7 @@ function toEventDraft(values: EventFormValues): EventDraft {
 }
 
 export function useEvents(range?: DateRange) {
+  const [sessionRefresh, setSessionRefresh] = useState(0)
   const events = useEventStore((state) => state.events)
   const isLoading = useEventStore((state) => state.isLoading)
   const error = useEventStore((state) => state.error)
@@ -57,10 +58,18 @@ export function useEvents(range?: DateRange) {
   const closeEventModal = useUIStore((state) => state.closeEventModal)
 
   useEffect(() => {
+    const refresh = () => setSessionRefresh((value) => value + 1)
+    window.addEventListener('calendar:session-restored', refresh)
+    return () => {
+      window.removeEventListener('calendar:session-restored', refresh)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!range) return
 
     loadEvents(range).catch(() => undefined)
-  }, [loadEvents, range])
+  }, [loadEvents, range, sessionRefresh])
 
   const visibleEvents = useMemo(() => {
     if (!range) return events

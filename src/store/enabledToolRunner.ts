@@ -1,8 +1,5 @@
 import { AIProgressToolRequestSchema } from '../domain/schemas/ai.schema'
-import type {
-  AICalendarContext,
-  AIProgressToolResult,
-} from '../domain/types'
+import type { AICalendarContext, AIProgressToolResult } from '../domain/types'
 import type {
   LongTermActionItem,
   LongTermMilestone,
@@ -77,7 +74,9 @@ async function stageProgressToolProposal(
     before: Record<string, unknown> | null
     after: Record<string, unknown>
   }> = []
-  const milestoneIdsByTitle = new Map(milestones.map((item) => [item.title.trim().toLowerCase(), item.milestone_id]))
+  const milestoneIdsByTitle = new Map(
+    milestones.map((item) => [item.title.trim().toLowerCase(), item.milestone_id]),
+  )
 
   for (const proposed of output.milestones) {
     const existing = milestones.find((item) =>
@@ -86,13 +85,39 @@ async function stageProgressToolProposal(
         : titleMatches(item.title, proposed.title),
     )
     const after = existing
-      ? { ...existing, title: proposed.title, description: proposed.description ?? existing.description ?? '', due_date: proposed.dueDate ?? existing.due_date ?? null, status: proposed.status, updated_at: now }
-      : { milestone_id: planId('milestone'), project_id: instance.projectId, title: proposed.title, description: proposed.description ?? '', due_date: proposed.dueDate ?? null, status: proposed.status, metadata: instance.project.metadata, created_at: now, updated_at: now }
-    const index = existing ? milestones.findIndex((item) => item.milestone_id === existing.milestone_id) : -1
+      ? {
+          ...existing,
+          title: proposed.title,
+          description: proposed.description ?? existing.description ?? '',
+          due_date: proposed.dueDate ?? existing.due_date ?? null,
+          status: proposed.status,
+          updated_at: now,
+        }
+      : {
+          milestone_id: planId('milestone'),
+          project_id: instance.projectId,
+          title: proposed.title,
+          description: proposed.description ?? '',
+          due_date: proposed.dueDate ?? null,
+          status: proposed.status,
+          metadata: instance.project.metadata,
+          created_at: now,
+          updated_at: now,
+        }
+    const index = existing
+      ? milestones.findIndex((item) => item.milestone_id === existing.milestone_id)
+      : -1
     if (index >= 0) milestones[index] = after
     else milestones.push(after)
     milestoneIdsByTitle.set(after.title.trim().toLowerCase(), after.milestone_id)
-    diff.push({ id: planId('diff'), entity: 'milestone', operation: existing ? 'update' : 'create', external_id: after.milestone_id, before: existing ?? null, after })
+    diff.push({
+      id: planId('diff'),
+      entity: 'milestone',
+      operation: existing ? 'update' : 'create',
+      external_id: after.milestone_id,
+      before: existing ?? null,
+      after,
+    })
   }
 
   for (const proposed of output.actions) {
@@ -102,15 +127,47 @@ async function stageProgressToolProposal(
         : titleMatches(item.title, proposed.title),
     )
     const milestoneId = proposed.milestoneTitle
-      ? milestoneIdsByTitle.get(proposed.milestoneTitle.trim().toLowerCase()) ?? existing?.milestone_id ?? null
-      : existing?.milestone_id ?? null
+      ? (milestoneIdsByTitle.get(proposed.milestoneTitle.trim().toLowerCase()) ??
+        existing?.milestone_id ??
+        null)
+      : (existing?.milestone_id ?? null)
     const after = existing
-      ? { ...existing, title: proposed.title, description: proposed.description ?? existing.description ?? '', due_date: proposed.dueDate ?? existing.due_date ?? null, milestone_id: milestoneId, status: proposed.status, updated_at: now }
-      : { action_id: planId('action'), project_id: instance.projectId, milestone_id: milestoneId, title: proposed.title, description: proposed.description ?? '', due_date: proposed.dueDate ?? null, status: proposed.status, estimated_minutes: 30, priority: 'medium', energy_needed: 'medium', execution_tier: 'standard', metadata: instance.project.metadata, created_at: now, updated_at: now }
+      ? {
+          ...existing,
+          title: proposed.title,
+          description: proposed.description ?? existing.description ?? '',
+          due_date: proposed.dueDate ?? existing.due_date ?? null,
+          milestone_id: milestoneId,
+          status: proposed.status,
+          updated_at: now,
+        }
+      : {
+          action_id: planId('action'),
+          project_id: instance.projectId,
+          milestone_id: milestoneId,
+          title: proposed.title,
+          description: proposed.description ?? '',
+          due_date: proposed.dueDate ?? null,
+          status: proposed.status,
+          estimated_minutes: 30,
+          priority: 'medium',
+          energy_needed: 'medium',
+          execution_tier: 'standard',
+          metadata: instance.project.metadata,
+          created_at: now,
+          updated_at: now,
+        }
     const index = existing ? actions.findIndex((item) => item.action_id === existing.action_id) : -1
     if (index >= 0) actions[index] = after
     else actions.push(after)
-    diff.push({ id: planId('diff'), entity: 'action', operation: existing ? 'update' : 'create', external_id: after.action_id, before: existing ?? null, after })
+    diff.push({
+      id: planId('diff'),
+      entity: 'action',
+      operation: existing ? 'update' : 'create',
+      external_id: after.action_id,
+      before: existing ?? null,
+      after,
+    })
   }
 
   if (!diff.length && !output.progressLog) return { handled: true, proposalId: null }
@@ -161,7 +218,9 @@ async function persistProgressToolResult(
   for (const milestone of handledByProposalApi ? [] : output.milestones) {
     const existing =
       (milestone.existingMilestoneId
-        ? current.milestones.find((candidate) => candidate.milestone_id === milestone.existingMilestoneId)
+        ? current.milestones.find(
+            (candidate) => candidate.milestone_id === milestone.existingMilestoneId,
+          )
         : undefined) ?? milestoneByTitle(current.milestones, milestone.title)
     const changes = {
       description: milestone.description,
@@ -187,8 +246,8 @@ async function persistProgressToolResult(
         ? latestActions.find((candidate) => candidate.action_id === action.existingActionId)
         : undefined) ?? actionByTitle(latestActions, action.title)
     const matchedMilestone = action.milestoneTitle
-      ? milestonesByTitle.get(action.milestoneTitle.trim().toLowerCase()) ??
-        milestoneByTitle(latestMilestones, action.milestoneTitle)
+      ? (milestonesByTitle.get(action.milestoneTitle.trim().toLowerCase()) ??
+        milestoneByTitle(latestMilestones, action.milestoneTitle))
       : undefined
     const changes = {
       description: action.description,
@@ -238,9 +297,13 @@ async function persistProgressToolResult(
     output_summary: output.summary,
     related_goal_id: instance.goalId,
     related_project_id: instance.projectId,
-    status: proposalId || output.needsUserConfirmation || output.calendarEvents.length || output.warnings.length
-      ? 'needs_user_confirmation'
-      : 'success',
+    status:
+      proposalId ||
+      output.needsUserConfirmation ||
+      output.calendarEvents.length ||
+      output.warnings.length
+        ? 'needs_user_confirmation'
+        : 'success',
     tool_name: instance.toolName,
   })
 }

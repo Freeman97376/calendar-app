@@ -30,8 +30,20 @@ export const diningPlannerPreset: ToolPreset = {
         { label: 'Dinner', value: 'dinner' },
       ],
     },
-    { id: 'cuisine', label: 'Cuisine', placeholder: 'Italian, hot pot, sushi', required: false, type: 'text' },
-    { id: 'guests', label: 'Guests', placeholder: '2 friends, family of 4', required: false, type: 'text' },
+    {
+      id: 'cuisine',
+      label: 'Cuisine',
+      placeholder: 'Italian, hot pot, sushi',
+      required: false,
+      type: 'text',
+    },
+    {
+      id: 'guests',
+      label: 'Guests',
+      placeholder: '2 friends, family of 4',
+      required: false,
+      type: 'text',
+    },
     { id: 'dietaryNotes', label: 'Dietary notes', required: false, type: 'textarea' },
     { id: 'budget', label: 'Budget', placeholder: '$80 total', required: false, type: 'text' },
     {

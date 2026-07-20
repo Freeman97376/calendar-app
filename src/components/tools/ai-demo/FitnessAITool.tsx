@@ -1,7 +1,12 @@
 import MemoryBackedAIDemoTool from './MemoryBackedAIDemoTool'
 
 const fields = [
-  { id: 'goal', label: 'Training goal', placeholder: 'Build strength, run 5K, improve mobility', type: 'text' as const },
+  {
+    id: 'goal',
+    label: 'Training goal',
+    placeholder: 'Build strength, run 5K, improve mobility',
+    type: 'text' as const,
+  },
   {
     id: 'level',
     label: 'Fitness level',
@@ -13,10 +18,30 @@ const fields = [
       { label: 'Advanced', value: 'advanced' },
     ],
   },
-  { id: 'equipment', label: 'Equipment', placeholder: 'Dumbbells, treadmill, none', type: 'text' as const },
-  { id: 'constraints', label: 'Constraints', placeholder: 'Knee pain, apartment-friendly, low impact', type: 'textarea' as const },
-  { id: 'frequency', label: 'Weekly frequency', defaultValue: '3 times per week', type: 'text' as const },
-  { id: 'sessionLength', label: 'Session length minutes', defaultValue: '45', type: 'number' as const },
+  {
+    id: 'equipment',
+    label: 'Equipment',
+    placeholder: 'Dumbbells, treadmill, none',
+    type: 'text' as const,
+  },
+  {
+    id: 'constraints',
+    label: 'Constraints',
+    placeholder: 'Knee pain, apartment-friendly, low impact',
+    type: 'textarea' as const,
+  },
+  {
+    id: 'frequency',
+    label: 'Weekly frequency',
+    defaultValue: '3 times per week',
+    type: 'text' as const,
+  },
+  {
+    id: 'sessionLength',
+    label: 'Session length minutes',
+    defaultValue: '45',
+    type: 'number' as const,
+  },
   { id: 'preferredTime', label: 'Preferred time', defaultValue: '07:00', type: 'time' as const },
 ]
 

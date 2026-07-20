@@ -23,7 +23,11 @@ function message(index: number): GoalConversationMessage {
 describe('goal planning prompt framework', () => {
   it('compresses recent messages according to the active usage mode', () => {
     const messages = Array.from({ length: 20 }, (_value, index) => message(index))
-    for (const [mode, expected] of [['economy', 2], ['balanced', 6], ['quality', 12]] as const) {
+    for (const [mode, expected] of [
+      ['economy', 2],
+      ['balanced', 6],
+      ['quality', 12],
+    ] as const) {
       const prompt = buildGoalPlanningPrompt({ mode, threadTitle: 'Build strength', messages })
       const request = JSON.parse(prompt[1].content) as { recentConversation: unknown[] }
       expect(request.recentConversation).toHaveLength(expected)
@@ -55,7 +59,11 @@ describe('goal planning prompt framework', () => {
       },
     })
 
-    const prompt = buildGoalPlanningPrompt({ mode: 'economy', threadTitle: 'Improve fitness', messages })
+    const prompt = buildGoalPlanningPrompt({
+      mode: 'economy',
+      threadTitle: 'Improve fitness',
+      messages,
+    })
     const request = JSON.parse(prompt[1].content) as {
       confirmedUserContext: { currentSituation: Record<string, unknown> }
       recentConversation: unknown[]
@@ -70,25 +78,41 @@ describe('goal planning prompt framework', () => {
   })
 
   it('parses a complete mocked planning response', () => {
-    const plan = parseGoalActivationPlan(JSON.stringify({
-      title: 'Mock fitness plan',
-      summary: 'Track completion and weight weekly.',
-      policy: { active_tier: 'standard', weekly_capacity_minutes: 240 },
-      metrics: [{ name: 'Training completion' }],
-      milestones: [{ title: 'Complete base phase' }],
-      actions: [{ title: 'Train three times' }],
-    }))
+    const plan = parseGoalActivationPlan(
+      JSON.stringify({
+        title: 'Mock fitness plan',
+        summary: 'Track completion and weight weekly.',
+        policy: { active_tier: 'standard', weekly_capacity_minutes: 240 },
+        metrics: [{ name: 'Training completion' }],
+        milestones: [{ title: 'Complete base phase' }],
+        actions: [{ title: 'Train three times' }],
+      }),
+    )
     expect(plan.title).toBe('Mock fitness plan')
     expect(plan.metrics[0].name).toBe('Training completion')
   })
 
   it('keeps economy check-ins rule-only and bounds richer check-in context', () => {
     const messages = Array.from({ length: 20 }, (_value, index) => message(index))
-    expect(buildCheckInSummaryPrompt({ mode: 'economy', checkIn: {}, recentMessages: messages })).toBeNull()
-    const balanced = buildCheckInSummaryPrompt({ mode: 'balanced', checkIn: { status: 'answered' }, recentMessages: messages })!
-    const quality = buildCheckInSummaryPrompt({ mode: 'quality', checkIn: { status: 'answered' }, recentMessages: messages })!
-    expect((JSON.parse(balanced[1].content) as { recentConversation: unknown[] }).recentConversation).toHaveLength(6)
-    expect((JSON.parse(quality[1].content) as { recentConversation: unknown[] }).recentConversation).toHaveLength(12)
+    expect(
+      buildCheckInSummaryPrompt({ mode: 'economy', checkIn: {}, recentMessages: messages }),
+    ).toBeNull()
+    const balanced = buildCheckInSummaryPrompt({
+      mode: 'balanced',
+      checkIn: { status: 'answered' },
+      recentMessages: messages,
+    })!
+    const quality = buildCheckInSummaryPrompt({
+      mode: 'quality',
+      checkIn: { status: 'answered' },
+      recentMessages: messages,
+    })!
+    expect(
+      (JSON.parse(balanced[1].content) as { recentConversation: unknown[] }).recentConversation,
+    ).toHaveLength(6)
+    expect(
+      (JSON.parse(quality[1].content) as { recentConversation: unknown[] }).recentConversation,
+    ).toHaveLength(12)
     expect(balanced[0].content).toContain('Do not change the plan')
   })
 })

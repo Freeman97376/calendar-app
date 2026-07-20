@@ -1,4 +1,3 @@
-import { invalidateApiSession } from '../services/appApiClient'
 import { useAIStore } from './aiStore'
 import { useCalendarStore } from './calendarStore'
 import { initializeRuntimeConfig } from './configStore'
@@ -12,7 +11,6 @@ import { useToolSessionStore } from './toolSessionStore'
 import { useUIStore } from './uiStore'
 
 export function resetUserSessionStores(preferences: Record<string, unknown> = {}) {
-  invalidateApiSession()
   useCalendarStore.getState().reset()
   useEventStore.getState().reset()
   useEventTypeStore.getState().reset()

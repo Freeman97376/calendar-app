@@ -28,7 +28,9 @@ describe('eventStore', () => {
   })
 
   it('createEvent validates event data', async () => {
-    await expect(useEventStore.getState().createEvent({ ...eventDraft, title: '' })).rejects.toThrow()
+    await expect(
+      useEventStore.getState().createEvent({ ...eventDraft, title: '' }),
+    ).rejects.toThrow()
     expect(useEventStore.getState().events).toHaveLength(0)
   })
 
@@ -60,7 +62,9 @@ describe('eventStore', () => {
   })
 
   it('error state is set when validation fails', async () => {
-    await expect(useEventStore.getState().createEvent({ ...eventDraft, title: '' })).rejects.toThrow()
+    await expect(
+      useEventStore.getState().createEvent({ ...eventDraft, title: '' }),
+    ).rejects.toThrow()
 
     expect(useEventStore.getState().error).toBeTruthy()
   })
@@ -95,6 +99,16 @@ describe('eventStore', () => {
 
     expect(syncManager.savedEvents).toEqual([event])
   })
+
+  it('does not keep an event when persistence fails', async () => {
+    configureEventSync(new TestSyncManager([], true))
+
+    await expect(useEventStore.getState().createEvent(eventDraft)).rejects.toThrow(
+      'simulated persistence failure',
+    )
+
+    expect(useEventStore.getState().events).toEqual([])
+  })
 })
 
 class TestSyncManager implements EventSyncManager {
@@ -102,7 +116,10 @@ class TestSyncManager implements EventSyncManager {
   readonly updatedEvents: Event[] = []
   readonly deletedIds: string[] = []
 
-  constructor(private readonly events: Event[] = []) {}
+  constructor(
+    private readonly events: Event[] = [],
+    private readonly failWrites = false,
+  ) {}
 
   async getEvents(_range: DateRange): Promise<Event[]> {
     return this.events
@@ -110,13 +127,16 @@ class TestSyncManager implements EventSyncManager {
 
   async saveEvent(event: Event): Promise<void> {
     this.savedEvents.push(event)
+    if (this.failWrites) throw new Error('simulated persistence failure')
   }
 
   async updateEvent(event: Event): Promise<void> {
     this.updatedEvents.push(event)
+    if (this.failWrites) throw new Error('simulated persistence failure')
   }
 
   async deleteEvent(id: string): Promise<void> {
     this.deletedIds.push(id)
+    if (this.failWrites) throw new Error('simulated persistence failure')
   }
 }

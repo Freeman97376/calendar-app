@@ -5,7 +5,10 @@ import { ToolPresetSchema, ToolSessionRequestSchema } from '../domain/schemas/to
 import type { ToolPreset, ToolSessionRequest, ToolSessionResult } from '../domain/types'
 import type { CreateToolRunInput, ToolRunStatus } from '../domain/types/longTermMemory'
 import { LocalToolPresetService } from '../services/toolSessions/localToolPresetService'
-import type { IToolPresetService, ToolPresetUpdate } from '../services/toolSessions/IToolPresetService'
+import type {
+  IToolPresetService,
+  ToolPresetUpdate,
+} from '../services/toolSessions/IToolPresetService'
 import { getConfiguredAIService } from './aiStore'
 import { recordLongTermToolRun, useLongTermMemoryStore } from './longTermMemoryStore'
 
@@ -55,7 +58,10 @@ function summarizeInputs(inputs: Record<string, string>): string {
 
 function summarizeResult(result: ToolSessionResult): string {
   const warningText = result.warnings.length ? ` Warnings: ${result.warnings.join('; ')}` : ''
-  return truncate(`${result.summary} Generated ${result.events.length} event draft(s).${warningText}`, 500)
+  return truncate(
+    `${result.summary} Generated ${result.events.length} event draft(s).${warningText}`,
+    500,
+  )
 }
 
 function summarizeFailure(message: string): string {
@@ -162,7 +168,13 @@ export const useToolSessionStore = create<ToolSessionStore>((set, get) => ({
       const message = 'AI service is not configured'
       set({ error: message })
       await recordLongTermToolRun(
-        toolRunInput(parsedRequest, 'failed', summarizeFailure(message), { error: message }, message),
+        toolRunInput(
+          parsedRequest,
+          'failed',
+          summarizeFailure(message),
+          { error: message },
+          message,
+        ),
       )
       throw new Error(message)
     }
@@ -170,7 +182,13 @@ export const useToolSessionStore = create<ToolSessionStore>((set, get) => ({
       const message = 'AI API service is not configured'
       set({ error: message })
       await recordLongTermToolRun(
-        toolRunInput(parsedRequest, 'failed', summarizeFailure(message), { error: message }, message),
+        toolRunInput(
+          parsedRequest,
+          'failed',
+          summarizeFailure(message),
+          { error: message },
+          message,
+        ),
       )
       throw new Error(message)
     }
@@ -191,7 +209,13 @@ export const useToolSessionStore = create<ToolSessionStore>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to run tool session'
       await recordLongTermToolRun(
-        toolRunInput(parsedRequest, 'failed', summarizeFailure(message), { error: message }, message),
+        toolRunInput(
+          parsedRequest,
+          'failed',
+          summarizeFailure(message),
+          { error: message },
+          message,
+        ),
       )
       set({ error: message, isRunning: false })
       throw error

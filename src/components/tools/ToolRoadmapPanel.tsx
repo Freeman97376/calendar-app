@@ -19,7 +19,10 @@ function statusLabel(value: string, t: ReturnType<typeof useI18n>['t']): string 
   return translated === key ? value.replace(/_/g, ' ') : translated
 }
 
-function sourceLabel(value: ToolRoadmapViewModel['pathSource'], t: ReturnType<typeof useI18n>['t']) {
+function sourceLabel(
+  value: ToolRoadmapViewModel['pathSource'],
+  t: ReturnType<typeof useI18n>['t'],
+) {
   const key = `enabled.pathSource.${value}` as Parameters<ReturnType<typeof useI18n>['t']>[0]
   const translated = t(key)
   return translated === key ? value : translated
@@ -27,16 +30,26 @@ function sourceLabel(value: ToolRoadmapViewModel['pathSource'], t: ReturnType<ty
 
 export default function ToolRoadmapPanel({ roadmap }: ToolRoadmapPanelProps) {
   const { t } = useI18n()
-  const latestMemory = roadmap.recentProgress[0]?.summary || roadmap.recentToolRuns[0]?.output_summary
+  const latestMemory =
+    roadmap.recentProgress[0]?.summary || roadmap.recentToolRuns[0]?.output_summary
 
   return (
-    <section aria-label={t('enabled.roadmap')} className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+    <section
+      aria-label={t('enabled.roadmap')}
+      className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase text-slate-500">{t('enabled.longTermPlan')}</p>
-          <h4 className="mt-1 truncate text-sm font-semibold text-slate-950">{roadmap.goalTitle}</h4>
+          <p className="text-xs font-semibold uppercase text-slate-500">
+            {t('enabled.longTermPlan')}
+          </p>
+          <h4 className="mt-1 truncate text-sm font-semibold text-slate-950">
+            {roadmap.goalTitle}
+          </h4>
           {roadmap.goalSummary ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{roadmap.goalSummary}</p>
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
+              {roadmap.goalSummary}
+            </p>
           ) : null}
         </div>
         <span className="shrink-0 rounded bg-white px-2 py-1 text-xs font-medium text-slate-700">
@@ -63,7 +76,9 @@ export default function ToolRoadmapPanel({ roadmap }: ToolRoadmapPanelProps) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <h5 className="text-sm font-semibold text-slate-950">{t('enabled.implementationPath')}</h5>
+          <h5 className="text-sm font-semibold text-slate-950">
+            {t('enabled.implementationPath')}
+          </h5>
           <span className="shrink-0 rounded bg-white px-2 py-1 text-xs text-slate-500">
             {sourceLabel(roadmap.pathSource, t)}
           </span>

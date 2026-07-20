@@ -55,16 +55,25 @@ export default function DesktopUpdateSettings() {
 
       {update.status === 'downloading' ? (
         <p className="text-sm text-slate-600">
-          {progress === null ? t('update.downloading') : t('update.downloadingPercent', { progress })}
+          {progress === null
+            ? t('update.downloading')
+            : t('update.downloadingPercent', { progress })}
         </p>
       ) : null}
-      {update.status === 'installing' ? <p className="text-sm text-slate-600">{t('update.installing')}</p> : null}
+      {update.status === 'installing' ? (
+        <p className="text-sm text-slate-600">{t('update.installing')}</p>
+      ) : null}
       {update.error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{update.error}</p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button disabled={busy} onClick={() => void update.check(false)} type="button" variant="secondary">
+        <Button
+          disabled={busy}
+          onClick={() => void update.check(false)}
+          type="button"
+          variant="secondary"
+        >
           {update.status === 'checking' ? t('update.checking') : t('update.check')}
         </Button>
         {update.status === 'available' ? (

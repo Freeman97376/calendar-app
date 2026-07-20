@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  ApiAIService,
-  chatCompletionsEndpoint,
-} from '../../../src/services/ai/apiAIService'
+import { ApiAIService, chatCompletionsEndpoint } from '../../../src/services/ai/apiAIService'
 
 const validBreakdown = {
   goal: 'Prepare for interview',
@@ -78,7 +75,9 @@ describe('ApiAIService', () => {
     const fetcher = vi.fn()
     const service = new ApiAIService({ apiKey: '', fetcher })
 
-    await expect(service.breakdownGoal('Prepare for interview')).rejects.toThrow('AI service is not configured')
+    await expect(service.breakdownGoal('Prepare for interview')).rejects.toThrow(
+      'AI service is not configured',
+    )
     expect(fetcher).not.toHaveBeenCalled()
   })
 
@@ -329,9 +328,7 @@ describe('ApiAIService', () => {
       toolName: 'Fridge',
     })
 
-    expect(result.activationSummary).toBe(
-      'Prepared Fridge active tool for: Manage groceries.',
-    )
+    expect(result.activationSummary).toBe('Prepared Fridge active tool for: Manage groceries.')
     expect(result.assistantReply).toContain('register')
     expect(result.activationForm).toEqual({ requirement: 'Track groceries' })
     expect(result.routeTags).toEqual(['fridge', 'grocery', 'inventory', 'groceries'])
@@ -475,7 +472,9 @@ describe('ApiAIService', () => {
   it('breakdownGoal extracts JSON when the model wraps the object in text', async () => {
     const service = new ApiAIService({
       apiKey: 'test-key',
-      fetcher: vi.fn(async () => apiResponse(`Here is the JSON:\n${JSON.stringify(validBreakdown)}`)),
+      fetcher: vi.fn(async () =>
+        apiResponse(`Here is the JSON:\n${JSON.stringify(validBreakdown)}`),
+      ),
     })
 
     await expect(service.breakdownGoal('Prepare for interview')).resolves.toEqual(validBreakdown)

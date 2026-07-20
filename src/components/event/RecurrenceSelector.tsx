@@ -9,7 +9,10 @@ type RecurrenceSelectorProps = {
   onChange: (rule: RecurrenceRule | undefined) => void
 }
 
-const weekdays: Array<{ value: Weekday; labelKey: Parameters<ReturnType<typeof useI18n>['t']>[0] }> = [
+const weekdays: Array<{
+  value: Weekday
+  labelKey: Parameters<ReturnType<typeof useI18n>['t']>[0]
+}> = [
   { value: 'mon', labelKey: 'repeat.weekdayMon' },
   { value: 'tue', labelKey: 'repeat.weekdayTue' },
   { value: 'wed', labelKey: 'repeat.weekdayWed' },
@@ -44,7 +47,11 @@ function withEndDate(date: string): RecurrenceRule['endCondition'] {
   }
 }
 
-export default function RecurrenceSelector({ value, startDate, onChange }: RecurrenceSelectorProps) {
+export default function RecurrenceSelector({
+  value,
+  startDate,
+  onChange,
+}: RecurrenceSelectorProps) {
   const { t } = useI18n()
   const rule = value ?? defaultRule(startDate)
   const repeats = Boolean(value)
@@ -134,7 +141,8 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
               }}
               onChange={(event) => {
                 setIntervalInput(event.target.value)
-                if (event.target.value) updateRule({ interval: toPositiveInteger(event.target.value) })
+                if (event.target.value)
+                  updateRule({ interval: toPositiveInteger(event.target.value) })
               }}
               type="number"
               value={intervalInput}
@@ -148,7 +156,7 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
             </span>
           </div>
 
-          {(rule.frequency === 'weekly' || rule.frequency === 'custom') ? (
+          {rule.frequency === 'weekly' || rule.frequency === 'custom' ? (
             <div className="flex flex-wrap gap-2">
               {weekdays.map((day) => (
                 <label
@@ -199,8 +207,10 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
                 className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                 id="repeat-end"
                 onChange={(event) => {
-                  if (event.target.value === 'never') updateRule({ endCondition: { type: 'never' } })
-                  if (event.target.value === 'date') updateRule({ endCondition: withEndDate(startDate) })
+                  if (event.target.value === 'never')
+                    updateRule({ endCondition: { type: 'never' } })
+                  if (event.target.value === 'date')
+                    updateRule({ endCondition: withEndDate(startDate) })
                   if (event.target.value === 'count') {
                     updateRule({ endCondition: { type: 'count', occurrences: 5 } })
                   }
@@ -219,7 +229,9 @@ export default function RecurrenceSelector({ value, startDate, onChange }: Recur
                 <input
                   className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
                   id="repeat-until"
-                  onChange={(event) => updateRule({ endCondition: withEndDate(event.target.value) })}
+                  onChange={(event) =>
+                    updateRule({ endCondition: withEndDate(event.target.value) })
+                  }
                   type="date"
                   value={toUntilDate(rule)}
                 />

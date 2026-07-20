@@ -5,13 +5,7 @@ import EventForm from './EventForm'
 
 export default function EventDetailsPanel() {
   const { t } = useI18n()
-  const {
-    editingEvent,
-    selectedDate,
-    closeEventModal,
-    saveEvent,
-    deleteEditingEvent,
-  } = useEvents()
+  const { editingEvent, selectedDate, closeEventModal, saveEvent, deleteEditingEvent } = useEvents()
 
   async function handleDelete(scope: RecurrenceEditScope) {
     if (!window.confirm(t('event.deleteConfirm'))) return

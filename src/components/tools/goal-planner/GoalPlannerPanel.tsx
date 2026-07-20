@@ -18,9 +18,21 @@ const textareaClass =
 
 const goalStatuses: GoalStatus[] = ['active', 'paused', 'completed', 'archived']
 const projectStatuses: ProjectStatus[] = ['active', 'paused', 'completed']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const milestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
-const progressLogTypes: ProgressLogType[] = ['update', 'decision', 'blocker', 'review', 'tool_result']
+const progressLogTypes: ProgressLogType[] = [
+  'update',
+  'decision',
+  'blocker',
+  'review',
+  'tool_result',
+]
 
 function label(value: string): string {
   return value.replace(/_/g, ' ')
@@ -284,7 +296,9 @@ export default function GoalPlannerPanel() {
                 >
                   <p className="truncate text-sm font-semibold text-slate-950">{project.title}</p>
                   {project.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">{project.description}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                      {project.description}
+                    </p>
                   ) : null}
                 </button>
                 <select
@@ -334,7 +348,10 @@ export default function GoalPlannerPanel() {
             {isEditingPath ? (
               <form className="space-y-3" onSubmit={(event) => void saveImplementationPath(event)}>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor="implementation-path">
+                  <label
+                    className="block text-sm font-medium text-slate-700"
+                    htmlFor="implementation-path"
+                  >
                     One step per line. Use "Title | Details" for descriptions.
                   </label>
                   <textarea
@@ -360,7 +377,10 @@ export default function GoalPlannerPanel() {
             <h5 className="text-sm font-semibold text-slate-950">Tool History</h5>
             <div className="space-y-2">
               {memory.toolRuns.map((toolRun) => (
-                <article className="rounded-md border border-slate-200 p-3" key={toolRun.tool_run_id}>
+                <article
+                  className="rounded-md border border-slate-200 p-3"
+                  key={toolRun.tool_run_id}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-950">
@@ -392,9 +412,15 @@ export default function GoalPlannerPanel() {
 
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Milestones</h5>
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void createMilestone(event)}>
+            <form
+              className="grid gap-3 sm:grid-cols-[1fr_auto]"
+              onSubmit={(event) => void createMilestone(event)}
+            >
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="milestone-title">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="milestone-title"
+                >
                   Milestone
                 </label>
                 <input
@@ -407,7 +433,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="milestone-due-date">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="milestone-due-date"
+                >
                   Due date
                 </label>
                 <input
@@ -420,16 +449,25 @@ export default function GoalPlannerPanel() {
                   value={milestoneDraft.dueDate}
                 />
               </div>
-              <Button className="sm:col-span-2" disabled={!milestoneDraft.title.trim()} type="submit">
+              <Button
+                className="sm:col-span-2"
+                disabled={!milestoneDraft.title.trim()}
+                type="submit"
+              >
                 Add milestone
               </Button>
             </form>
             <div className="space-y-2">
               {memory.milestones.map((milestone) => (
-                <div className="rounded-md border border-slate-200 p-3" key={milestone.milestone_id}>
+                <div
+                  className="rounded-md border border-slate-200 p-3"
+                  key={milestone.milestone_id}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-950">{milestone.title}</p>
+                      <p className="truncate text-sm font-semibold text-slate-950">
+                        {milestone.title}
+                      </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {milestone.due_date ? `Due ${milestone.due_date}` : 'No due date'}
                       </p>
@@ -462,7 +500,10 @@ export default function GoalPlannerPanel() {
 
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Action Items</h5>
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void createAction(event)}>
+            <form
+              className="grid gap-3 sm:grid-cols-[1fr_auto]"
+              onSubmit={(event) => void createAction(event)}
+            >
               <div>
                 <label className="block text-sm font-medium text-slate-700" htmlFor="action-title">
                   Action item
@@ -477,7 +518,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="action-due-date">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="action-due-date"
+                >
                   Due date
                 </label>
                 <input
@@ -499,7 +543,9 @@ export default function GoalPlannerPanel() {
                 <div className="rounded-md border border-slate-200 p-3" key={action.action_id}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-950">{action.title}</p>
+                      <p className="truncate text-sm font-semibold text-slate-950">
+                        {action.title}
+                      </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {action.due_date ? `Due ${action.due_date}` : 'No due date'}
                       </p>
@@ -556,7 +602,10 @@ export default function GoalPlannerPanel() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="progress-summary">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="progress-summary"
+                >
                   Summary
                 </label>
                 <input
@@ -569,7 +618,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="progress-details">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="progress-details"
+                >
                   Details
                 </label>
                 <textarea
@@ -591,7 +643,9 @@ export default function GoalPlannerPanel() {
                   <p className="text-sm font-semibold text-slate-950">{entry.summary}</p>
                   <p className="mt-1 text-xs uppercase text-slate-500">{label(entry.log_type)}</p>
                   {entry.details ? (
-                    <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{entry.details}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">
+                      {entry.details}
+                    </p>
                   ) : null}
                 </div>
               ))}

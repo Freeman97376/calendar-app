@@ -22,11 +22,20 @@ export function useCalendar() {
   const goToPrev = useCalendarStore((state) => state.goToPrev)
   const goToToday = useCalendarStore((state) => state.goToToday)
 
-  const monthGrid = useMemo(() => getMonthGrid(focusedDate, new Date(), locale), [focusedDate, locale])
-  const weekDays = useMemo(() => getWeekDays(focusedDate, new Date(), locale), [focusedDate, locale])
+  const monthGrid = useMemo(
+    () => getMonthGrid(focusedDate, new Date(), locale),
+    [focusedDate, locale],
+  )
+  const weekDays = useMemo(
+    () => getWeekDays(focusedDate, new Date(), locale),
+    [focusedDate, locale],
+  )
   const day = useMemo(() => getDayInfo(focusedDate, new Date(), locale), [focusedDate, locale])
   const visibleRange = useMemo(() => getViewRange(view, focusedDate), [focusedDate, view])
-  const title = useMemo(() => getCalendarTitle(view, focusedDate, locale), [focusedDate, locale, view])
+  const title = useMemo(
+    () => getCalendarTitle(view, focusedDate, locale),
+    [focusedDate, locale, view],
+  )
   const subtitle = useMemo(
     () =>
       getCalendarSubtitle(view, focusedDate, locale, {

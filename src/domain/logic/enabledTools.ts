@@ -1,7 +1,5 @@
 import { calculateProjectProgress } from './progress'
-import type {
-  AIProgressToolKind,
-} from '../types'
+import type { AIProgressToolKind } from '../types'
 import type {
   ImplementationPathStep,
   LongTermActionItem,
@@ -98,7 +96,10 @@ export function normalizeImplementationPath(value: unknown): ImplementationPathS
       if (!title) return null
 
       const actionIds = Array.isArray(record.actionIds)
-        ? record.actionIds.filter((actionId): actionId is string => typeof actionId === 'string' && Boolean(actionId.trim()))
+        ? record.actionIds.filter(
+            (actionId): actionId is string =>
+              typeof actionId === 'string' && Boolean(actionId.trim()),
+          )
         : undefined
 
       return {
@@ -106,7 +107,10 @@ export function normalizeImplementationPath(value: unknown): ImplementationPathS
         description: optionalString(record.description),
         id: optionalString(record.id) ?? `path-${index + 1}`,
         milestoneId: optionalString(record.milestoneId),
-        order: typeof record.order === 'number' && Number.isFinite(record.order) ? record.order : index + 1,
+        order:
+          typeof record.order === 'number' && Number.isFinite(record.order)
+            ? record.order
+            : index + 1,
         title,
       }
     })
@@ -210,7 +214,9 @@ export function activeToolFromProject(
   const parentTemplateId =
     typeof metadata.parentTemplateId === 'string' ? metadata.parentTemplateId : metadata.templateId
   const parentTemplateLabel =
-    typeof metadata.parentTemplateLabel === 'string' ? metadata.parentTemplateLabel : metadata.toolName
+    typeof metadata.parentTemplateLabel === 'string'
+      ? metadata.parentTemplateLabel
+      : metadata.toolName
   const parentTemplateToolName =
     typeof metadata.parentTemplateToolName === 'string'
       ? metadata.parentTemplateToolName
@@ -218,7 +224,8 @@ export function activeToolFromProject(
 
   return {
     activationForm: stringRecord(metadata.activationForm),
-    activationSummary: typeof metadata.activationSummary === 'string' ? metadata.activationSummary : '',
+    activationSummary:
+      typeof metadata.activationSummary === 'string' ? metadata.activationSummary : '',
     adapterId: typeof metadata.adapterId === 'string' ? metadata.adapterId : undefined,
     goal: goals.find((goal) => goal.goal_id === project.goal_id) ?? null,
     goalId: project.goal_id,
@@ -233,7 +240,8 @@ export function activeToolFromProject(
     roadmapFormatVersion: 1,
     routeTags: stringArray(metadata.routeTags),
     routingEnabled: metadata.routingEnabled !== false,
-    sourceToolId: typeof metadata.sourceToolId === 'string' ? metadata.sourceToolId : parentTemplateId,
+    sourceToolId:
+      typeof metadata.sourceToolId === 'string' ? metadata.sourceToolId : parentTemplateId,
     status: project.status,
     templateId: typeof metadata.templateId === 'string' ? metadata.templateId : parentTemplateId,
     toolFeatures: stringArray(metadata.toolFeatures),

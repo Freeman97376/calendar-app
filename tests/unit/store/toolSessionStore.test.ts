@@ -172,7 +172,9 @@ describe('toolSessionStore tool run memory', () => {
       }),
     )
 
-    await expect(useToolSessionStore.getState().runSession(request)).rejects.toThrow('Planner failed')
+    await expect(useToolSessionStore.getState().runSession(request)).rejects.toThrow(
+      'Planner failed',
+    )
 
     expect(createToolRun).toHaveBeenCalledWith(
       expect.objectContaining({

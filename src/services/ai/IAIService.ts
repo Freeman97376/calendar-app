@@ -45,10 +45,7 @@ export interface IAIService {
    * Takes a natural-language command plus current frontend state and returns
    * explicit actions the UI can review and apply.
    */
-  planCalendarActions(
-    command: string,
-    context: AICalendarContext,
-  ): Promise<AICalendarActionPlan>
+  planCalendarActions(command: string, context: AICalendarContext): Promise<AICalendarActionPlan>
 
   /**
    * Runs a configured tool-session prompt and returns validated calendar event drafts.

@@ -40,7 +40,8 @@ function formatDateTime(value: string, locale: string): string {
 
 function actionTitle(action: AIAction): string {
   if (action.type === 'create_event') return action.title
-  if (action.type === 'update_event') return action.changes.title ?? `Update event ${action.eventId}`
+  if (action.type === 'update_event')
+    return action.changes.title ?? `Update event ${action.eventId}`
   if (action.type === 'delete_event') return `Delete event ${action.eventId}`
   if (action.type === 'create_todo') return action.title
   if (action.type === 'update_todo') return action.changes.title ?? `Update task ${action.todoId}`
@@ -63,7 +64,8 @@ function actionTimeLabel(
       : formatDateTime(action.changes.startAt, locale)
   }
 
-  if (action.type === 'create_todo' && action.dueDate) return `${t('todo.dueDate')}: ${action.dueDate}`
+  if (action.type === 'create_todo' && action.dueDate)
+    return `${t('todo.dueDate')}: ${action.dueDate}`
   if (action.type === 'update_todo' && action.changes.dueDate) {
     return `${t('todo.dueDate')}: ${action.changes.dueDate}`
   }
@@ -104,9 +106,7 @@ function DrawerFrame({ children, footer, title }: DrawerFrameProps) {
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">{children}</div>
 
-      <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 p-4">
-        {footer}
-      </div>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 p-4">{footer}</div>
     </aside>
   )
 }
@@ -196,7 +196,9 @@ function AIPlanApprovalDrawer() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-950">{actionTitle(action)}</p>
-                      <p className="mt-1 text-xs text-slate-500">{action.type.replace(/_/g, ' ')}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {action.type.replace(/_/g, ' ')}
+                      </p>
                     </div>
                     <span className="shrink-0 rounded bg-white px-2 py-1 text-xs text-slate-600">
                       #{index + 1}
@@ -274,7 +276,9 @@ function ActiveToolPlanApprovalDrawer() {
           onClick={() => void applyActiveToolPlan()}
           variant="primary"
         >
-          {activeTools.isApplyingCalendarDrafts ? t('enabled.applying') : t('enabled.applyToCalendar')}
+          {activeTools.isApplyingCalendarDrafts
+            ? t('enabled.applying')
+            : t('enabled.applyToCalendar')}
         </Button>
       }
       title={t('approval.activeToolPlan')}
@@ -337,7 +341,8 @@ export default function ApprovalDrawer() {
   const approvalDrawer = useApprovalDrawer()
 
   if (!approvalDrawer.isOpen || !approvalDrawer.source) return null
-  if (approvalDrawer.source === 'active-tool-calendar-drafts') return <ActiveToolPlanApprovalDrawer />
+  if (approvalDrawer.source === 'active-tool-calendar-drafts')
+    return <ActiveToolPlanApprovalDrawer />
 
   return <AIPlanApprovalDrawer />
 }

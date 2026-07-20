@@ -315,7 +315,10 @@ export class ApiAIService implements IAIService {
     )
     this.fetcher = options.fetcher ?? defaultFetcher
     this.model =
-      options.model ?? import.meta.env.VITE_AI_API_MODEL ?? import.meta.env.VITE_DEEPSEEK_MODEL ?? DEFAULT_AI_API_MODEL
+      options.model ??
+      import.meta.env.VITE_AI_API_MODEL ??
+      import.meta.env.VITE_DEEPSEEK_MODEL ??
+      DEFAULT_AI_API_MODEL
   }
 
   isAvailable(): boolean {
@@ -498,7 +501,9 @@ export class ApiAIService implements IAIService {
 
     if (!response.ok) {
       const message = await readResponseMessage(response)
-      throw new Error(`AI API request failed with status ${response.status}${message ? `: ${message}` : ''}`)
+      throw new Error(
+        `AI API request failed with status ${response.status}${message ? `: ${message}` : ''}`,
+      )
     }
 
     const body = await parseResponseJson<ChatCompletionResponse>(
@@ -739,14 +744,24 @@ function normalizeProgressToolOutput(value: unknown): unknown {
 }
 
 function latestActivationUserMessage(request: AIToolActivationRequest): string {
-  return [...request.messages].reverse().find((message) => message.role === 'user')?.content.trim() ?? ''
+  return (
+    [...request.messages]
+      .reverse()
+      .find((message) => message.role === 'user')
+      ?.content.trim() ?? ''
+  )
 }
 
 function fallbackActivationAlias(request: AIToolActivationRequest, latestMessage: string): string {
-  const fromRequirement = latestMessage.match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]?.trim()
-  const base = (fromRequirement || request.templateLabel).replace(/\s+/g, ' ').trim() || request.templateLabel
+  const fromRequirement = latestMessage
+    .match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]
+    ?.trim()
+  const base =
+    (fromRequirement || request.templateLabel).replace(/\s+/g, ' ').trim() || request.templateLabel
   const candidate = base.length > 48 ? base.slice(0, 48).trimEnd() : base
-  const existing = new Set(request.existingInstanceAliases.map((alias) => alias.trim().toLowerCase()))
+  const existing = new Set(
+    request.existingInstanceAliases.map((alias) => alias.trim().toLowerCase()),
+  )
 
   if (!existing.has(candidate.toLowerCase())) return candidate
 
@@ -758,7 +773,10 @@ function fallbackActivationAlias(request: AIToolActivationRequest, latestMessage
   return `${candidate} ${Date.now()}`
 }
 
-function fallbackActivationSummary(request: AIToolActivationRequest, latestMessage: string): string {
+function fallbackActivationSummary(
+  request: AIToolActivationRequest,
+  latestMessage: string,
+): string {
   return latestMessage
     ? `Prepared ${request.templateLabel} active tool for: ${latestMessage}`
     : `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
@@ -797,34 +815,40 @@ function normalizeToolActivationOutput(value: unknown, request?: AIToolActivatio
   const latestMessage = request ? latestActivationUserMessage(request) : ''
   const fallbackAlias = request ? fallbackActivationAlias(request, latestMessage) : undefined
   const fallbackSummary = request ? fallbackActivationSummary(request, latestMessage) : undefined
-  const fallbackReply = request && fallbackAlias
-    ? fallbackActivationReply(request, latestMessage, fallbackAlias)
-    : undefined
+  const fallbackReply =
+    request && fallbackAlias
+      ? fallbackActivationReply(request, latestMessage, fallbackAlias)
+      : undefined
   const normalizedRouteTags = normalizeStringArray(output.routeTags)
-  const routeTags = Array.isArray(normalizedRouteTags) && normalizedRouteTags.length
-    ? normalizedRouteTags
-    : request
-      ? uniqueStringArray([
-          ...request.routeTags,
-          ...request.capabilityTags,
-          request.templateLabel,
-          request.toolName,
-          fallbackAlias,
-        ])
-      : normalizedRouteTags
+  const routeTags =
+    Array.isArray(normalizedRouteTags) && normalizedRouteTags.length
+      ? normalizedRouteTags
+      : request
+        ? uniqueStringArray([
+            ...request.routeTags,
+            ...request.capabilityTags,
+            request.templateLabel,
+            request.toolName,
+            fallbackAlias,
+          ])
+        : normalizedRouteTags
 
   return compactUndefined({
     ...output,
     activationForm: isRecord(output.activationForm)
       ? Object.fromEntries(
           Object.entries(output.activationForm)
-            .map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : String(entry ?? '')])
+            .map(([key, entry]) => [
+              key,
+              typeof entry === 'string' ? entry.trim() : String(entry ?? ''),
+            ])
             .filter(([, entry]) => Boolean(entry)),
         )
       : undefined,
     activationSummary: nonEmptyString(output.activationSummary) ?? fallbackSummary,
     assistantReply: nonEmptyString(output.assistantReply) ?? fallbackReply,
-    needsMoreInfo: booleanFromUnknown(output.needsMoreInfo) ?? (request ? !latestMessage : undefined),
+    needsMoreInfo:
+      booleanFromUnknown(output.needsMoreInfo) ?? (request ? !latestMessage : undefined),
     routeTags,
     suggestedInstanceAlias: nonEmptyString(output.suggestedInstanceAlias) ?? fallbackAlias,
     warnings: normalizeWarnings(output.warnings),

@@ -49,14 +49,16 @@ describe('desktop update store', () => {
       onProgress({ downloadedBytes: 50, totalBytes: 100 })
       return backup
     })
-    configureDesktopUpdateClient(fakeClient({
-      check: vi.fn(async () => ({
-        currentVersion: '0.2.0',
-        distribution: 'installed' as const,
-        update: availableUpdate,
-      })),
-      install,
-    }))
+    configureDesktopUpdateClient(
+      fakeClient({
+        check: vi.fn(async () => ({
+          currentVersion: '0.2.0',
+          distribution: 'installed' as const,
+          update: availableUpdate,
+        })),
+        install,
+      }),
+    )
 
     await useDesktopUpdateStore.getState().check()
     expect(useDesktopUpdateStore.getState()).toMatchObject({
@@ -79,15 +81,17 @@ describe('desktop update store', () => {
   it('opens the release page instead of installing in a portable build', async () => {
     const install = vi.fn(async () => backup)
     const openReleasePage = vi.fn(async () => undefined)
-    configureDesktopUpdateClient(fakeClient({
-      check: vi.fn(async () => ({
-        currentVersion: '0.2.0',
-        distribution: 'portable' as const,
-        update: availableUpdate,
-      })),
-      install,
-      openReleasePage,
-    }))
+    configureDesktopUpdateClient(
+      fakeClient({
+        check: vi.fn(async () => ({
+          currentVersion: '0.2.0',
+          distribution: 'portable' as const,
+          update: availableUpdate,
+        })),
+        install,
+        openReleasePage,
+      }),
+    )
 
     await useDesktopUpdateStore.getState().check()
     await useDesktopUpdateStore.getState().install()

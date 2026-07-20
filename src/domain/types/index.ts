@@ -62,8 +62,8 @@ export type {
 
 /** A date range used for querying events within a view window */
 export interface DateRange {
-  start: string  // ISO datetime string
-  end: string    // ISO datetime string
+  start: string // ISO datetime string
+  end: string // ISO datetime string
 }
 
 /** Calendar view modes */

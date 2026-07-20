@@ -62,7 +62,9 @@ const suggestion: AIBreakdownResult = {
 class MockAIService implements IAIService {
   constructor(
     private readonly result: () => Promise<AIBreakdownResult>,
-    private readonly actionPlan: (context: AICalendarContext) => Promise<AICalendarActionPlan> = async () => ({
+    private readonly actionPlan: (
+      context: AICalendarContext,
+    ) => Promise<AICalendarActionPlan> = async () => ({
       summary: 'No actions',
       actions: [
         {
@@ -163,8 +165,7 @@ async function submitComposer(
   mode: 'chat' | 'plan' | 'goal',
   message: string,
 ) {
-  const modeLabel =
-    mode === 'chat' ? 'Chat' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
+  const modeLabel = mode === 'chat' ? 'Chat' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
   const submitLabel =
     mode === 'chat' ? 'Send message' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
 
@@ -289,7 +290,9 @@ describe('AI Assistant - integration', () => {
 
     await submitComposer(user, 'chat', 'Help me clarify this task')
 
-    expect(await screen.findByText('Which deadline and level of detail should I use?')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Which deadline and level of detail should I use?'),
+    ).toBeInTheDocument()
     expect(screen.getByText('Draft clarified event.')).toBeInTheDocument()
     await reviewPlan()
     expect(screen.getByText('Clarified planning block')).toBeInTheDocument()
@@ -355,7 +358,9 @@ describe('AI Assistant - integration', () => {
         ]),
       )
     })
-    expect(useEventStore.getState().events.some((event) => event.id === eventToDelete.id)).toBe(false)
+    expect(useEventStore.getState().events.some((event) => event.id === eventToDelete.id)).toBe(
+      false,
+    )
   })
 
   it('plans and applies todo create, update, delete, and schedule actions', async () => {
@@ -595,11 +600,16 @@ describe('AI Assistant - integration', () => {
     expect(researchCard).not.toBeNull()
 
     await user.click(within(researchCard as HTMLElement).getByText('Details'))
-    await user.click(within(researchCard as HTMLElement).getByRole('button', { name: 'Edit step 1' }))
+    await user.click(
+      within(researchCard as HTMLElement).getByRole('button', { name: 'Edit step 1' }),
+    )
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit Step 1' })
     await user.clear(within(dialog).getByLabelText('Step details'))
-    await user.type(within(dialog).getByLabelText('Step details'), 'Research company product updates')
+    await user.type(
+      within(dialog).getByLabelText('Step details'),
+      'Research company product updates',
+    )
     await user.click(within(dialog).getByRole('button', { name: 'Save step' }))
 
     await waitFor(() => {

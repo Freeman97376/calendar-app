@@ -111,20 +111,81 @@ export type PlanChangeProposal = {
 }
 
 export type GoalControlDashboard = {
-  project: Record<string, unknown> & { project_id: string; title: string; description: string; status: string }
+  project: Record<string, unknown> & {
+    project_id: string
+    title: string
+    description: string
+    status: string
+  }
   goal: (Record<string, unknown> & { goal_id: string; title: string }) | null
-  actions: Array<Record<string, unknown> & { action_id: string; title: string; status: string; estimated_minutes: number; execution_tier: string; due_date?: string | null }>
-  milestones: Array<Record<string, unknown> & { milestone_id: string; title: string; status: string; due_date?: string | null }>
+  actions: Array<
+    Record<string, unknown> & {
+      action_id: string
+      title: string
+      status: string
+      estimated_minutes: number
+      execution_tier: string
+      due_date?: string | null
+    }
+  >
+  milestones: Array<
+    Record<string, unknown> & {
+      milestone_id: string
+      title: string
+      status: string
+      due_date?: string | null
+    }
+  >
   metrics: MetricDefinition[]
-  policy: Record<string, unknown> & { ai_usage_mode?: AIUsageMode | null; active_tier: string; weekly_capacity_minutes: number; buffer_percent: number; planning_brief?: Record<string, unknown> }
+  policy: Record<string, unknown> & {
+    ai_usage_mode?: AIUsageMode | null
+    active_tier: string
+    weekly_capacity_minutes: number
+    buffer_percent: number
+    planning_brief?: Record<string, unknown>
+  }
   dependencies: Array<Record<string, unknown>>
   effort: Array<Record<string, unknown> & { minutes: number; occurred_on: string }>
-  health: { status: 'on_track' | 'attention' | 'at_risk' | 'paused'; factors: Array<{ key: string; label: string; value: number; severity: string }>; confidence: string }
-  critical_path: { action_ids: string[]; total_minutes: number; has_cycle: boolean; projected_finish?: string | null; usable_weekly_minutes?: number }
-  milestone_predictions: Array<{ milestone_id: string; projected_finish: string; due_date?: string | null; at_risk: boolean }>
-  review: { recommend_replan: boolean; recommend_pause: boolean; triggers: Array<{ key: string; label: string }>; trigger_count: number; safety_warnings: Array<{ key: string; label: string }>; adjustment_question: string }
-  pending_check_in: (Record<string, unknown> & { check_in_id: string; questions: QuestionBatchItem[] }) | null
-  versions: Array<Record<string, unknown> & { version_id: string; version_number: number; summary: string; source: string; created_at: string; is_pinned: boolean; snapshot?: Record<string, unknown> }>
+  health: {
+    status: 'on_track' | 'attention' | 'at_risk' | 'paused'
+    factors: Array<{ key: string; label: string; value: number; severity: string }>
+    confidence: string
+  }
+  critical_path: {
+    action_ids: string[]
+    total_minutes: number
+    has_cycle: boolean
+    projected_finish?: string | null
+    usable_weekly_minutes?: number
+  }
+  milestone_predictions: Array<{
+    milestone_id: string
+    projected_finish: string
+    due_date?: string | null
+    at_risk: boolean
+  }>
+  review: {
+    recommend_replan: boolean
+    recommend_pause: boolean
+    triggers: Array<{ key: string; label: string }>
+    trigger_count: number
+    safety_warnings: Array<{ key: string; label: string }>
+    adjustment_question: string
+  }
+  pending_check_in:
+    | (Record<string, unknown> & { check_in_id: string; questions: QuestionBatchItem[] })
+    | null
+  versions: Array<
+    Record<string, unknown> & {
+      version_id: string
+      version_number: number
+      summary: string
+      source: string
+      created_at: string
+      is_pinned: boolean
+      snapshot?: Record<string, unknown>
+    }
+  >
   proposals: PlanChangeProposal[]
   threads: GoalConversationThread[]
   usage: UsageResolution

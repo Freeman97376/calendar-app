@@ -109,7 +109,12 @@ describe('buildToolRoadmap', () => {
       project(),
       [
         milestone({ due_date: '2026-07-20', milestone_id: 'milestone-2', title: 'Second' }),
-        milestone({ due_date: '2026-07-10', milestone_id: 'milestone-1', status: 'done', title: 'First' }),
+        milestone({
+          due_date: '2026-07-10',
+          milestone_id: 'milestone-1',
+          status: 'done',
+          title: 'First',
+        }),
       ],
       [
         action({ action_id: 'action-1', milestone_id: 'milestone-1', status: 'done' }),

@@ -74,9 +74,12 @@ export class FridgeApiService implements IFridgeService {
   }
 
   async deleteInventoryItem(itemId: string): Promise<void> {
-    const response = await this.fetcher(`${this.baseUrl}/api/fridge/items/${encodeURIComponent(itemId)}`, {
-      method: 'DELETE',
-    })
+    const response = await this.fetcher(
+      `${this.baseUrl}/api/fridge/items/${encodeURIComponent(itemId)}`,
+      {
+        method: 'DELETE',
+      },
+    )
     await parseJsonResponse(response)
   }
 
@@ -89,11 +92,14 @@ export class FridgeApiService implements IFridgeService {
     itemId: string,
     changes: FridgeInventoryUpdate,
   ): Promise<FridgeInventoryItem> {
-    const response = await this.fetcher(`${this.baseUrl}/api/fridge/items/${encodeURIComponent(itemId)}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(changes),
-    })
+    const response = await this.fetcher(
+      `${this.baseUrl}/api/fridge/items/${encodeURIComponent(itemId)}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(changes),
+      },
+    )
     return FridgeInventoryItemResponseSchema.parse(await parseJsonResponse(response)).item
   }
 }

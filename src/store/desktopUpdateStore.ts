@@ -6,10 +6,7 @@ import type {
   DesktopUpdateStatus,
   PreUpdateBackup,
 } from '../domain/types'
-import {
-  desktopUpdateClient,
-  type DesktopUpdateClient,
-} from '../services/desktopUpdateService'
+import { desktopUpdateClient, type DesktopUpdateClient } from '../services/desktopUpdateService'
 
 type DesktopUpdateStore = {
   autoChecked: boolean
@@ -50,7 +47,12 @@ export const useDesktopUpdateStore = create<DesktopUpdateStore>((set, get) => ({
   ...initialState,
   check: async (automatic = false) => {
     if (automatic && get().autoChecked) return
-    if (get().status === 'checking' || get().status === 'downloading' || get().status === 'installing') return
+    if (
+      get().status === 'checking' ||
+      get().status === 'downloading' ||
+      get().status === 'installing'
+    )
+      return
     set({
       autoChecked: get().autoChecked || automatic,
       error: null,
@@ -81,7 +83,13 @@ export const useDesktopUpdateStore = create<DesktopUpdateStore>((set, get) => ({
       await get().openReleasePage()
       return
     }
-    set({ backup: null, downloadedBytes: 0, error: null, status: 'downloading', totalBytes: undefined })
+    set({
+      backup: null,
+      downloadedBytes: 0,
+      error: null,
+      status: 'downloading',
+      totalBytes: undefined,
+    })
     try {
       const backup = await client.install(({ downloadedBytes, totalBytes }) => {
         set({ downloadedBytes, status: 'downloading', totalBytes })

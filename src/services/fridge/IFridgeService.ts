@@ -25,4 +25,3 @@ export interface IFridgeService {
   getInventoryItems(): Promise<FridgeInventoryItem[]>
   updateInventoryItem(itemId: string, changes: FridgeInventoryUpdate): Promise<FridgeInventoryItem>
 }
-

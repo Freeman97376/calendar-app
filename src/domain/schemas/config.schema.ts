@@ -1,9 +1,12 @@
 import { z } from 'zod'
 
-export const AIProviderSchema = z.preprocess((value) => {
-  if (value === 'anthropic' || value === 'deepseek' || value === 'ollama') return 'api'
-  return value
-}, z.enum(['api', 'local']))
+export const AIProviderSchema = z.preprocess(
+  (value) => {
+    if (value === 'anthropic' || value === 'deepseek' || value === 'ollama') return 'api'
+    return value
+  },
+  z.enum(['api', 'local']),
+)
 
 export const RuntimeConfigSchema = z.object({
   aiProvider: AIProviderSchema.default('api'),
@@ -19,8 +22,14 @@ export const RuntimeConfigSchema = z.object({
   anthropicApiKey: z.string().default(''),
   anthropicModel: z.string().trim().min(1).default('claude-sonnet-4-6'),
   defaultEventColor: z.string().trim().min(1).default('#047857'),
-  defaultEventEndTime: z.string().regex(/^\d{2}:\d{2}$/).default('10:00'),
-  defaultEventStartTime: z.string().regex(/^\d{2}:\d{2}$/).default('09:00'),
+  defaultEventEndTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default('10:00'),
+  defaultEventStartTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default('09:00'),
   defaultEventTypeId: z.string().trim().min(1).default('general'),
   defaultTodoEventTypeId: z.string().trim().min(1).default('general'),
   defaultTodoPriority: z.enum(['high', 'medium', 'low']).default('medium'),

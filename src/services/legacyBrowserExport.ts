@@ -46,7 +46,9 @@ function arrayValue(value: unknown): unknown[] {
   return Array.isArray(value) ? value : []
 }
 
-export async function exportLegacyBrowserData(storage: Storage = localStorage): Promise<CalendarBackup> {
+export async function exportLegacyBrowserData(
+  storage: Storage = localStorage,
+): Promise<CalendarBackup> {
   const rawPreferences = readValue(storage, 'calendar_runtime_config', {})
   const preferences = Object.fromEntries(
     Object.entries(

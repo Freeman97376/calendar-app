@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 
 import { localeForLanguage, translate, type TranslationKey } from '../domain/logic/i18n'
-import { useConfigStore } from '../store/configStore'
+import { setPreAuthLanguage, useConfigStore } from '../store/configStore'
 
 export function useI18n() {
   const language = useConfigStore((state) => state.config.language)
@@ -19,6 +19,10 @@ export function useI18n() {
     ) => translate(targetLanguage, key, params),
     [],
   )
+  const setLanguage = useCallback(
+    (targetLanguage: typeof language) => setPreAuthLanguage(targetLanguage),
+    [],
+  )
 
-  return { language, locale, t, translateForLanguage }
+  return { language, locale, setLanguage, t, translateForLanguage }
 }

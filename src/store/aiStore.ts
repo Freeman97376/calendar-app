@@ -85,7 +85,9 @@ export type AIStore = {
     options?: EnabledToolRoutingOptions,
   ) => Promise<void>
   sendGoal: (goal: string) => Promise<void>
-  startTodoStepConversation: (context: Extract<AIConversationContext, { kind: 'todo-step-refinement' }>) => void
+  startTodoStepConversation: (
+    context: Extract<AIConversationContext, { kind: 'todo-step-refinement' }>,
+  ) => void
   reset: () => void
 }
 
@@ -116,7 +118,9 @@ function createMessage(role: AIMessage['role'], content: string): AIMessage {
   }
 }
 
-function selectedTodoStepsMessage(context: Extract<AIConversationContext, { kind: 'todo-step-refinement' }>): string {
+function selectedTodoStepsMessage(
+  context: Extract<AIConversationContext, { kind: 'todo-step-refinement' }>,
+): string {
   return [
     `Selected ${context.selectedItems.length} item${context.selectedItems.length === 1 ? '' : 's'} from task "${context.todoTitle}" for AI refinement:`,
     ...context.selectedItems.map(
@@ -126,7 +130,9 @@ function selectedTodoStepsMessage(context: Extract<AIConversationContext, { kind
   ].join('\n')
 }
 
-function draftActionPlanContext(plan: AICalendarActionPlan): Extract<AIConversationContext, { kind: 'draft-action-plan' }> {
+function draftActionPlanContext(
+  plan: AICalendarActionPlan,
+): Extract<AIConversationContext, { kind: 'draft-action-plan' }> {
   return {
     actionPlan: plan,
     kind: 'draft-action-plan',
@@ -248,7 +254,9 @@ function confirmationWarning(action: AIAction, context: AICalendarContext): stri
   const startsInMs = start.getTime() - now.getTime()
   if (startsInMs < 0 || startsInMs > NEAR_TERM_CONFIRMATION_WINDOW_MS) return null
 
-  const range = end ? timeRangeLabel(start, end, context) : formatActionTime(start, context.timezone)
+  const range = end
+    ? timeRangeLabel(start, end, context)
+    : formatActionTime(start, context.timezone)
   const timezone = context.timezone ? ` (${context.timezone})` : ''
 
   return `${TIME_CONFIRMATION_WARNING_PREFIX} ${actionLabel(action)} is scheduled for ${range}${timezone}. Review the time before applying.`
@@ -453,7 +461,8 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingEnabledToolRoute: null,
       }))
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to dispatch active tool route'
+      const message =
+        error instanceof Error ? error.message : 'Unable to dispatch active tool route'
       set({ error: message, isLoading: false })
     }
   },
@@ -487,7 +496,9 @@ export const useAIStore = create<AIStore>((set, get) => ({
 
     try {
       const canRouteToEnabledTool =
-        options.allowEnabledToolRouting !== false && !pendingActionPlan && !currentConversationContext
+        options.allowEnabledToolRouting !== false &&
+        !pendingActionPlan &&
+        !currentConversationContext
       const routeMatch = canRouteToEnabledTool
         ? await findEnabledToolRoute(aiService, trimmedMessage, context)
         : null
@@ -545,7 +556,8 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingSuggestion: actionPlan ? null : state.pendingSuggestion,
       }))
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unable to continue conversation'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unable to continue conversation'
       set({ error: errorMessage, isLoading: false })
     }
   },

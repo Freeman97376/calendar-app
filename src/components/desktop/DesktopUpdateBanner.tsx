@@ -20,9 +20,7 @@ export default function DesktopUpdateBanner() {
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="font-semibold">
-          {t('update.available', { version: update.update.version })}
-        </p>
+        <p className="font-semibold">{t('update.available', { version: update.update.version })}</p>
         <p className="mt-1 text-emerald-800">
           {portable ? t('update.portableNotice') : t('update.installedNotice')}
         </p>

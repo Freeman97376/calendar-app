@@ -11,11 +11,7 @@ import type {
   LongTermToolRun,
   MilestoneStatus,
 } from '../types/longTermMemory'
-import type {
-  ToolRoadmapSource,
-  ToolRoadmapStep,
-  ToolRoadmapViewModel,
-} from '../types/toolRoadmap'
+import type { ToolRoadmapSource, ToolRoadmapStep, ToolRoadmapViewModel } from '../types/toolRoadmap'
 
 function optionalString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -38,7 +34,10 @@ function milestoneStepStatus(
 ): ActionItemStatus | MilestoneStatus | 'not_started' {
   if (milestone) return milestone.status
   if (actions.some((action) => action.status === 'blocked')) return 'blocked'
-  if (actions.length && actions.every((action) => action.status === 'done' || action.status === 'skipped')) {
+  if (
+    actions.length &&
+    actions.every((action) => action.status === 'done' || action.status === 'skipped')
+  ) {
     return 'done'
   }
   if (actions.some((action) => action.status === 'scheduled')) return 'scheduled'
@@ -108,7 +107,8 @@ function stepsFromActions(actions: LongTermActionItem[]): ToolRoadmapStep[] {
 
 function summaryStep(project: LongTermProject): ToolRoadmapStep {
   const activationSummary = optionalString(project.metadata.activationSummary)
-  const title = activationSummary || project.description || project.title || 'No implementation path yet'
+  const title =
+    activationSummary || project.description || project.title || 'No implementation path yet'
 
   return {
     actionCount: 0,
@@ -149,7 +149,10 @@ export function buildToolRoadmap(
   }
 
   return {
-    goalSummary: goal?.description || project.description || optionalString(project.metadata.activationSummary),
+    goalSummary:
+      goal?.description ||
+      project.description ||
+      optionalString(project.metadata.activationSummary),
     goalTitle: longTermGoalLabel || goal?.title || project.title,
     pathSource,
     progressSummary: calculateProjectProgress(actions, milestones),

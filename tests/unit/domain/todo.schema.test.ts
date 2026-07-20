@@ -20,10 +20,12 @@ describe('TodoSchema', () => {
   })
 
   it('validates eta bounds and energy enum values', () => {
-    expect(TodoSchema.parse({ ...baseTodo, etaMinutes: '45', energyNeeded: 'high' })).toMatchObject({
-      energyNeeded: 'high',
-      etaMinutes: 45,
-    })
+    expect(TodoSchema.parse({ ...baseTodo, etaMinutes: '45', energyNeeded: 'high' })).toMatchObject(
+      {
+        energyNeeded: 'high',
+        etaMinutes: 45,
+      },
+    )
     expect(() => TodoSchema.parse({ ...baseTodo, etaMinutes: 4 })).toThrow()
     expect(() => TodoSchema.parse({ ...baseTodo, etaMinutes: 481 })).toThrow()
     expect(() => TodoSchema.parse({ ...baseTodo, energyNeeded: 'extreme' })).toThrow()

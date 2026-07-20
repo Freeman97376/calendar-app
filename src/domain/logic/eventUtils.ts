@@ -77,7 +77,9 @@ export function groupEventsByDate(events: Event[]): Record<string, Event[]> {
 }
 
 export function sortEventsByTime(events: Event[]): Event[] {
-  return [...events].sort((left, right) => compareAsc(parseISO(left.startAt), parseISO(right.startAt)))
+  return [...events].sort((left, right) =>
+    compareAsc(parseISO(left.startAt), parseISO(right.startAt)),
+  )
 }
 
 export function doesEventOverlap(left: Event, right: Event): boolean {

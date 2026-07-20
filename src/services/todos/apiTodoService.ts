@@ -7,7 +7,10 @@ export class ApiTodoService implements ITodoService {
   constructor(private readonly client: CalendarApiClient) {}
 
   async createTodo(draft: TodoDraft): Promise<Todo> {
-    const response = await this.client.post<{ success: true; todo: unknown }>('/api/calendar/todos', draft)
+    const response = await this.client.post<{ success: true; todo: unknown }>(
+      '/api/calendar/todos',
+      draft,
+    )
     return TodoSchema.parse(response.todo)
   }
 
@@ -16,7 +19,9 @@ export class ApiTodoService implements ITodoService {
   }
 
   async getTodos(): Promise<Todo[]> {
-    const response = await this.client.get<{ success: true; todos: unknown[] }>('/api/calendar/todos')
+    const response = await this.client.get<{ success: true; todos: unknown[] }>(
+      '/api/calendar/todos',
+    )
     return TodoSchema.array().parse(response.todos)
   }
 

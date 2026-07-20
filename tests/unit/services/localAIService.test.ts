@@ -155,7 +155,9 @@ describe('LocalAIService', () => {
 
     expect(result.summary).toContain('ship a demo')
     expect(result.assistantReply).toContain('Confirmed AI agent learning')
-    expect(result.milestones.map((milestone) => milestone.title)).toContain('Tool use and structured outputs')
+    expect(result.milestones.map((milestone) => milestone.title)).toContain(
+      'Tool use and structured outputs',
+    )
     expect(result.currentRecommendation).toContain('Start with AI agent foundations')
   })
 
@@ -264,7 +266,9 @@ describe('LocalAIService', () => {
 
     expect(result.calendarEvents).toHaveLength(3)
     expect(result.calendarEvents[0].startAt).toBe('2026-06-23T02:00:00.000Z')
-    expect(result.actions.map((action) => action.title)).toContain('Implement one structured tool call exercise')
+    expect(result.actions.map((action) => action.title)).toContain(
+      'Implement one structured tool call exercise',
+    )
     expect(result.confirmedRequirements).toContain('Calendar sessions: 3')
   })
 })

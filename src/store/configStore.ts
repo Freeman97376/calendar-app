@@ -86,13 +86,20 @@ export function initializeRuntimeConfig(preferences: Partial<RuntimeConfig> = {}
   return config
 }
 
+export function setPreAuthLanguage(language: RuntimeConfig['language']) {
+  const config = runtimeConfigService.saveConfig({ ...currentConfig, language })
+  currentConfig = config
+  useConfigStore.setState({ config, error: null })
+  applyRuntimeConfig(config)
+  return config
+}
+
 export function configureConfigServices(
   runtimeService: RuntimeConfigService,
   backendService?: BackendConfigApiService,
 ) {
   runtimeConfigService = runtimeService
-  backendConfigApi =
-    backendService ?? new BackendConfigApiService(apiBaseUrl)
+  backendConfigApi = backendService ?? new BackendConfigApiService(apiBaseUrl)
 }
 
 export const useConfigStore = create<ConfigStore>((set) => ({

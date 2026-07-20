@@ -44,10 +44,7 @@ function templateToolName(tool: ToolDefinition): string {
 }
 
 function defaultPrompt(tool: ToolDefinition, t: ReturnType<typeof useI18n>['t']): string {
-  return (
-    tool.activationPrompt ??
-    t('tools.defaultPrompt', { label: tool.label })
-  )
+  return tool.activationPrompt ?? t('tools.defaultPrompt', { label: tool.label })
 }
 
 export default function ToolsPanel() {
@@ -124,7 +121,10 @@ export default function ToolsPanel() {
                       {tool.capabilityTags?.length ? (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {tool.capabilityTags.map((tag) => (
-                            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600" key={tag}>
+                            <span
+                              className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                              key={tag}
+                            >
                               {tag}
                             </span>
                           ))}
@@ -161,9 +161,13 @@ export default function ToolsPanel() {
                       key={`${message.role}-${index}`}
                     >
                       <p className="text-xs font-semibold uppercase text-slate-500">
-                        {message.role === 'assistant' ? t('tools.templateAssistant') : t('tools.you')}
+                        {message.role === 'assistant'
+                          ? t('tools.templateAssistant')
+                          : t('tools.you')}
                       </p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
+                        {message.content}
+                      </p>
                     </article>
                   ))
                 ) : (
@@ -174,7 +178,10 @@ export default function ToolsPanel() {
               </div>
 
               <form className="space-y-2" onSubmit={(event) => void runActivation(event)}>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="tool-template-message">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="tool-template-message"
+                >
                   {t('tools.requirements')}
                 </label>
                 <textarea
@@ -185,7 +192,11 @@ export default function ToolsPanel() {
                   placeholder={defaultPrompt(activeTemplate, t)}
                   value={draft}
                 />
-                <Button disabled={activation.isActivating || !draft.trim()} type="submit" variant="primary">
+                <Button
+                  disabled={activation.isActivating || !draft.trim()}
+                  type="submit"
+                  variant="primary"
+                >
                   {activation.isActivating ? t('tools.confirming') : t('tools.sendRequirement')}
                 </Button>
               </form>
@@ -193,7 +204,10 @@ export default function ToolsPanel() {
               {activation.activationResult ? (
                 <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700" htmlFor="enabled-tool-alias">
+                    <label
+                      className="block text-sm font-medium text-slate-700"
+                      htmlFor="enabled-tool-alias"
+                    >
                       {t('tools.enabledToolAlias')}
                     </label>
                     <input
@@ -204,11 +218,17 @@ export default function ToolsPanel() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500">{t('tools.toolName')}</p>
-                    <p className="mt-1 text-sm text-slate-800">{templateToolName(activeTemplate)}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      {t('tools.toolName')}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-800">
+                      {templateToolName(activeTemplate)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500">{t('tools.activationSummary')}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      {t('tools.activationSummary')}
+                    </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                       {activation.activationResult.activationSummary}
                     </p>
@@ -216,7 +236,10 @@ export default function ToolsPanel() {
                   {activation.activationResult.routeTags.length ? (
                     <div className="flex flex-wrap gap-1">
                       {activation.activationResult.routeTags.map((tag) => (
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600" key={tag}>
+                        <span
+                          className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                          key={tag}
+                        >
                           {tag}
                         </span>
                       ))}
@@ -247,9 +270,13 @@ export default function ToolsPanel() {
             </p>
           ) : null}
           {activation.status ? (
-            <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{activation.status}</p>
+            <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {activation.status}
+            </p>
           ) : null}
-          {activation.isLoading ? <p className="text-sm text-slate-500">{t('tools.loadingTemplates')}</p> : null}
+          {activation.isLoading ? (
+            <p className="text-sm text-slate-500">{t('tools.loadingTemplates')}</p>
+          ) : null}
         </div>
       )}
     </div>

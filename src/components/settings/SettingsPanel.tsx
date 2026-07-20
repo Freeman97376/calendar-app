@@ -110,12 +110,7 @@ export default function SettingsPanel() {
 
   function restoreLayoutPanelSizeInput() {
     const parsed = Number(layoutPanelSizeInput)
-    if (
-      layoutPanelSizeInput.trim() === '' ||
-      Number.isNaN(parsed) ||
-      parsed < 15 ||
-      parsed > 40
-    ) {
+    if (layoutPanelSizeInput.trim() === '' || Number.isNaN(parsed) || parsed < 15 || parsed > 40) {
       setLayoutPanelSizeInput(String(runtimeDraft.layoutPanelSizePercent))
     }
   }
@@ -146,7 +141,10 @@ export default function SettingsPanel() {
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium text-slate-800">{t('settings.display')}</legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-language">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-language"
+              >
                 {t('language.label')}
               </label>
               <select
@@ -170,9 +168,14 @@ export default function SettingsPanel() {
             className="space-y-3 border-t border-slate-200 pt-4"
             hidden={auth.capabilities?.serverManagedAI ?? false}
           >
-            <legend className="text-sm font-medium text-slate-800">{t('settings.aiProviders')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.aiProviders')}
+            </legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-ai-provider">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-ai-provider"
+              >
                 {t('settings.defaultAIProvider')}
               </label>
               <select
@@ -194,13 +197,18 @@ export default function SettingsPanel() {
             {runtimeDraft.aiProvider === 'api' ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor="settings-ai-api-profile">
+                  <label
+                    className="block text-sm font-medium text-slate-700"
+                    htmlFor="settings-ai-api-profile"
+                  >
                     {t('settings.aiApiProfile')}
                   </label>
                   <select
                     className={inputClass}
                     id="settings-ai-api-profile"
-                    onChange={(event) => setAiApiProfile(event.target.value as RuntimeConfig['aiApiProfile'])}
+                    onChange={(event) =>
+                      setAiApiProfile(event.target.value as RuntimeConfig['aiApiProfile'])
+                    }
                     value={runtimeDraft.aiApiProfile}
                   >
                     <option value="deepseek">DeepSeek</option>
@@ -248,7 +256,10 @@ export default function SettingsPanel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700" htmlFor="settings-ai-api-model">
+                  <label
+                    className="block text-sm font-medium text-slate-700"
+                    htmlFor="settings-ai-api-model"
+                  >
                     {t('settings.aiApiModel')}
                   </label>
                   <input
@@ -269,7 +280,9 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.enabledToolRouting')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.enabledToolRouting')}
+            </legend>
             <label className="flex items-start gap-2 text-sm text-slate-700">
               <input
                 checked={runtimeDraft.confirmEnabledToolRouting}
@@ -287,9 +300,14 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.workspaceLayout')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.workspaceLayout')}
+            </legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-layout-position">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-layout-position"
+              >
                 {t('settings.panelPosition')}
               </label>
               <select
@@ -311,7 +329,10 @@ export default function SettingsPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-layout-size">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-layout-size"
+              >
                 {t('settings.panelSize')}
               </label>
               <div className="mt-1 flex items-center gap-3">
@@ -340,16 +361,24 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.timeContext')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.timeContext')}
+            </legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-timezone-override">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-timezone-override"
+              >
                 {t('settings.timezoneOverride')}
               </label>
               <input
                 className={inputClass}
                 id="settings-timezone-override"
                 onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, timezoneOverride: event.target.value }))
+                  setRuntimeDraft((current) => ({
+                    ...current,
+                    timezoneOverride: event.target.value,
+                  }))
                 }
                 placeholder="America/Los_Angeles"
                 value={runtimeDraft.timezoneOverride}
@@ -358,16 +387,24 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.fridgeFrontend')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.fridgeFrontend')}
+            </legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-fridge-api">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-fridge-api"
+              >
                 {t('settings.fridgeApiBaseUrl')}
               </label>
               <input
                 className={inputClass}
                 id="settings-fridge-api"
                 onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, fridgeApiBaseUrl: event.target.value }))
+                  setRuntimeDraft((current) => ({
+                    ...current,
+                    fridgeApiBaseUrl: event.target.value,
+                  }))
                 }
                 value={runtimeDraft.fridgeApiBaseUrl}
               />
@@ -375,16 +412,24 @@ export default function SettingsPanel() {
           </fieldset>
 
           <fieldset className="space-y-3 border-t border-slate-200 pt-4">
-            <legend className="text-sm font-medium text-slate-800">{t('settings.inputDefaults')}</legend>
+            <legend className="text-sm font-medium text-slate-800">
+              {t('settings.inputDefaults')}
+            </legend>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-event-color">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-event-color"
+              >
                 {t('settings.defaultEventColor')}
               </label>
               <input
                 className={inputClass}
                 id="settings-event-color"
                 onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, defaultEventColor: event.target.value }))
+                  setRuntimeDraft((current) => ({
+                    ...current,
+                    defaultEventColor: event.target.value,
+                  }))
                 }
                 type="color"
                 value={runtimeDraft.defaultEventColor}
@@ -393,7 +438,10 @@ export default function SettingsPanel() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="settings-event-start">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="settings-event-start"
+                >
                   {t('settings.defaultEventStart')}
                 </label>
                 <input
@@ -411,14 +459,20 @@ export default function SettingsPanel() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="settings-event-end">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="settings-event-end"
+                >
                   {t('settings.defaultEventEnd')}
                 </label>
                 <input
                   className={inputClass}
                   id="settings-event-end"
                   onChange={(event) =>
-                    setRuntimeDraft((current) => ({ ...current, defaultEventEndTime: event.target.value }))
+                    setRuntimeDraft((current) => ({
+                      ...current,
+                      defaultEventEndTime: event.target.value,
+                    }))
                   }
                   type="time"
                   value={runtimeDraft.defaultEventEndTime}
@@ -427,14 +481,20 @@ export default function SettingsPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-default-event-type">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-default-event-type"
+              >
                 {t('settings.defaultCalendarType')}
               </label>
               <select
                 className={inputClass}
                 id="settings-default-event-type"
                 onChange={(event) =>
-                  setRuntimeDraft((current) => ({ ...current, defaultEventTypeId: event.target.value }))
+                  setRuntimeDraft((current) => ({
+                    ...current,
+                    defaultEventTypeId: event.target.value,
+                  }))
                 }
                 value={runtimeDraft.defaultEventTypeId}
               >
@@ -445,13 +505,18 @@ export default function SettingsPanel() {
                     </option>
                   ))
                 ) : (
-                  <option value={runtimeDraft.defaultEventTypeId}>{runtimeDraft.defaultEventTypeId}</option>
+                  <option value={runtimeDraft.defaultEventTypeId}>
+                    {runtimeDraft.defaultEventTypeId}
+                  </option>
                 )}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-default-todo-type">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-default-todo-type"
+              >
                 {t('settings.defaultTaskType')}
               </label>
               <select
@@ -480,7 +545,10 @@ export default function SettingsPanel() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="settings-default-todo-priority">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-default-todo-priority"
+              >
                 {t('settings.defaultTaskPriority')}
               </label>
               <select
@@ -515,88 +583,108 @@ export default function SettingsPanel() {
 
       {auth.capabilities?.dataPortability ? <DataPortabilityPanel /> : null}
 
-      {auth.capabilities?.backendConfigEditable ? <section className="space-y-3 border-t border-slate-200 pt-4">
-        <h3 className="text-sm font-semibold text-slate-950">{t('settings.backendDeepSeekFridge')}</h3>
-        {settings.backendStatus ? (
-          <p className="text-sm text-slate-600">
-            {settings.backendStatus.deepseek.configured
-              ? t('settings.deepSeekConfigured')
-              : t('settings.deepSeekNotConfigured')}
-          </p>
-        ) : (
-          <p className="text-sm text-slate-500">
-            {settings.isLoadingBackend
-              ? t('settings.loadingBackendConfig')
-              : t('settings.backendConfigUnavailable')}
-          </p>
-        )}
+      {auth.capabilities?.backendConfigEditable ? (
+        <section className="space-y-3 border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-semibold text-slate-950">
+            {t('settings.backendDeepSeekFridge')}
+          </h3>
+          {settings.backendStatus ? (
+            <p className="text-sm text-slate-600">
+              {settings.backendStatus.deepseek.configured
+                ? t('settings.deepSeekConfigured')
+                : t('settings.deepSeekNotConfigured')}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              {settings.isLoadingBackend
+                ? t('settings.loadingBackendConfig')
+                : t('settings.backendConfigUnavailable')}
+            </p>
+          )}
 
-        <form className="space-y-3" onSubmit={(event) => void saveBackend(event)}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="settings-deepseek-key">
-              {t('settings.deepSeekApiKey')}
-            </label>
-            <input
-              className={inputClass}
-              id="settings-deepseek-key"
-              onChange={(event) =>
-                setBackendDraft((current) => ({ ...current, deepseekApiKey: event.target.value }))
-              }
-              placeholder={t('settings.leaveBlankToKeepExistingKey')}
-              type="password"
-              value={backendDraft.deepseekApiKey}
-            />
-          </div>
+          <form className="space-y-3" onSubmit={(event) => void saveBackend(event)}>
+            <div>
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-deepseek-key"
+              >
+                {t('settings.deepSeekApiKey')}
+              </label>
+              <input
+                className={inputClass}
+                id="settings-deepseek-key"
+                onChange={(event) =>
+                  setBackendDraft((current) => ({ ...current, deepseekApiKey: event.target.value }))
+                }
+                placeholder={t('settings.leaveBlankToKeepExistingKey')}
+                type="password"
+                value={backendDraft.deepseekApiKey}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="settings-deepseek-url">
-              {t('settings.deepSeekBaseUrl')}
-            </label>
-            <input
-              className={inputClass}
-              id="settings-deepseek-url"
-              onChange={(event) =>
-                setBackendDraft((current) => ({ ...current, deepseekBaseUrl: event.target.value }))
-              }
-              value={backendDraft.deepseekBaseUrl}
-            />
-          </div>
+            <div>
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-deepseek-url"
+              >
+                {t('settings.deepSeekBaseUrl')}
+              </label>
+              <input
+                className={inputClass}
+                id="settings-deepseek-url"
+                onChange={(event) =>
+                  setBackendDraft((current) => ({
+                    ...current,
+                    deepseekBaseUrl: event.target.value,
+                  }))
+                }
+                value={backendDraft.deepseekBaseUrl}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="settings-deepseek-model">
-              {t('settings.deepSeekModel')}
-            </label>
-            <input
-              className={inputClass}
-              id="settings-deepseek-model"
-              onChange={(event) =>
-                setBackendDraft((current) => ({ ...current, deepseekModel: event.target.value }))
-              }
-              value={backendDraft.deepseekModel}
-            />
-          </div>
+            <div>
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-deepseek-model"
+              >
+                {t('settings.deepSeekModel')}
+              </label>
+              <input
+                className={inputClass}
+                id="settings-deepseek-model"
+                onChange={(event) =>
+                  setBackendDraft((current) => ({ ...current, deepseekModel: event.target.value }))
+                }
+                value={backendDraft.deepseekModel}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="settings-fridge-data">
-              {t('settings.fridgeDataDirectory')}
-            </label>
-            <input
-              className={inputClass}
-              id="settings-fridge-data"
-              onChange={(event) =>
-                setBackendDraft((current) => ({ ...current, fridgeDataDir: event.target.value }))
-              }
-              value={backendDraft.fridgeDataDir}
-            />
-          </div>
+            <div>
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="settings-fridge-data"
+              >
+                {t('settings.fridgeDataDirectory')}
+              </label>
+              <input
+                className={inputClass}
+                id="settings-fridge-data"
+                onChange={(event) =>
+                  setBackendDraft((current) => ({ ...current, fridgeDataDir: event.target.value }))
+                }
+                value={backendDraft.fridgeDataDir}
+              />
+            </div>
 
-          <Button disabled={settings.isLoadingBackend} type="submit" variant="primary">
-            {t('settings.saveBackendConfig')}
-          </Button>
-        </form>
-      </section> : (
+            <Button disabled={settings.isLoadingBackend} type="submit" variant="primary">
+              {t('settings.saveBackendConfig')}
+            </Button>
+          </form>
+        </section>
+      ) : (
         <section className="border-t border-slate-200 pt-4 text-sm text-slate-600">
-          Server AI and storage configuration is managed by the operator. / 服务器 AI 与存储配置由管理员在服务器端维护。
+          Server AI and storage configuration is managed by the operator. / 服务器 AI
+          与存储配置由管理员在服务器端维护。
         </section>
       )}
 

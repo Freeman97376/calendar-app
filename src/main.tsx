@@ -11,13 +11,22 @@ import { ApiCalendarStorageAdapter } from './services/storage/apiCalendarStorage
 import { ApiTodoService } from './services/todos/apiTodoService'
 import { ApiToolPresetService } from './services/toolSessions/apiToolPresetService'
 import { configureDesktopRuntime } from './services/desktopRuntime'
-import { configureUserSessionReset, useAuthStore } from './store/authStore'
-import { configureRuntimeEnvironment, initializeRuntimeConfig } from './store/configStore'
-import { configureEventSync } from './store/eventStore'
-import { configureEventTypeService } from './store/eventTypeStore'
-import { configureLongTermMemoryClient } from './store/longTermMemoryStore'
-import { configureTodoService } from './store/todoStore'
-import { configureToolPresetService } from './store/toolSessionStore'
+import {
+  configureUserSessionRefresh,
+  configureUserSessionReset,
+  useAuthStore,
+} from './store/authStore'
+import {
+  configureRuntimeEnvironment,
+  initializeRuntimeConfig,
+  useConfigStore,
+} from './store/configStore'
+import { configureEventSync, useEventStore } from './store/eventStore'
+import { configureEventTypeService, useEventTypeStore } from './store/eventTypeStore'
+import { useFridgeStore } from './store/fridgeStore'
+import { configureLongTermMemoryClient, useLongTermMemoryStore } from './store/longTermMemoryStore'
+import { configureTodoService, useTodoStore } from './store/todoStore'
+import { configureToolPresetService, useToolSessionStore } from './store/toolSessionStore'
 import { resetUserSessionStores } from './store/resetUserSession'
 
 function configureApiBackedServices() {
@@ -30,6 +39,26 @@ function configureApiBackedServices() {
   )
   configureToolPresetService(new ApiToolPresetService())
 }
+async function refreshUserSessionStores() {
+  const memory = useLongTermMemoryStore.getState()
+  const jobs: Promise<unknown>[] = [
+    useEventStore.getState().loadEvents({
+      start: '0001-01-01T00:00:00.000Z',
+      end: '9999-12-31T23:59:59.999Z',
+    }),
+    useEventTypeStore.getState().loadEventTypes(),
+    useTodoStore.getState().loadTodos(),
+    memory.loadOverview(),
+    useToolSessionStore.getState().loadPresets(),
+    useFridgeStore.getState().loadInventory(),
+  ]
+  if (memory.selectedProjectId) jobs.push(memory.loadProjectDetails(memory.selectedProjectId))
+  const results = await Promise.allSettled(jobs)
+  if (results.some((result) => result.status === 'rejected')) {
+    throw new Error('One or more account views could not be refreshed.')
+  }
+  window.dispatchEvent(new Event('calendar:session-restored'))
+}
 
 async function start() {
   let desktopRuntimeError: string | null = null
@@ -41,11 +70,12 @@ async function start() {
       error instanceof Error ? error.message : 'Unable to start the desktop backend.'
     useAuthStore.setState({
       error: desktopRuntimeError,
-      status: 'error',
+      status: 'startup-error',
     })
   }
   configureUserSessionReset(resetUserSessionStores)
-  setApiUnauthorizedHandler(() => useAuthStore.getState().sessionExpired())
+  configureUserSessionRefresh(refreshUserSessionStores)
+  setApiUnauthorizedHandler((reason) => useAuthStore.getState().sessionExpired(reason))
   configureApiBackedServices()
 
   let bootstrap = null
@@ -62,7 +92,13 @@ async function start() {
     persistPreferences: true,
     serverManagedAI: bootstrap?.capabilities.serverManagedAI ?? false,
   })
-  initializeRuntimeConfig(bootstrap?.preferences ?? {})
+  const preAuthLanguage = useConfigStore.getState().config.language
+  initializeRuntimeConfig({
+    ...(bootstrap?.preferences ?? {}),
+    ...(!bootstrap || (bootstrap.authRequired && !bootstrap.user)
+      ? { language: preAuthLanguage }
+      : {}),
+  })
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

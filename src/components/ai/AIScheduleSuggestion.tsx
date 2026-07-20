@@ -23,7 +23,9 @@ export default function AIScheduleSuggestion({
     <section className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
       <div>
         <h2 className="text-sm font-semibold text-slate-950">{suggestion.goal}</h2>
-        {suggestion.notes ? <p className="mt-1 text-sm text-slate-600">{suggestion.notes}</p> : null}
+        {suggestion.notes ? (
+          <p className="mt-1 text-sm text-slate-600">{suggestion.notes}</p>
+        ) : null}
       </div>
 
       <div className="space-y-2">

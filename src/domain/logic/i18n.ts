@@ -13,6 +13,62 @@ export const APP_LANGUAGE_LABELS: Record<AppLanguage, string> = {
 }
 
 const en = {
+  'auth.appName': 'Calendar App',
+  'auth.accountDescription':
+    'Use the account created by the server administrator. Registration is not available.',
+  'auth.description':
+    'Use the account created by your server administrator. Public registration is not available.',
+  'auth.languageChinese': 'Chinese',
+  'auth.password': 'Password',
+  'auth.reauthDescription':
+    'Your page and unsaved work are protected. Sign in to continue; write requests will not be replayed.',
+  'auth.reauthTitle': 'Session expired',
+  'auth.retryIn': 'Try again in {seconds} seconds.',
+  'auth.signIn': 'Sign in',
+  'auth.signOut': 'Sign out',
+  'auth.signingIn': 'Signing in...',
+  'auth.switchLanguage': 'Language',
+  'auth.title': 'Sign in',
+  'auth.username': 'Username',
+  'startup.copyDiagnostic': 'Copy diagnostic',
+  'startup.copied': 'Diagnostic copied.',
+  'startup.description':
+    'Calendar App could not connect to its backend. Retry, or copy the diagnostic for support.',
+  'startup.retry': 'Retry connection',
+  'startup.retrying': 'Retrying...',
+  'startup.title': 'Calendar App could not start',
+  'checkIn.continue': 'Continue',
+  'checkIn.customPlaceholder': 'Add your own answer',
+  'checkIn.skip': 'Skip this Check-in',
+  'checkIn.skipConfirm': 'Skip this Check-in without submitting answers?',
+  'checkIn.submitting': 'Submitting...',
+  'backup.applyMerge': 'Apply merge',
+  'backup.applyReplace': 'Apply replacement',
+  'backup.choose': 'Choose Calendar backup',
+  'backup.chooseAllConflicts': 'Choose how to resolve every conflict before importing.',
+  'backup.complete': 'Import complete',
+  'backup.conflicts': 'Conflicts',
+  'backup.description':
+    'Backup files contain personal app data, but never passwords, sessions, or AI API keys.',
+  'backup.entity': 'Entity',
+  'backup.export': 'Export backup',
+  'backup.exportLegacy': 'Export legacy browser data',
+  'backup.ignored': '{count} item(s) will be ignored by policy or because local data is newer.',
+  'backup.importing': 'Importing...',
+  'backup.keepLocal': 'Keep local',
+  'backup.new': 'New',
+  'backup.previewMerge': 'Preview merge',
+  'backup.previewReplace': 'Preview replacement',
+  'backup.previewTitle': 'Import preview',
+  'backup.relationshipErrors': 'Relationship errors prevent this import.',
+  'backup.replaceConfirm':
+    'A verified safety backup is ready. Replace all current personal data now?',
+  'backup.report': '{applied} entity operation(s) applied; {ignored} preference key(s) ignored.',
+  'backup.safetyCreated': 'Safety backup',
+  'backup.title': 'Backup and restore',
+  'backup.unchanged': 'Unchanged',
+  'backup.updated': 'Updated',
+  'backup.useBackup': 'Use backup',
   'ai.actionPlan': 'Action Plan',
   'ai.addToTasks': 'Add to Tasks',
   'ai.applyActions': 'Apply Actions',
@@ -79,7 +135,8 @@ const en = {
   'enabled.draftsPreviewOnly': 'Calendar drafts stay preview-only until you apply them here.',
   'enabled.editPlanAndFeatures': 'Edit plan & characteristics',
   'enabled.editPlanTitle': 'Edit long-term plan and tool characteristics',
-  'enabled.featuresHelp': 'One characteristic per line. These are included in the tool prompt context.',
+  'enabled.featuresHelp':
+    'One characteristic per line. These are included in the tool prompt context.',
   'enabled.header': 'Active Tools',
   'enabled.implementationPath': 'Implementation path',
   'enabled.implementationPathHelp': 'One step per line. Use "Title | Details" for descriptions.',
@@ -103,7 +160,8 @@ const en = {
   'enabled.reviewPlan': 'Review plan',
   'enabled.routingEnabled': 'Routing enabled',
   'enabled.routingSignals': 'Routing signals',
-  'enabled.routingSignalsHelp': 'One signal per line. The assistant uses these to choose this tool.',
+  'enabled.routingSignalsHelp':
+    'One signal per line. The assistant uses these to choose this tool.',
   'enabled.savePlanAndFeatures': 'Save plan & characteristics',
   'enabled.saveName': 'Save name',
   'enabled.toolCharacteristics': 'Tool characteristics',
@@ -217,7 +275,8 @@ const en = {
   'settings.routingConfirmDescription':
     'Preview and confirm AI Assistant routing before dispatching to Active Tools.',
   'settings.saveBackendConfig': 'Save backend config',
-  'settings.saveBackendStatus': 'Saved backend config. DeepSeek will be used by new fridge analyses.',
+  'settings.saveBackendStatus':
+    'Saved backend config. DeepSeek will be used by new fridge analyses.',
   'settings.saveFrontendConfig': 'Save frontend config',
   'settings.saveFrontendStatus': 'Saved frontend runtime config.',
   'settings.timeContext': 'Time context',
@@ -239,7 +298,8 @@ const en = {
     'Calendar data, goals, OCR, backups, and the Calendar API stay on this computer. DeepSeek is contacted directly by the local backend.',
   'update.openRelease': 'Open download page',
   'update.portable': 'Portable edition',
-  'update.portableNotice': 'Portable editions notify only. Replace the app manually from GitHub Releases.',
+  'update.portableNotice':
+    'Portable editions notify only. Replace the app manually from GitHub Releases.',
   'update.title': 'Desktop updates',
   'update.upToDate': 'Calendar App is up to date.',
   'status.active': 'active',
@@ -266,7 +326,8 @@ const en = {
   'todo.linkLongProject': 'Link this task to a SQLite Memory project for milestones and progress.',
   'todo.loading': 'Loading...',
   'todo.longProject': 'Long project',
-  'todo.longProjectDescription': 'Create a linked SQLite Memory project with milestones and progress.',
+  'todo.longProjectDescription':
+    'Create a linked SQLite Memory project with milestones and progress.',
   'todo.low': 'Low',
   'todo.medium': 'Medium',
   'todo.noCompletedTasks': 'No completed tasks.',
@@ -288,7 +349,8 @@ const en = {
   'tools.confirming': 'Confirming...',
   'tools.configure': 'Configure {label}',
   'tools.createEnabledTool': 'Register active tool',
-  'tools.defaultPrompt': 'Describe the goal, constraints, cadence, and target outcome for this {label} instance.',
+  'tools.defaultPrompt':
+    'Describe the goal, constraints, cadence, and target outcome for this {label} instance.',
   'tools.enabledToolAlias': 'Active tool name',
   'tools.header': 'Tool Templates',
   'tools.loadingTemplates': 'Loading templates...',
@@ -304,15 +366,19 @@ const en = {
   'workspace.back': 'Back',
   'workspace.close': 'Close',
   'workspace.drawer': 'Workspace Drawer',
-  'workspace.drawerCalendarVisible': 'Calendar is visible. Details are kept in this drawer for review.',
+  'workspace.drawerCalendarVisible':
+    'Calendar is visible. Details are kept in this drawer for review.',
   'workspace.drawerDescription': 'Open a workspace area from this drawer.',
-  'workspace.drawerFocused': 'Details are open in the main area. The calendar is temporarily hidden.',
+  'workspace.drawerFocused':
+    'Details are open in the main area. The calendar is temporarily hidden.',
   'workspace.entryAiDescription': 'Chat, route requests, and review AI action plans.',
   'workspace.entryDebugDescription': 'Inspect runtime state and current app diagnostics.',
-  'workspace.entryEnabledToolsDescription': 'Manage registered active tools, progress, routing, and reviewable plans.',
+  'workspace.entryEnabledToolsDescription':
+    'Manage registered active tools, progress, routing, and reviewable plans.',
   'workspace.entrySettingsDescription': 'Providers, routing confirmation, layout, and defaults.',
   'workspace.entryTodosDescription': 'Tasks, long projects, and task detail refinement.',
-  'workspace.entryToolsDescription': 'Browse parent templates and register independent active tools.',
+  'workspace.entryToolsDescription':
+    'Browse parent templates and register independent active tools.',
   'workspace.focusPanel': 'Focus panel',
   'workspace.homeDescription': 'Open tools, tasks, settings, or event details from here.',
   'workspace.navigationAndContext': 'Navigation and context',
@@ -324,6 +390,30 @@ const en = {
 export type TranslationKey = keyof typeof en
 
 const zh: Record<TranslationKey, string> = {
+  'auth.appName': '\u65e5\u5386\u5e94\u7528',
+  'auth.accountDescription':
+    '\u8bf7\u4f7f\u7528\u670d\u52a1\u5668\u7ba1\u7406\u5458\u521b\u5efa\u7684\u8d26\u53f7\uff0c\u672c\u7cfb\u7edf\u4e0d\u5f00\u653e\u6ce8\u518c\u3002',
+  'auth.description':
+    '\u4f7f\u7528\u670d\u52a1\u5668\u7ba1\u7406\u5458\u521b\u5efa\u7684\u8d26\u53f7\u3002\u672a\u5f00\u653e\u516c\u5f00\u6ce8\u518c\u3002',
+  'auth.languageChinese': '\u4e2d\u6587',
+  'auth.password': '\u5bc6\u7801',
+  'auth.reauthDescription':
+    '\u9875\u9762\u548c\u672a\u4fdd\u5b58\u5185\u5bb9\u5df2\u53d7\u4fdd\u62a4\u3002\u91cd\u65b0\u767b\u5f55\u540e\u7ee7\u7eed\uff1b\u5199\u8bf7\u6c42\u4e0d\u4f1a\u81ea\u52a8\u91cd\u653e\u3002',
+  'auth.reauthTitle': '\u4f1a\u8bdd\u5df2\u8fc7\u671f',
+  'auth.retryIn': '{seconds} \u79d2\u540e\u91cd\u8bd5',
+  'auth.signIn': '\u767b\u5f55',
+  'auth.signOut': '\u9000\u51fa',
+  'auth.signingIn': '\u767b\u5f55\u4e2d...',
+  'auth.switchLanguage': '\u8bed\u8a00',
+  'auth.title': '\u767b\u5f55',
+  'auth.username': '\u7528\u6237\u540d',
+  'startup.copyDiagnostic': '\u590d\u5236\u8bca\u65ad\u4fe1\u606f',
+  'startup.copied': '\u5df2\u590d\u5236\u8bca\u65ad\u4fe1\u606f\u3002',
+  'startup.description':
+    'Calendar App \u65e0\u6cd5\u8fde\u63a5\u540e\u7aef\u3002\u8bf7\u91cd\u8bd5\uff0c\u6216\u590d\u5236\u8bca\u65ad\u4fe1\u606f\u5bfb\u6c42\u652f\u6301\u3002',
+  'startup.retry': '\u91cd\u8bd5\u8fde\u63a5',
+  'startup.retrying': '\u6b63\u5728\u91cd\u8bd5...',
+  'startup.title': 'Calendar App \u65e0\u6cd5\u542f\u52a8',
   'ai.actionPlan': '行动计划',
   'ai.addToTasks': '加入任务',
   'ai.applyActions': '应用操作',
@@ -625,6 +715,42 @@ const zh: Record<TranslationKey, string> = {
   'update.portableNotice': '便携版只提示新版本，请从 GitHub Releases 手动替换程序文件。',
   'update.title': '桌面端更新',
   'update.upToDate': 'Calendar App 已是最新版本。',
+  'checkIn.continue': '\u7ee7\u7eed',
+  'checkIn.customPlaceholder': '\u6dfb\u52a0\u81ea\u5df1\u7684\u56de\u7b54',
+  'checkIn.skip': '\u8df3\u8fc7\u672c\u6b21 Check-in',
+  'checkIn.skipConfirm':
+    '\u786e\u5b9a\u8df3\u8fc7\u672c\u6b21 Check-in \u4e14\u4e0d\u63d0\u4ea4\u56de\u7b54\u5417\uff1f',
+  'checkIn.submitting': '\u63d0\u4ea4\u4e2d...',
+  'backup.applyMerge': '\u6267\u884c\u5408\u5e76',
+  'backup.applyReplace': '\u6267\u884c\u8986\u76d6\u6062\u590d',
+  'backup.choose': '\u9009\u62e9 Calendar App \u5907\u4efd',
+  'backup.chooseAllConflicts':
+    '\u5bfc\u5165\u524d\u8bf7\u4e3a\u6bcf\u4e2a\u51b2\u7a81\u9009\u62e9\u5904\u7406\u65b9\u5f0f\u3002',
+  'backup.complete': '\u5bfc\u5165\u5b8c\u6210',
+  'backup.conflicts': '\u51b2\u7a81',
+  'backup.description':
+    '\u5907\u4efd\u5305\u542b\u4e2a\u4eba\u5e94\u7528\u6570\u636e\uff0c\u4f46\u4e0d\u5305\u542b\u5bc6\u7801\u3001\u4f1a\u8bdd\u6216 AI \u5bc6\u94a5\u3002',
+  'backup.entity': '\u5b9e\u4f53',
+  'backup.export': '\u5bfc\u51fa\u5907\u4efd',
+  'backup.exportLegacy': '\u5bfc\u51fa\u65e7\u6d4f\u89c8\u5668\u6570\u636e',
+  'backup.ignored':
+    '{count} \u9879\u56e0\u7b56\u7565\u6216\u672c\u673a\u6570\u636e\u8f83\u65b0\u800c\u5ffd\u7565\u3002',
+  'backup.importing': '\u6b63\u5728\u5bfc\u5165...',
+  'backup.keepLocal': '\u4fdd\u7559\u672c\u673a',
+  'backup.new': '\u65b0\u589e',
+  'backup.previewMerge': '\u9884\u89c8\u5408\u5e76',
+  'backup.previewReplace': '\u9884\u89c8\u8986\u76d6\u6062\u590d',
+  'backup.previewTitle': '\u5bfc\u5165\u9884\u68c0',
+  'backup.relationshipErrors': '\u5173\u7cfb\u9519\u8bef\u963b\u6b62\u6b64\u6b21\u5bfc\u5165\u3002',
+  'backup.replaceConfirm':
+    '\u5df2\u521b\u5efa\u5e76\u9a8c\u8bc1\u5b89\u5168\u5907\u4efd\u3002\u73b0\u5728\u8986\u76d6\u5168\u90e8\u5f53\u524d\u4e2a\u4eba\u6570\u636e\u5417\uff1f',
+  'backup.report':
+    '\u5df2\u6267\u884c {applied} \u9879\u5b9e\u4f53\u64cd\u4f5c\uff1b\u5ffd\u7565 {ignored} \u4e2a\u504f\u597d\u8bbe\u7f6e\u952e\u3002',
+  'backup.safetyCreated': '\u5b89\u5168\u5907\u4efd',
+  'backup.title': '\u5907\u4efd\u4e0e\u6062\u590d',
+  'backup.unchanged': '\u4e0d\u53d8',
+  'backup.updated': '\u66f4\u65b0',
+  'backup.useBackup': '\u4f7f\u7528\u5907\u4efd',
 }
 
 const translations: Record<AppLanguage, Record<TranslationKey, string>> = {

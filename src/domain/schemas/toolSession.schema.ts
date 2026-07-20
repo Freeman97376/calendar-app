@@ -3,11 +3,7 @@ import { z } from 'zod'
 const ISODateTimeSchema = z.string().datetime()
 const ISODateSchema = z.string().date()
 
-export const ToolSessionProviderSchema = z.enum([
-  'global',
-  'api',
-  'local',
-])
+export const ToolSessionProviderSchema = z.enum(['global', 'api', 'local'])
 
 export const ToolSessionLlmOptionsSchema = z.object({
   model: z.string().trim().optional(),

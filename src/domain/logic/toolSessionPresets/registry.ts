@@ -1,7 +1,10 @@
 import { ToolPresetSchema } from '../../schemas/toolSession.schema'
 import type { ToolPreset } from '../../types'
 import { diningPlannerPreset } from './diningPlanner'
-import { TOOL_SESSION_OUTPUT_SCHEMA_KEY, TOOL_SESSION_OUTPUT_SCHEMA_PREVIEW } from './shared/outputSchema'
+import {
+  TOOL_SESSION_OUTPUT_SCHEMA_KEY,
+  TOOL_SESSION_OUTPUT_SCHEMA_PREVIEW,
+} from './shared/outputSchema'
 import { workoutPlannerPreset } from './workoutPlanner'
 
 export { TOOL_SESSION_OUTPUT_SCHEMA_KEY, TOOL_SESSION_OUTPUT_SCHEMA_PREVIEW }

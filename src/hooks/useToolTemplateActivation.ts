@@ -43,10 +43,7 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
   const error = useLongTermMemoryStore((state) => state.error)
   const isLoading = useLongTermMemoryStore((state) => state.isLoading)
   const loadOverview = useLongTermMemoryStore((state) => state.loadOverview)
-  const activeTools = useMemo(
-    () => activeToolsFromProjects(projects, goals),
-    [goals, projects],
-  )
+  const activeTools = useMemo(() => activeToolsFromProjects(projects, goals), [goals, projects])
   const [messages, setMessages] = useState<TemplateActivationMessage[]>([])
   const [aliasDraft, setAliasDraft] = useState('')
   const [activationResult, setActivationResult] = useState<TemplateActivationResult | null>(null)
@@ -130,7 +127,7 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
       parentTemplateToolName: templateToolName(activeTemplate),
       routeTags: activationResult.routeTags.length
         ? activationResult.routeTags
-        : activeTemplate.routeTags ?? [],
+        : (activeTemplate.routeTags ?? []),
       routingEnabled: true,
       sourceToolId: activeTemplate.id,
       templateId: activeTemplate.id,

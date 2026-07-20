@@ -1,10 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { AIProgressToolKind } from '../../../domain/types'
-import type {
-  ActionItemStatus,
-  MilestoneStatus,
-} from '../../../domain/types/longTermMemory'
+import type { ActionItemStatus, MilestoneStatus } from '../../../domain/types/longTermMemory'
 import { useMemoryBackedAIDemoTool } from '../../../hooks/useMemoryBackedAIDemoTool'
 import Button from '../../ui/Button'
 
@@ -45,7 +42,13 @@ const inputClass =
 const textareaClass =
   'mt-1 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100'
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const milestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
 
 function defaultForm(fields: Field[]): Record<string, string> {
   return Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? '']))
@@ -204,7 +207,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
             {activeModule.alias ? (
               <p className="truncate text-xs font-medium text-slate-500">{activeModule.alias}</p>
             ) : null}
-            <h3 className="truncate text-sm font-semibold text-slate-950">{activeModule.toolName}</h3>
+            <h3 className="truncate text-sm font-semibold text-slate-950">
+              {activeModule.toolName}
+            </h3>
           </div>
           {activeModule.alias ? (
             <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
@@ -222,7 +227,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
               {modules.map((module) => (
                 <label className="flex items-center justify-between gap-3 text-sm" key={module.id}>
                   <span>
-                    <span className="font-medium text-slate-800">{module.alias ?? module.toolName}</span>
+                    <span className="font-medium text-slate-800">
+                      {module.alias ?? module.toolName}
+                    </span>
                     <span className="ml-2 text-xs text-slate-500">{module.toolName}</span>
                   </span>
                   <input
@@ -246,7 +253,10 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
         ) : null}
         {tool.projects.length ? (
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={`${activeModule.sourceToolId}-project`}>
+            <label
+              className="block text-sm font-medium text-slate-700"
+              htmlFor={`${activeModule.sourceToolId}-project`}
+            >
               Project
             </label>
             <select
@@ -269,17 +279,25 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
         )}
       </section>
 
-      <form className="space-y-3 border-t border-slate-200 pt-4" onSubmit={(event) => void run(event)}>
+      <form
+        className="space-y-3 border-t border-slate-200 pt-4"
+        onSubmit={(event) => void run(event)}
+      >
         {activeModule.fields.map((field) => (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={`${activeModule.sourceToolId}-${field.id}`}>
+            <label
+              className="block text-sm font-medium text-slate-700"
+              htmlFor={`${activeModule.sourceToolId}-${field.id}`}
+            >
               {field.label}
             </label>
             {field.type === 'textarea' ? (
               <textarea
                 className={textareaClass}
                 id={`${activeModule.sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 placeholder={field.placeholder}
                 value={form[field.id] ?? ''}
               />
@@ -287,7 +305,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
               <select
                 className={inputClass}
                 id={`${activeModule.sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 value={form[field.id] ?? ''}
               >
                 {field.options.map((option) => (
@@ -300,7 +320,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
               <input
                 className={inputClass}
                 id={`${activeModule.sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 placeholder={field.placeholder}
                 type={field.type}
                 value={form[field.id] ?? ''}
@@ -340,7 +362,10 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
           )}
         </div>
         <form className="space-y-2" onSubmit={(event) => void sendMessage(event)}>
-          <label className="block text-sm font-medium text-slate-700" htmlFor={`${activeModule.sourceToolId}-conversation`}>
+          <label
+            className="block text-sm font-medium text-slate-700"
+            htmlFor={`${activeModule.sourceToolId}-conversation`}
+          >
             Conversation message
           </label>
           <textarea
@@ -360,9 +385,12 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
         <section className="space-y-3 border-t border-slate-200 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h4 className="truncate text-sm font-semibold text-slate-950">{tool.selectedProject.title}</h4>
+              <h4 className="truncate text-sm font-semibold text-slate-950">
+                {tool.selectedProject.title}
+              </h4>
               <p className="mt-1 text-xs text-slate-500">
-                {tool.progressSummary.completed}/{tool.progressSummary.total} complete from {tool.progressSummary.source}
+                {tool.progressSummary.completed}/{tool.progressSummary.total} complete from{' '}
+                {tool.progressSummary.source}
               </p>
             </div>
             <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
@@ -384,15 +412,22 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
           <h4 className="text-sm font-semibold text-slate-950">Milestones</h4>
           <div className="space-y-2">
             {tool.milestones.map((milestone) => (
-              <article className="rounded-md border border-slate-200 p-3" key={milestone.milestone_id}>
+              <article
+                className="rounded-md border border-slate-200 p-3"
+                key={milestone.milestone_id}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-950">{milestone.title}</p>
+                    <p className="truncate text-sm font-semibold text-slate-950">
+                      {milestone.title}
+                    </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {milestone.due_date ? `Due ${milestone.due_date}` : 'No due date'}
                     </p>
                     {milestone.description ? (
-                      <p className="mt-2 text-xs leading-5 text-slate-600">{milestone.description}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">
+                        {milestone.description}
+                      </p>
                     ) : null}
                   </div>
                   <select
@@ -435,7 +470,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
                   <select
                     aria-label={`Action status for ${action.title}`}
                     className={`h-8 shrink-0 rounded-md border border-slate-200 px-2 text-xs ${statusClass(action.status)}`}
-                    onChange={(event) => void tool.setActionStatus(action, event.target.value as ActionItemStatus)}
+                    onChange={(event) =>
+                      void tool.setActionStatus(action, event.target.value as ActionItemStatus)
+                    }
                     value={action.status}
                   >
                     {actionStatuses.map((candidate) => (
@@ -461,7 +498,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-950">{entry.summary}</p>
                     {entry.details ? (
-                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{entry.details}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
+                        {entry.details}
+                      </p>
                     ) : null}
                   </div>
                   <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">
@@ -482,7 +521,10 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
               <h4 className="text-sm font-semibold text-slate-950">Confirmed Requirements</h4>
               <div className="mt-2 flex flex-wrap gap-2">
                 {tool.result.confirmedRequirements.map((requirement) => (
-                  <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700" key={requirement}>
+                  <span
+                    className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                    key={requirement}
+                  >
                     {requirement}
                   </span>
                 ))}
@@ -504,7 +546,10 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
             <div className="space-y-2">
               <h5 className="text-sm font-semibold text-slate-950">Calendar Preview</h5>
               {tool.result.calendarEvents.map((event, index) => (
-                <article className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${event.title}-${index}`}>
+                <article
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  key={`${event.title}-${index}`}
+                >
                   <p className="text-sm font-semibold text-slate-950">{event.title}</p>
                   <p className="mt-1 text-xs text-slate-500">
                     {formatDateTime(event.startAt)} - {formatDateTime(event.endAt)}
@@ -516,7 +561,11 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
                   ) : null}
                 </article>
               ))}
-              <Button disabled={tool.isApplyingEvents} onClick={() => void applyEvents()} variant="primary">
+              <Button
+                disabled={tool.isApplyingEvents}
+                onClick={() => void applyEvents()}
+                variant="primary"
+              >
                 {tool.isApplyingEvents ? 'Applying...' : 'Apply events'}
               </Button>
             </div>
@@ -537,7 +586,9 @@ export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProp
       {status ? (
         <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{status}</p>
       ) : null}
-      {tool.isDetailLoading || tool.isLoading ? <p className="text-sm text-slate-500">Loading memory...</p> : null}
+      {tool.isDetailLoading || tool.isLoading ? (
+        <p className="text-sm text-slate-500">Loading memory...</p>
+      ) : null}
     </div>
   )
 }

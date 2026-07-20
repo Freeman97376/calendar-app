@@ -70,7 +70,8 @@ function compactTitle(value: string): string {
 
 function actionTitle(action: AIAction): string {
   if (action.type === 'create_event') return action.title
-  if (action.type === 'update_event') return action.changes.title ?? `Update event ${action.eventId}`
+  if (action.type === 'update_event')
+    return action.changes.title ?? `Update event ${action.eventId}`
   if (action.type === 'delete_event') return `Delete event ${action.eventId}`
   if (action.type === 'create_todo') return action.title
   if (action.type === 'update_todo') return action.changes.title ?? `Update task ${action.todoId}`
@@ -81,12 +82,17 @@ function actionTitle(action: AIAction): string {
 function actionNotesLine(action: AIAction): string {
   const title = actionTitle(action)
 
-  if (action.type === 'create_event') return `${action.type}: ${title} (${action.startAt} - ${action.endAt})`
-  if (action.type === 'update_event') return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
-  if (action.type === 'create_todo') return `${action.type}: ${title}${action.dueDate ? ` (due ${action.dueDate})` : ''}`
-  if (action.type === 'update_todo') return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
+  if (action.type === 'create_event')
+    return `${action.type}: ${title} (${action.startAt} - ${action.endAt})`
+  if (action.type === 'update_event')
+    return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
+  if (action.type === 'create_todo')
+    return `${action.type}: ${title}${action.dueDate ? ` (due ${action.dueDate})` : ''}`
+  if (action.type === 'update_todo')
+    return `${action.type}: ${title} (${JSON.stringify(action.changes)})`
   if (action.type === 'schedule_todo') {
-    const when = action.startAt && action.endAt ? `${action.startAt} - ${action.endAt}` : action.date
+    const when =
+      action.startAt && action.endAt ? `${action.startAt} - ${action.endAt}` : action.date
     return `${action.type}: ${title}${when ? ` (${when})` : ''}`
   }
 
@@ -100,7 +106,8 @@ function actionDueDateFor(action: AIAction): string | undefined {
   }
   if (action.type === 'create_todo') return action.dueDate
   if (action.type === 'update_todo') return action.changes.dueDate
-  if (action.type === 'schedule_todo') return action.startAt ? localDateFromDateTime(action.startAt) : action.date
+  if (action.type === 'schedule_todo')
+    return action.startAt ? localDateFromDateTime(action.startAt) : action.date
   return undefined
 }
 
@@ -124,18 +131,25 @@ function actionEtaMinutes(action: AIAction): Todo['etaMinutes'] {
 
 function actionEnergyNeeded(action: AIAction): Todo['energyNeeded'] {
   if (action.type === 'create_todo') return action.energyNeeded
-  if (action.type === 'update_todo' && action.changes.energyNeeded) return action.changes.energyNeeded
+  if (action.type === 'update_todo' && action.changes.energyNeeded)
+    return action.changes.energyNeeded
   return 'medium'
 }
 
 function actionEventTypeId(action: AIAction, config: RuntimeConfig): string {
   if ('eventTypeId' in action && action.eventTypeId) return action.eventTypeId
-  if (action.type === 'update_event' && action.changes.eventTypeId) return action.changes.eventTypeId
+  if (action.type === 'update_event' && action.changes.eventTypeId)
+    return action.changes.eventTypeId
   if (action.type === 'update_todo' && action.changes.eventTypeId) return action.changes.eventTypeId
   return config.defaultTodoEventTypeId
 }
 
-function actionToTodo(plan: AICalendarActionPlan, action: AIAction, index: number, config: RuntimeConfig) {
+function actionToTodo(
+  plan: AICalendarActionPlan,
+  action: AIAction,
+  index: number,
+  config: RuntimeConfig,
+) {
   return {
     dueDate: actionDueDateFor(action),
     eventTypeId: actionEventTypeId(action, config),
@@ -145,7 +159,9 @@ function actionToTodo(plan: AICalendarActionPlan, action: AIAction, index: numbe
       `Summary: ${plan.summary}`,
       `Action ${index + 1}: ${actionNotesLine(action)}`,
       action.reason ? `Reason: ${action.reason}` : '',
-      ...(plan.warnings.length ? ['', 'Warnings:', ...plan.warnings.map((warning) => `- ${warning}`)] : []),
+      ...(plan.warnings.length
+        ? ['', 'Warnings:', ...plan.warnings.map((warning) => `- ${warning}`)]
+        : []),
       '',
       'Action JSON:',
       JSON.stringify(action, null, 2),
@@ -206,8 +222,14 @@ function stepToTodo(
   }
 }
 
-function suggestionToTodos(suggestion: AIBreakdownResult, focusedDate: string, config: RuntimeConfig) {
-  return suggestion.steps.map((step, index) => stepToTodo(suggestion, step, index, focusedDate, config))
+function suggestionToTodos(
+  suggestion: AIBreakdownResult,
+  focusedDate: string,
+  config: RuntimeConfig,
+) {
+  return suggestion.steps.map((step, index) =>
+    stepToTodo(suggestion, step, index, focusedDate, config),
+  )
 }
 
 function modelForProvider(provider: AIProvider, config: RuntimeConfig): string {
@@ -256,7 +278,9 @@ function toScheduledEventFromTodo(
   }
 }
 
-function eventDraftFromCreateAction(action: Extract<AIAction, { type: 'create_event' }>): EventDraft {
+function eventDraftFromCreateAction(
+  action: Extract<AIAction, { type: 'create_event' }>,
+): EventDraft {
   return {
     allDay: action.allDay,
     description: action.description,
@@ -322,28 +346,32 @@ export function useAI() {
       ...timeContext,
       focusedDate,
       today: timeContext.currentDate,
-      events: includeCalendarContext ? events.map((event) => ({
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        displayDetails: event.displayDetails,
-        startAt: event.startAt,
-        endAt: event.endAt,
-        allDay: event.allDay,
-        eventTypeId: event.eventTypeId,
-      })) : [],
-      todos: includeTodoContext ? todos.map((todo) => ({
-        id: todo.id,
-        title: todo.title,
-        notes: todo.notes,
-        status: todo.status,
-        eventTypeId: todo.eventTypeId,
-        dueDate: todo.dueDate,
-        energyNeeded: todo.energyNeeded,
-        etaMinutes: todo.etaMinutes,
-        priority: todo.priority,
-        linkedEventId: todo.linkedEventId,
-      })) : [],
+      events: includeCalendarContext
+        ? events.map((event) => ({
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            displayDetails: event.displayDetails,
+            startAt: event.startAt,
+            endAt: event.endAt,
+            allDay: event.allDay,
+            eventTypeId: event.eventTypeId,
+          }))
+        : [],
+      todos: includeTodoContext
+        ? todos.map((todo) => ({
+            id: todo.id,
+            title: todo.title,
+            notes: todo.notes,
+            status: todo.status,
+            eventTypeId: todo.eventTypeId,
+            dueDate: todo.dueDate,
+            energyNeeded: todo.energyNeeded,
+            etaMinutes: todo.etaMinutes,
+            priority: todo.priority,
+            linkedEventId: todo.linkedEventId,
+          }))
+        : [],
       eventTypes: eventTypes.map((eventType) => ({
         id: eventType.id,
         label: eventType.label,
@@ -411,7 +439,9 @@ export function useAI() {
 
   function setModel(nextModel: string) {
     const trimmedModel = nextModel.trim()
-    const saved = saveRuntimeConfig(configWithProviderModel(config, provider, trimmedModel || model))
+    const saved = saveRuntimeConfig(
+      configWithProviderModel(config, provider, trimmedModel || model),
+    )
     setStoreModel(modelForProvider(provider, saved))
   }
 

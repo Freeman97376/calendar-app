@@ -22,7 +22,12 @@ function formatEventTime(event: Event): string {
 }
 
 function detailSnippet(displayDetails: string): string {
-  return displayDetails.split('\n').find((line) => line.trim())?.trim() ?? displayDetails.trim()
+  return (
+    displayDetails
+      .split('\n')
+      .find((line) => line.trim())
+      ?.trim() ?? displayDetails.trim()
+  )
 }
 
 export default function EventCard({

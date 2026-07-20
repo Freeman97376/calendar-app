@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../src/App'
-import { RuntimeConfigService, BackendConfigApiService } from '../../src/services/config/runtimeConfigService'
+import {
+  RuntimeConfigService,
+  BackendConfigApiService,
+} from '../../src/services/config/runtimeConfigService'
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
 import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'

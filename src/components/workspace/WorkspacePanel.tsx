@@ -197,7 +197,9 @@ export default function WorkspacePanel({ compact = false, mode = 'content' }: Wo
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-950">
-            {isDrawer && mainMode === 'panel' ? t('workspace.drawer') : t(panelTitleKeys[activePanel])}
+            {isDrawer && mainMode === 'panel'
+              ? t('workspace.drawer')
+              : t(panelTitleKeys[activePanel])}
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
             {isDrawer ? t('workspace.navigationAndContext') : t('workspace.navigationAndDetails')}

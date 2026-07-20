@@ -27,8 +27,10 @@ beforeEach(() => {
       serverManagedAI: false,
     },
     error: null,
+    isSubmitting: false,
     mode: 'desktop',
     preferences: {},
+    retryAfterSeconds: null,
     status: 'authenticated',
     user: { id: 'local', role: 'admin', username: 'local' },
   })

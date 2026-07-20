@@ -84,7 +84,10 @@ function truncateRuleBefore(rule: RecurrenceRule, occurrenceDate: string): Recur
   }
 }
 
-function isSameRecurrenceRule(first: RecurrenceRule | undefined, second: RecurrenceRule | undefined): boolean {
+function isSameRecurrenceRule(
+  first: RecurrenceRule | undefined,
+  second: RecurrenceRule | undefined,
+): boolean {
   return JSON.stringify(first ?? null) === JSON.stringify(second ?? null)
 }
 
@@ -211,11 +214,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       const previousEvents = get().events
       const nextEvents = [...previousEvents, event]
 
-      set((state) => ({
-        events: [...state.events, event],
-        error: null,
-      }))
       await persistEventChanges(previousEvents, nextEvents)
+      set({
+        events: nextEvents,
+        error: null,
+      })
       return event
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to create event'
@@ -245,11 +248,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           .map((event) => (event.id === master.id ? updatedMaster : event))
           .concat(exception)
 
+        await persistEventChanges(previousEvents, nextEvents)
         set({
           events: nextEvents,
           error: null,
         })
-        await persistEventChanges(previousEvents, nextEvents)
         return exception
       }
 
@@ -279,11 +282,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           .map((event) => (event.id === master.id ? truncatedMaster : event))
           .concat(newMaster)
 
+        await persistEventChanges(previousEvents, nextEvents)
         set({
           events: nextEvents,
           error: null,
         })
-        await persistEventChanges(previousEvents, nextEvents)
         return newMaster
       }
 
@@ -294,11 +297,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
         event.id === master.id ? updatedMaster : event,
       )
 
+      await persistEventChanges(previousEvents, nextEvents)
       set({
         events: nextEvents,
         error: null,
       })
-      await persistEventChanges(previousEvents, nextEvents)
       return updatedMaster
     }
 
@@ -313,11 +316,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       const previousEvents = get().events
       const nextEvents = previousEvents.map((event) => (event.id === id ? updated : event))
 
+      await persistEventChanges(previousEvents, nextEvents)
       set({
         events: nextEvents,
         error: null,
       })
-      await persistEventChanges(previousEvents, nextEvents)
       return updated
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update event'
@@ -346,11 +349,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           event.id === master.id ? updatedMaster : event,
         )
 
+        await persistEventChanges(previousEvents, nextEvents)
         set({
           events: nextEvents,
           error: null,
         })
-        await persistEventChanges(previousEvents, nextEvents)
         return
       }
 
@@ -365,11 +368,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           event.id === master.id ? truncatedMaster : event,
         )
 
+        await persistEventChanges(previousEvents, nextEvents)
         set({
           events: nextEvents,
           error: null,
         })
-        await persistEventChanges(previousEvents, nextEvents)
         return
       }
 
@@ -378,22 +381,22 @@ export const useEventStore = create<EventStore>((set, get) => ({
         (event) => event.id !== master.id && event.exceptionFor !== master.id,
       )
 
+      await persistEventChanges(previousEvents, nextEvents)
       set({
         events: nextEvents,
         error: null,
       })
-      await persistEventChanges(previousEvents, nextEvents)
       return
     }
 
     const previousEvents = get().events
     const nextEvents = previousEvents.filter((event) => event.id !== id)
 
+    await persistEventChanges(previousEvents, nextEvents)
     set({
       events: nextEvents,
       error: null,
     })
-    await persistEventChanges(previousEvents, nextEvents)
   },
   reset: (events = []) => set({ events, isLoading: false, error: null }),
 }))

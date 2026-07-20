@@ -159,7 +159,7 @@ export const AICalendarActionPlanSchema = z
             ? updateEventTimesAreValid(action)
             : action.type === 'schedule_todo'
               ? scheduleTodoTimesAreValid(action)
-            : true
+              : true
 
       if (!validTimes) {
         ctx.addIssue({
@@ -346,7 +346,9 @@ export const AIProgressToolMilestoneUpsertSchema = z.object({
   description: z.string().trim().optional(),
   dueDate: ISODateSchema.optional(),
   existingMilestoneId: z.string().trim().min(1).optional(),
-  status: z.enum(['not_started', 'in_progress', 'done', 'blocked', 'skipped']).default('not_started'),
+  status: z
+    .enum(['not_started', 'in_progress', 'done', 'blocked', 'skipped'])
+    .default('not_started'),
   title: z.string().trim().min(1).max(160),
 })
 
@@ -361,7 +363,9 @@ export const AIProgressToolActionUpsertSchema = z.object({
 
 export const AIProgressToolProgressLogSchema = z.object({
   details: z.string().trim().optional(),
-  logType: z.enum(['update', 'decision', 'blocker', 'review', 'tool_result']).default('tool_result'),
+  logType: z
+    .enum(['update', 'decision', 'blocker', 'review', 'tool_result'])
+    .default('tool_result'),
   summary: z.string().trim().min(1).max(500),
 })
 

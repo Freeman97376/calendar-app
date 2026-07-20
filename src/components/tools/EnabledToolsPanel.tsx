@@ -16,7 +16,13 @@ import ToolRoadmapPanel from './ToolRoadmapPanel'
 import GoalControlDashboardPanel from './GoalControlDashboard'
 
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const milestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
 const projectStatuses: ProjectStatus[] = ['active', 'paused', 'completed']
 
 function statusLabel(value: string, t: ReturnType<typeof useI18n>['t']): string {
@@ -46,7 +52,9 @@ export default function EnabledToolsPanel() {
   const approvalDrawer = useApprovalDrawer()
   const workspace = useWorkspacePanel()
   const activeInstance = enabledTools.activeInstance
-  const summaries = useActiveToolSummaries(enabledTools.instances.map((instance) => instance.projectId))
+  const summaries = useActiveToolSummaries(
+    enabledTools.instances.map((instance) => instance.projectId),
+  )
   const [aliasDraft, setAliasDraft] = useState('')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
   const [isPromptDetailsOpen, setIsPromptDetailsOpen] = useState(false)
@@ -62,14 +70,19 @@ export default function EnabledToolsPanel() {
   )
   const visibleToolFeatures = activeInstance?.toolFeatures.length
     ? activeInstance.toolFeatures
-    : activeInstance?.routeTags ?? []
+    : (activeInstance?.routeTags ?? [])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white">
       <div className="border-b border-slate-200 px-4 py-4">
         <div className="flex items-start justify-between gap-3">
-          <div><h2 className="text-base font-semibold text-slate-950">{t('enabled.header')}</h2><p className="mt-1 text-sm text-slate-600">{t('enabled.description')}</p></div>
-          <Button onClick={() => workspace.openPanel('tools')} variant="ghost">Templates</Button>
+          <div>
+            <h2 className="text-base font-semibold text-slate-950">{t('enabled.header')}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t('enabled.description')}</p>
+          </div>
+          <Button onClick={() => workspace.openPanel('tools')} variant="ghost">
+            Templates
+          </Button>
         </div>
       </div>
 
@@ -81,8 +94,14 @@ export default function EnabledToolsPanel() {
               const summary = summaries[instance.projectId]
               const nextMilestone = summary?.milestones
                 .filter((milestone) => !['done', 'skipped'].includes(milestone.status))
-                .sort((left, right) => String(left.due_date || '9999').localeCompare(String(right.due_date || '9999')))[0]
-              const plannedMinutes = summary?.actions.reduce((total, action) => total + Number(action.estimated_minutes || 0), 0) ?? 0
+                .sort((left, right) =>
+                  String(left.due_date || '9999').localeCompare(String(right.due_date || '9999')),
+                )[0]
+              const plannedMinutes =
+                summary?.actions.reduce(
+                  (total, action) => total + Number(action.estimated_minutes || 0),
+                  0,
+                ) ?? 0
 
               return (
                 <article
@@ -106,7 +125,38 @@ export default function EnabledToolsPanel() {
                         <p className="mt-1 text-xs text-slate-500">
                           {t('enabled.parentTemplate')}: {instance.parentTemplateLabel}
                         </p>
-                        {summary ? <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-slate-600"><span className="rounded bg-white px-1.5 py-0.5">{summary.health.status.replace('_', ' ')}</span><span className="rounded bg-white px-1.5 py-0.5">{summary.policy.active_tier}</span><span className="rounded bg-white px-1.5 py-0.5">AI {summary.usage.effective_mode}</span><span className="rounded bg-white px-1.5 py-0.5">{summary.metrics.length} metrics</span><span className="rounded bg-white px-1.5 py-0.5">{plannedMinutes}/{summary.policy.weekly_capacity_minutes} min</span><span className="rounded bg-white px-1.5 py-0.5">{summary.actions.filter((action) => !['done', 'skipped'].includes(action.status)).length} open</span>{nextMilestone ? <span className="rounded bg-white px-1.5 py-0.5">Next: {nextMilestone.title}</span> : null}</div> : null}
+                        {summary ? (
+                          <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-slate-600">
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              {summary.health.status.replace('_', ' ')}
+                            </span>
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              {summary.policy.active_tier}
+                            </span>
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              AI {summary.usage.effective_mode}
+                            </span>
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              {summary.metrics.length} metrics
+                            </span>
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              {plannedMinutes}/{summary.policy.weekly_capacity_minutes} min
+                            </span>
+                            <span className="rounded bg-white px-1.5 py-0.5">
+                              {
+                                summary.actions.filter(
+                                  (action) => !['done', 'skipped'].includes(action.status),
+                                ).length
+                              }{' '}
+                              open
+                            </span>
+                            {nextMilestone ? (
+                              <span className="rounded bg-white px-1.5 py-0.5">
+                                Next: {nextMilestone.title}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <span className="shrink-0 rounded bg-white px-2 py-1 text-xs text-slate-600">
                         {instance.toolName}
@@ -156,16 +206,24 @@ export default function EnabledToolsPanel() {
         {activeInstance ? (
           <section className="space-y-4 border-t border-slate-200 pt-4">
             <GoalControlDashboardPanel projectId={activeInstance.projectId} />
-            <details className="rounded-md border border-slate-200 bg-white p-3" onToggle={(event) => setIsPromptDetailsOpen(event.currentTarget.open)}>
+            <details
+              className="rounded-md border border-slate-200 bg-white p-3"
+              onToggle={(event) => setIsPromptDetailsOpen(event.currentTarget.open)}
+            >
               <summary className="cursor-pointer text-sm font-semibold text-slate-900">
                 How AI assists this plan / LLM 如何协助计划
               </summary>
-              {isPromptDetailsOpen ? <><p className="mt-2 text-xs leading-5 text-slate-500">
-                This is the user-facing operating prompt. System prompts, hidden reasoning, keys, and complete internal context are never shown here.
-              </p>
-              <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs leading-5 text-slate-100">
-                {enabledTools.promptFramework}
-              </pre></> : null}
+              {isPromptDetailsOpen ? (
+                <>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    This is the user-facing operating prompt. System prompts, hidden reasoning,
+                    keys, and complete internal context are never shown here.
+                  </p>
+                  <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-3 text-xs leading-5 text-slate-100">
+                    {enabledTools.promptFramework}
+                  </pre>
+                </>
+              ) : null}
             </details>
             <div>
               <div className="flex items-start justify-between gap-3">
@@ -178,7 +236,9 @@ export default function EnabledToolsPanel() {
                     {t('enabled.parentTemplate')}: {activeInstance.parentTemplateLabel}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded px-2 py-1 text-xs ${statusClass(activeInstance.status)}`}>
+                <span
+                  className={`shrink-0 rounded px-2 py-1 text-xs ${statusClass(activeInstance.status)}`}
+                >
                   {statusLabel(activeInstance.status, t)}
                 </span>
               </div>
@@ -239,7 +299,9 @@ export default function EnabledToolsPanel() {
                   <ul className="mt-2 space-y-1 text-sm text-slate-700">
                     {visibleToolFeatures.map((feature) => (
                       <li className="flex gap-2" key={feature}>
-                        <span aria-hidden="true" className="text-emerald-700">•</span>
+                        <span aria-hidden="true" className="text-emerald-700">
+                          •
+                        </span>
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -256,7 +318,10 @@ export default function EnabledToolsPanel() {
                   </h4>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {activeInstance.routeTags.map((tag) => (
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600" key={tag}>
+                      <span
+                        className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                        key={tag}
+                      >
                         {tag}
                       </span>
                     ))}
@@ -271,17 +336,24 @@ export default function EnabledToolsPanel() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-slate-950">{t('enabled.milestones')}</h4>
                 {enabledTools.milestones.map((milestone) => (
-                  <article className="rounded-md border border-slate-200 bg-white p-3" key={milestone.milestone_id}>
+                  <article
+                    className="rounded-md border border-slate-200 bg-white p-3"
+                    key={milestone.milestone_id}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">{milestone.title}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {milestone.title}
+                        </p>
                         <p className="mt-1 text-xs text-slate-500">
                           {milestone.due_date
                             ? `${t('todo.dueDate')}: ${milestone.due_date}`
                             : t('enabled.noDueDate')}
                         </p>
                         {milestone.description ? (
-                          <p className="mt-2 text-xs leading-5 text-slate-600">{milestone.description}</p>
+                          <p className="mt-2 text-xs leading-5 text-slate-600">
+                            {milestone.description}
+                          </p>
                         ) : null}
                       </div>
                       <select
@@ -312,17 +384,24 @@ export default function EnabledToolsPanel() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-slate-950">{t('enabled.actions')}</h4>
                 {enabledTools.actions.map((action) => (
-                  <article className="rounded-md border border-slate-200 bg-white p-3" key={action.action_id}>
+                  <article
+                    className="rounded-md border border-slate-200 bg-white p-3"
+                    key={action.action_id}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">{action.title}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {action.title}
+                        </p>
                         <p className="mt-1 text-xs text-slate-500">
                           {action.due_date
                             ? `${t('todo.dueDate')}: ${action.due_date}`
                             : t('enabled.noDueDate')}
                         </p>
                         {action.description ? (
-                          <p className="mt-2 text-xs leading-5 text-slate-600">{action.description}</p>
+                          <p className="mt-2 text-xs leading-5 text-slate-600">
+                            {action.description}
+                          </p>
                         ) : null}
                       </div>
                       <select
@@ -352,7 +431,9 @@ export default function EnabledToolsPanel() {
             {enabledTools.calendarDrafts.length ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-sm font-semibold text-slate-950">{t('enabled.calendarPreview')}</h4>
+                  <h4 className="text-sm font-semibold text-slate-950">
+                    {t('enabled.calendarPreview')}
+                  </h4>
                   <Button
                     onClick={() => approvalDrawer.open('active-tool-calendar-drafts')}
                     variant="primary"
@@ -361,10 +442,14 @@ export default function EnabledToolsPanel() {
                   </Button>
                 </div>
                 {enabledTools.calendarDrafts.slice(0, 3).map((draft, index) => (
-                  <article className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${draft.title}-${index}`}>
+                  <article
+                    className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                    key={`${draft.title}-${index}`}
+                  >
                     <p className="text-sm font-medium text-slate-900">{draft.title}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {formatDateTime(draft.startAt, locale)} - {formatDateTime(draft.endAt, locale)}
+                      {formatDateTime(draft.startAt, locale)} -{' '}
+                      {formatDateTime(draft.endAt, locale)}
                     </p>
                     {draft.displayDetails ? (
                       <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
@@ -393,10 +478,15 @@ export default function EnabledToolsPanel() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-slate-950">{t('enabled.progressLog')}</h4>
                 {enabledTools.progress.slice(0, 5).map((entry) => (
-                  <article className="rounded-md border border-slate-200 bg-white p-3" key={entry.progress_id}>
+                  <article
+                    className="rounded-md border border-slate-200 bg-white p-3"
+                    key={entry.progress_id}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">{entry.summary}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {entry.summary}
+                        </p>
                         {entry.details ? (
                           <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
                             {entry.details}
@@ -416,13 +506,22 @@ export default function EnabledToolsPanel() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-slate-950">{t('enabled.toolRuns')}</h4>
                 {enabledTools.toolRuns.slice(0, 5).map((toolRun) => (
-                  <article className="rounded-md border border-slate-200 bg-white p-3" key={toolRun.tool_run_id}>
+                  <article
+                    className="rounded-md border border-slate-200 bg-white p-3"
+                    key={toolRun.tool_run_id}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">{toolRun.intent}</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-600">{toolRun.output_summary}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {toolRun.intent}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                          {toolRun.output_summary}
+                        </p>
                       </div>
-                      <span className={`shrink-0 rounded px-2 py-1 text-xs ${statusClass(toolRun.status)}`}>
+                      <span
+                        className={`shrink-0 rounded px-2 py-1 text-xs ${statusClass(toolRun.status)}`}
+                      >
                         {statusLabel(toolRun.status, t)}
                       </span>
                     </div>
@@ -434,7 +533,9 @@ export default function EnabledToolsPanel() {
         ) : null}
 
         {enabledTools.error ? (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{enabledTools.error}</p>
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {enabledTools.error}
+          </p>
         ) : null}
         {enabledTools.isLoading || enabledTools.isDetailLoading ? (
           <p className="text-sm text-slate-500">{t('enabled.loadingMemory')}</p>

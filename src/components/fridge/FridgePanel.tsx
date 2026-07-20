@@ -66,7 +66,10 @@ function FridgeContent() {
             type="file"
           />
 
-          <label className="block text-sm font-medium text-slate-700" htmlFor="receipt-purchase-date">
+          <label
+            className="block text-sm font-medium text-slate-700"
+            htmlFor="receipt-purchase-date"
+          >
             Purchase date
           </label>
           <input

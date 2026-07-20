@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { LocalEventTypeService } from '../../../src/services/eventTypes/localEventTypeService'
-import {
-  configureEventTypeService,
-  useEventTypeStore,
-} from '../../../src/store/eventTypeStore'
+import { configureEventTypeService, useEventTypeStore } from '../../../src/store/eventTypeStore'
 
 describe('eventTypeStore', () => {
   beforeEach(() => {

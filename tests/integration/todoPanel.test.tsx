@@ -7,10 +7,7 @@ import { LocalEventTypeService } from '../../src/services/eventTypes/localEventT
 import { LocalTodoService } from '../../src/services/todos/localTodoService'
 import { useCalendarStore } from '../../src/store/calendarStore'
 import { configureEventSync, useEventStore } from '../../src/store/eventStore'
-import {
-  configureEventTypeService,
-  useEventTypeStore,
-} from '../../src/store/eventTypeStore'
+import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
 import { useAIStore } from '../../src/store/aiStore'
 import { configureTodoService, useTodoStore } from '../../src/store/todoStore'
 import { useUIStore } from '../../src/store/uiStore'
@@ -137,7 +134,9 @@ describe('Todo panel', () => {
 
     await user.type(screen.getByLabelText('Task'), 'Archive completed task')
     await user.click(screen.getByRole('button', { name: 'Add task' }))
-    await user.click(await screen.findByRole('button', { name: /Mark task Archive completed task done/i }))
+    await user.click(
+      await screen.findByRole('button', { name: /Mark task Archive completed task done/i }),
+    )
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
@@ -208,7 +207,10 @@ describe('Todo panel', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit Step 2' })
     await user.clear(within(dialog).getByLabelText('Step details'))
-    await user.type(within(dialog).getByLabelText('Step details'), 'Review final launch checklist with owner')
+    await user.type(
+      within(dialog).getByLabelText('Step details'),
+      'Review final launch checklist with owner',
+    )
     await user.click(within(dialog).getByRole('button', { name: 'Save step' }))
 
     await waitFor(() => {
@@ -243,9 +245,7 @@ describe('Todo panel', () => {
     await user.click(screen.getByRole('button', { name: 'Mark step 2 done' }))
 
     await waitFor(() => {
-      expect(useTodoStore.getState().todos[0].notes).toContain(
-        '2. [x] Review launch checklist',
-      )
+      expect(useTodoStore.getState().todos[0].notes).toContain('2. [x] Review launch checklist')
     })
     expect(useTodoStore.getState().todos[0].notes).toContain('1. Draft launch checklist')
     expect(screen.getByText('Marked step 2 done.')).toBeInTheDocument()
@@ -278,7 +278,10 @@ describe('Todo panel', () => {
     await user.click(screen.getByRole('button', { name: 'Edit step 1' }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit Step 1' })
     await user.clear(within(dialog).getByLabelText('Step details'))
-    await user.type(within(dialog).getByLabelText('Step details'), 'Research company product updates')
+    await user.type(
+      within(dialog).getByLabelText('Step details'),
+      'Research company product updates',
+    )
     await user.click(within(dialog).getByRole('button', { name: 'Save step' }))
 
     await waitFor(() => {
@@ -321,7 +324,9 @@ describe('Todo panel', () => {
     expect(screen.getByText('Task refinement context')).toBeInTheDocument()
     expect(screen.getByText('AI: Launch prep')).toBeInTheDocument()
     expect(screen.getAllByText(/Step 1: Draft launch checklist/i).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Step 2 \(completed\): Review launch checklist/i).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/Step 2 \(completed\): Review launch checklist/i).length,
+    ).toBeGreaterThan(0)
     expect(screen.getByText(/I have these selected task items/i)).toBeInTheDocument()
   })
 
@@ -340,7 +345,9 @@ describe('Todo panel', () => {
     expect(firstCard).not.toBeNull()
     await user.click(within(firstCard as HTMLElement).getByText('Details'))
     await user.click(within(firstCard as HTMLElement).getByRole('button', { name: 'Select all' }))
-    await user.click(within(firstCard as HTMLElement).getByRole('button', { name: 'Send selected to AI' }))
+    await user.click(
+      within(firstCard as HTMLElement).getByRole('button', { name: 'Send selected to AI' }),
+    )
 
     expect(await screen.findByText('AI: First prep')).toBeInTheDocument()
 
@@ -349,7 +356,9 @@ describe('Todo panel', () => {
     expect(secondCard).not.toBeNull()
     await user.click(within(secondCard as HTMLElement).getByText('Details'))
     await user.click(within(secondCard as HTMLElement).getByRole('button', { name: 'Select all' }))
-    await user.click(within(secondCard as HTMLElement).getByRole('button', { name: 'Send selected to AI' }))
+    await user.click(
+      within(secondCard as HTMLElement).getByRole('button', { name: 'Send selected to AI' }),
+    )
 
     expect(await screen.findByText('AI: Second prep')).toBeInTheDocument()
     expect(screen.queryByText('AI: First prep')).not.toBeInTheDocument()

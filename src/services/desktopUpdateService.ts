@@ -26,9 +26,9 @@ export interface DesktopUpdateClient {
 let pendingUpdate: Update | null = null
 
 async function errorMessage(response: Response): Promise<string> {
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: { message?: string } }
-    | null
+  const payload = (await response.json().catch(() => null)) as {
+    error?: { message?: string }
+  } | null
   return payload?.error?.message ?? `Update backup failed with status ${response.status}.`
 }
 
@@ -83,11 +83,14 @@ export const desktopUpdateClient: DesktopUpdateClient = {
 
     let downloadedBytes = 0
     let totalBytes: number | undefined
-    await update.download((event) => {
-      if (event.event === 'Started') totalBytes = event.data.contentLength
-      if (event.event === 'Progress') downloadedBytes += event.data.chunkLength
-      onProgress({ downloadedBytes, totalBytes })
-    }, { timeout: 5 * 60_000 })
+    await update.download(
+      (event) => {
+        if (event.event === 'Started') totalBytes = event.data.contentLength
+        if (event.event === 'Progress') downloadedBytes += event.data.chunkLength
+        onProgress({ downloadedBytes, totalBytes })
+      },
+      { timeout: 5 * 60_000 },
+    )
 
     const backup = await createPreUpdateBackup(update)
     await update.install()

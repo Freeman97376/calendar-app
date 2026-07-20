@@ -32,7 +32,8 @@ function setupMessage(
 
 function actionTitle(action: AIAction): string {
   if (action.type === 'create_event') return action.title
-  if (action.type === 'update_event') return action.changes.title ?? `Update event ${action.eventId}`
+  if (action.type === 'update_event')
+    return action.changes.title ?? `Update event ${action.eventId}`
   if (action.type === 'delete_event') return `Delete event ${action.eventId}`
   if (action.type === 'create_todo') return action.title
   if (action.type === 'update_todo') return action.changes.title ?? `Update task ${action.todoId}`
@@ -332,7 +333,11 @@ export default function AIAssistantPanel() {
               {ai.pendingEnabledToolRoute.rewrittenInstruction}
             </div>
             <div className="flex gap-2">
-              <Button disabled={ai.isLoading} onClick={() => void ai.confirmEnabledToolRoute()} variant="primary">
+              <Button
+                disabled={ai.isLoading}
+                onClick={() => void ai.confirmEnabledToolRoute()}
+                variant="primary"
+              >
                 {t('ai.dispatch')}
               </Button>
               <Button disabled={ai.isLoading} onClick={ai.clearEnabledToolRoute}>

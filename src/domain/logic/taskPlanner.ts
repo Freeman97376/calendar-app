@@ -53,7 +53,9 @@ function addMinutes(date: Date, minutes: number): Date {
 }
 
 function overlaps(left: BusyBlock, right: BusyBlock): boolean {
-  return new Date(left.startAt) < new Date(right.endAt) && new Date(right.startAt) < new Date(left.endAt)
+  return (
+    new Date(left.startAt) < new Date(right.endAt) && new Date(right.startAt) < new Date(left.endAt)
+  )
 }
 
 function sortedCandidateTodos(todos: Todo[]): Todo[] {
@@ -63,8 +65,12 @@ function sortedCandidateTodos(todos: Todo[]): Todo[] {
       const priorityDelta = priorityRank[right.priority] - priorityRank[left.priority]
       if (priorityDelta) return priorityDelta
 
-      const leftDue = left.dueDate ? new Date(`${left.dueDate}T00:00:00`).getTime() : Number.POSITIVE_INFINITY
-      const rightDue = right.dueDate ? new Date(`${right.dueDate}T00:00:00`).getTime() : Number.POSITIVE_INFINITY
+      const leftDue = left.dueDate
+        ? new Date(`${left.dueDate}T00:00:00`).getTime()
+        : Number.POSITIVE_INFINITY
+      const rightDue = right.dueDate
+        ? new Date(`${right.dueDate}T00:00:00`).getTime()
+        : Number.POSITIVE_INFINITY
       if (leftDue !== rightDue) return leftDue - rightDue
 
       const energyDelta = energyRank[right.energyNeeded] - energyRank[left.energyNeeded]
@@ -92,8 +98,12 @@ function findSlot(
 
   while (cursor <= rangeEnd) {
     const isoDate = toLocalISODate(cursor)
-    let candidateStart = new Date(Math.max(dateAtTime(isoDate, options.dayStartTime).getTime(), rangeStart.getTime()))
-    const dayEnd = new Date(Math.min(dateAtTime(isoDate, options.dayEndTime).getTime(), rangeEnd.getTime()))
+    let candidateStart = new Date(
+      Math.max(dateAtTime(isoDate, options.dayStartTime).getTime(), rangeStart.getTime()),
+    )
+    const dayEnd = new Date(
+      Math.min(dateAtTime(isoDate, options.dayEndTime).getTime(), rangeEnd.getTime()),
+    )
     const dayBusy = busyBlocks.filter((block) =>
       overlaps(block, {
         startAt: dateAtTime(isoDate, options.dayStartTime).toISOString(),
