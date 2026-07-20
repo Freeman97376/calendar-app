@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import date, timedelta
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.goal_control import GoalControlService, GoalControlValidationError
-from backend.database import CheckInRecord
+from sqlalchemy import select
+
+from backend.database import AIUsageEventRecord, AIUsageMonthlyRecord, CheckInRecord, UserPreferenceRecord
+from backend.goal_control import GoalControlConflictError, GoalControlService, GoalControlValidationError
 from backend.memory import LongTermMemoryService
 from backend.user_data import BackupValidationError, DataPortabilityService, checksum_entities
 
@@ -70,6 +73,32 @@ class GoalControlTests(unittest.TestCase):
         with self.assertRaises(GoalControlValidationError):
             self.alice.add_dependency("shared-project", {"predecessor_action_id": "review", "successor_action_id": "train"})
 
+    def test_thread_project_goal_is_derived_and_conflicts_are_rejected(self) -> None:
+        activated = self.activate(self.alice)
+        project_id = activated["project"]["project_id"]
+        goal_id = activated["goal"]["goal_id"]
+
+        linked = self.alice.create_thread(
+            {"thread_id": "linked-thread", "title": "Linked", "project_id": project_id}
+        )
+        self.assertEqual(linked["goal_id"], goal_id)
+
+        with self.assertRaisesRegex(GoalControlValidationError, "conflicts"):
+            self.alice.create_thread(
+                {
+                    "thread_id": "conflicting-thread",
+                    "title": "Conflict",
+                    "project_id": project_id,
+                    "goal_id": "different-goal",
+                }
+            )
+
+        standalone = self.alice.create_thread({"thread_id": "standalone-thread", "title": "Standalone"})
+        with self.assertRaisesRegex(GoalControlValidationError, "conflicts"):
+            self.alice.update_thread(standalone["thread_id"], {"project_id": project_id, "goal_id": "different-goal"})
+        updated = self.alice.update_thread(standalone["thread_id"], {"project_id": project_id})
+        self.assertEqual((updated["project_id"], updated["goal_id"]), (project_id, goal_id))
+
     def test_activation_rejects_standard_plan_above_buffered_capacity(self) -> None:
         thread = self.alice.create_thread({"title": "Overloaded plan"})
         plan = mock_plan()
@@ -124,6 +153,81 @@ class GoalControlTests(unittest.TestCase):
         self.assertEqual(before_dst, "2026-03-08T04:00:00Z")
         self.assertEqual(after_dst, "2026-03-09T03:00:00Z")
 
+    def test_concurrent_check_in_ensure_creates_one_project_period(self) -> None:
+        self.activate(self.alice)
+        services = [
+            GoalControlService(engine=self.alice.engine, user_id="alice")
+            for _index in range(4)
+        ]
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda service: service.ensure_check_ins("2026-07-14"), services))
+
+        returned_ids = {
+            item["check_in_id"]
+            for result in results
+            for item in result
+        }
+        self.assertEqual(len(returned_ids), 1)
+        with self.alice.session_factory() as session:
+            records = session.scalars(select(CheckInRecord)).all()
+        self.assertEqual(len(records), 1)
+
+    def test_existing_pending_check_in_periods_are_not_rewritten(self) -> None:
+        self.activate(self.alice)
+        timestamps = {
+            "created_at": "2026-07-13T20:00:00Z",
+            "updated_at": "2026-07-13T20:00:00Z",
+        }
+        with self.alice.session_factory.begin() as session:
+            session.add_all(
+                [
+                    CheckInRecord(
+                        check_in_id="pending-old",
+                        user_id="alice",
+                        project_id="shared-project",
+                        thread_id="shared-thread",
+                        period_start="2026-07-13",
+                        period_end="2026-07-13",
+                        due_at="2026-07-13T20:00:00Z",
+                        status="pending",
+                        includes_review=False,
+                        questions_json=[],
+                        answers_json=[],
+                        summary_json={},
+                        answered_at=None,
+                        skipped_at=None,
+                        **timestamps,
+                    ),
+                    CheckInRecord(
+                        check_in_id="pending-current",
+                        user_id="alice",
+                        project_id="shared-project",
+                        thread_id="shared-thread",
+                        period_start="2026-07-14",
+                        period_end="2026-07-14",
+                        due_at="2026-07-14T20:00:00Z",
+                        status="pending",
+                        includes_review=False,
+                        questions_json=[],
+                        answers_json=[],
+                        summary_json={},
+                        answered_at=None,
+                        skipped_at=None,
+                        created_at="2026-07-14T20:00:00Z",
+                        updated_at="2026-07-14T20:00:00Z",
+                    ),
+                ]
+            )
+
+        returned = self.alice.ensure_check_ins("2026-07-14")
+
+        self.assertEqual([item["check_in_id"] for item in returned], ["pending-old"])
+        with self.alice.session_factory() as session:
+            records = session.scalars(
+                select(CheckInRecord).order_by(CheckInRecord.period_end.asc())
+            ).all()
+        self.assertEqual([record.period_end for record in records], ["2026-07-13", "2026-07-14"])
+
     def test_skipped_action_does_not_increase_completion(self) -> None:
         self.activate(self.alice)
         memory = LongTermMemoryService(engine=self.alice.engine, user_id="alice")
@@ -147,6 +251,38 @@ class GoalControlTests(unittest.TestCase):
         pending = self.alice.list_pending_check_ins()
         self.assertEqual(pending[0]["status"], "pending")
         self.assertEqual(self.alice.list_effort("shared-project"), [])
+
+    def test_check_in_requires_every_answer_and_skip_is_explicit(self) -> None:
+        self.activate(self.alice)
+        created = self.alice.ensure_check_ins("2026-07-14")[0]
+        check_in_id = created["check_in_id"]
+        with self.assertRaisesRegex(GoalControlValidationError, "Every Check-in question"):
+            self.alice.answer_check_in(check_in_id, {"answers": {}})
+        with self.assertRaisesRegex(GoalControlValidationError, "Every Check-in question"):
+            self.alice.answer_check_in(
+                check_in_id,
+                {
+                    "answers": {
+                        "progress": {"selected": ["most"]},
+                        "effort": {"selected": ["60"]},
+                    }
+                },
+            )
+        with self.assertRaisesRegex(GoalControlValidationError, "requires an answer"):
+            self.alice.answer_check_in(
+                check_in_id,
+                {
+                    "answers": {
+                        "progress": {"custom": "   "},
+                        "effort": {"selected": ["60"]},
+                        "metric:completion": {"selected": ["unchanged"]},
+                    }
+                },
+            )
+        skipped = self.alice.skip_check_in(check_in_id)
+        self.assertEqual(skipped["status"], "skipped")
+        with self.assertRaises(GoalControlConflictError):
+            self.alice.skip_check_in(check_in_id)
 
     def test_mock_plan_manual_change_and_rollback(self) -> None:
         activated = self.activate(self.alice)
@@ -212,9 +348,103 @@ class GoalControlTests(unittest.TestCase):
         self.assertTrue(self.alice.usage_summary("shared-project")["degraded"])
         created = self.alice.ensure_check_ins("2026-07-14")
         self.assertEqual(len(created), 1)
-        answered = self.alice.answer_check_in(created[0]["check_in_id"], {"answers": {"progress": {"selected": ["most"]}, "effort": {"selected": ["60"]}}, "effort_minutes": 60})
+        answered = self.alice.answer_check_in(
+            created[0]["check_in_id"],
+            {
+                "answers": {
+                    "progress": {"selected": ["most"]},
+                    "effort": {"selected": ["60"]},
+                    "metric:completion": {"selected": ["unchanged"]},
+                },
+                "effort_minutes": 60,
+            },
+        )
         self.assertEqual(answered["status"], "answered")
         self.assertEqual(self.alice.list_effort("shared-project")[0]["minutes"], 60)
+
+    def test_ai_usage_mapping_and_concurrent_monthly_upsert(self) -> None:
+        operations = [
+            "goal_plan",
+            "calendar_plan",
+            "activation",
+            "replan",
+            "weekly_review",
+            "routine",
+        ] * 3
+
+        def record(operation: str) -> None:
+            self.alice.record_usage(
+                operation=operation,
+                model="mock",
+                usage_mode="balanced",
+                input_tokens=2,
+                output_tokens=1,
+            )
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            list(executor.map(record, operations))
+
+        usage = self.alice.usage_summary()
+        self.assertEqual(usage["planning_input_tokens"], 30)
+        self.assertEqual(usage["planning_output_tokens"], 15)
+        self.assertEqual(usage["routine_input_tokens"], 6)
+        self.assertEqual(usage["routine_output_tokens"], 3)
+        self.assertEqual(usage["request_count"], 18)
+        with self.alice.session_factory() as session:
+            recorded_operations = set(session.scalars(select(AIUsageEventRecord.operation)))
+        self.assertNotIn("planning", recorded_operations)
+        self.assertIn("goal_plan", recorded_operations)
+        self.assertIn("calendar_plan", recorded_operations)
+
+    def test_user_timezone_precedence_controls_ai_month_boundary(self) -> None:
+        fixed_utc = datetime(2026, 8, 1, 0, 30, tzinfo=timezone.utc)
+
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, zone=None):
+                return fixed_utc if zone is None else fixed_utc.astimezone(zone)
+
+        service = GoalControlService(
+            engine=self.alice.engine,
+            user_id="alice",
+            client_timezone="Pacific/Honolulu",
+        )
+        with patch("backend.goal_control.datetime", FrozenDateTime):
+            service.record_usage(
+                operation="routine",
+                model="mock",
+                usage_mode="balanced",
+                input_tokens=1,
+                output_tokens=0,
+            )
+            self.assertEqual(service.usage_summary()["month"], "2026-07")
+
+            with service.session_factory.begin() as session:
+                preferences = session.get(UserPreferenceRecord, "alice")
+                if preferences is None:
+                    preferences = UserPreferenceRecord(
+                        user_id="alice",
+                        preferences_json={},
+                        created_at="2026-08-01T00:30:00Z",
+                        updated_at="2026-08-01T00:30:00Z",
+                    )
+                    session.add(preferences)
+                preferences.preferences_json = {"timezoneOverride": "Asia/Tokyo"}
+
+            service.record_usage(
+                operation="goal_plan",
+                model="mock",
+                usage_mode="balanced",
+                input_tokens=1,
+                output_tokens=0,
+            )
+            self.assertEqual(service.usage_summary()["month"], "2026-08")
+
+        with service.session_factory() as session:
+            rows = session.scalars(select(AIUsageMonthlyRecord)).all()
+            self.assertEqual({row.month_key for row in rows}, {"2026-07", "2026-08"})
+        with self.assertRaises(GoalControlValidationError):
+            GoalControlService(engine=self.alice.engine, user_id="alice", client_timezone="Mars/Olympus")
 
     def test_medium_sensitivity_requires_two_off_track_reviews(self) -> None:
         self.activate(self.alice)

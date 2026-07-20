@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+from contextlib import contextmanager
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, time as clock_time, timedelta, timezone, tzinfo
@@ -10,6 +11,8 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Engine
 
 from .database import (
@@ -45,6 +48,8 @@ METRIC_ROLES = ("leading", "lagging")
 METRIC_DIRECTIONS = ("increase", "decrease", "range", "maintain")
 THREAD_STATUSES = ("draft", "active", "archived")
 PROPOSAL_STATUSES = ("pending", "accepted", "rejected")
+AI_OPERATION_ALIASES = {"planning": "goal_plan"}
+AI_PLANNING_OPERATIONS = frozenset({"goal_plan", "calendar_plan", "activation", "replan", "weekly_review"})
 
 DEFAULT_REPLAN_THRESHOLDS = {
     "consecutiveOffTrackReviews": 2,
@@ -104,8 +109,8 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex}"
 
 
-def month_key() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m")
+def month_key(value: datetime | None = None) -> str:
+    return (value or datetime.now(timezone.utc)).strftime("%Y-%m")
 
 
 def clean_mode(value: object, fallback: str = "balanced") -> str:
@@ -276,12 +281,16 @@ class GoalControlService:
         *,
         db_path: str | os.PathLike[str] | None = None,
         app_mode: str = "desktop",
+        client_timezone: str | None = None,
     ) -> None:
         self.engine = engine or create_database_engine(db_path=db_path)
         initialize_schema(self.engine)
         self.session_factory = create_session_factory(self.engine)
         self.user_id = user_id
         self.app_mode = "desktop" if app_mode == "desktop" else "server"
+        self.client_timezone = str(client_timezone or "").strip()
+        if self.client_timezone:
+            self._timezone(self.client_timezone)
 
     def _project(self, session: Any, project_id: str) -> ProjectRecord:
         record = session.scalar(
@@ -289,6 +298,14 @@ class GoalControlService:
         )
         if record is None:
             raise GoalControlNotFoundError(project_id)
+        return record
+
+    def _goal(self, session: Any, goal_id: str) -> GoalRecord:
+        record = session.scalar(
+            select(GoalRecord).where(GoalRecord.user_id == self.user_id, GoalRecord.goal_id == goal_id)
+        )
+        if record is None:
+            raise GoalControlNotFoundError(goal_id)
         return record
 
     def _thread(self, session: Any, thread_id: str) -> ConversationThreadRecord:
@@ -321,15 +338,23 @@ class GoalControlService:
         if status not in THREAD_STATUSES:
             raise GoalControlValidationError("Invalid conversation status.")
         project_id = str(payload.get("project_id") or "").strip() or None
+        requested_goal_id = str(payload.get("goal_id") or "").strip() or None
         with self.session_factory.begin() as session:
             if project_id:
-                self._project(session, project_id)
+                project = self._project(session, project_id)
+                if requested_goal_id and requested_goal_id != project.goal_id:
+                    raise GoalControlValidationError("goal_id conflicts with the selected project's goal.")
+                goal_id = project.goal_id
+            else:
+                goal_id = requested_goal_id
+                if goal_id:
+                    self._goal(session, goal_id)
             record = ConversationThreadRecord(
                 thread_id=thread_id,
                 user_id=self.user_id,
                 kind=kind,
                 title=str(payload.get("title") or "New long-term goal")[:200],
-                goal_id=str(payload.get("goal_id") or "").strip() or None,
+                goal_id=goal_id,
                 project_id=project_id,
                 template_id=str(payload.get("template_id") or "").strip() or None,
                 status=status,
@@ -358,6 +383,28 @@ class GoalControlService:
     def update_thread(self, thread_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self.session_factory.begin() as session:
             record = self._thread(session, thread_id)
+            if "project_id" in payload or "goal_id" in payload:
+                project_id = (
+                    str(payload.get("project_id") or "").strip() or None
+                    if "project_id" in payload
+                    else record.project_id
+                )
+                requested_goal_id = (
+                    str(payload.get("goal_id") or "").strip() or None
+                    if "goal_id" in payload
+                    else record.goal_id
+                )
+                if project_id:
+                    project = self._project(session, project_id)
+                    if "goal_id" in payload and requested_goal_id != project.goal_id:
+                        raise GoalControlValidationError("goal_id conflicts with the selected project's goal.")
+                    record.project_id = project_id
+                    record.goal_id = project.goal_id
+                else:
+                    if requested_goal_id:
+                        self._goal(session, requested_goal_id)
+                    record.project_id = None
+                    record.goal_id = requested_goal_id
             if "status" in payload:
                 status = str(payload["status"])
                 if status not in THREAD_STATUSES:
@@ -748,7 +795,7 @@ class GoalControlService:
                 user_id=self.user_id,
                 project_id=project_id,
                 action_id=action_id,
-                occurred_on=str(payload.get("occurred_on") or date.today().isoformat()),
+                occurred_on=str(payload.get("occurred_on") or self._user_today(session).isoformat()),
                 minutes=minutes,
                 source=str(payload.get("source") or "manual")[:24],
                 confidence=min(1.0, max(0.0, float(payload.get("confidence", 1.0)))),
@@ -795,7 +842,7 @@ class GoalControlService:
         if visited != len(action_map):
             return {"action_ids": [], "total_minutes": 0, "has_cycle": True, "projected_finish": None}
         if not distance:
-            return {"action_ids": [], "total_minutes": 0, "has_cycle": False, "projected_finish": date.today().isoformat()}
+            return {"action_ids": [], "total_minutes": 0, "has_cycle": False, "projected_finish": None}
         end = max(distance, key=distance.get)
         path = [end]
         while end in previous:
@@ -1073,17 +1120,18 @@ class GoalControlService:
                 item["entries"] = [metric_entry_dict(entry) for entry in entries if entry.metric_id == metric.metric_id]
                 metric_values.append(item)
             review = self._review_assessment(session, project_id, policy)
+            user_today = self._user_today(session)
             critical_path = self._critical_path(actions, dependencies)
             usable_capacity = max(1, math.floor(policy.weekly_capacity_minutes * (1 - policy.buffer_percent / 100)))
             if not critical_path["has_cycle"] and critical_path["total_minutes"]:
                 projected_days = max(1, math.ceil(critical_path["total_minutes"] / usable_capacity * 7))
-                critical_path["projected_finish"] = (date.today() + timedelta(days=projected_days)).isoformat()
+                critical_path["projected_finish"] = (user_today + timedelta(days=projected_days)).isoformat()
             critical_path["usable_weekly_minutes"] = usable_capacity
             milestone_predictions = []
             for milestone in milestones:
                 milestone_path = self._critical_path([item for item in actions if item.milestone_id == milestone.milestone_id], dependencies)
                 projected_days = math.ceil(milestone_path["total_minutes"] / usable_capacity * 7) if milestone_path["total_minutes"] else 0
-                projected_finish = (date.today() + timedelta(days=projected_days)).isoformat()
+                projected_finish = (user_today + timedelta(days=projected_days)).isoformat()
                 milestone_predictions.append({
                     "milestone_id": milestone.milestone_id, "projected_finish": projected_finish,
                     "due_date": milestone.due_date, "at_risk": bool(milestone.due_date and projected_finish > milestone.due_date),
@@ -1107,7 +1155,7 @@ class GoalControlService:
                     effort,
                     review,
                     schedule.last_check_in_at if schedule else None,
-                    self._project_today(session, project_id),
+                    user_today,
                 ),
                 "critical_path": critical_path,
                 "milestone_predictions": milestone_predictions,
@@ -1182,15 +1230,26 @@ class GoalControlService:
         except (ZoneInfoNotFoundError, ValueError) as error:
             raise GoalControlValidationError(f"Unknown IANA timezone: {name}") from error
 
-    def _project_today(self, session: Any, project_id: str) -> date:
-        schedule = session.scalar(
-            select(CheckInScheduleRecord).where(
-                CheckInScheduleRecord.user_id == self.user_id,
-                CheckInScheduleRecord.project_id == project_id,
-            )
+    def _user_timezone(self, session: Any) -> tuple[str, tzinfo]:
+        preferences = session.scalar(
+            select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == self.user_id)
         )
-        zone = self._timezone(schedule.timezone if schedule else "UTC")
-        return datetime.now(zone).date()
+        override = str(
+            (preferences.preferences_json if preferences else {}).get("timezoneOverride") or ""
+        ).strip()
+        name = override or self.client_timezone or "UTC"
+        return name, self._timezone(name)
+
+    def _user_now(self, session: Any) -> datetime:
+        _name, zone = self._user_timezone(session)
+        return datetime.now(zone)
+
+    def _user_today(self, session: Any) -> date:
+        return self._user_now(session).date()
+
+    def _project_today(self, session: Any, project_id: str) -> date:
+        self._project(session, project_id)
+        return self._user_today(session)
 
     @classmethod
     def _check_in_due_at(cls, local_day: date, local_time: str, timezone_name: str) -> str:
@@ -1202,12 +1261,30 @@ class GoalControlService:
         value = datetime.combine(local_day, local_clock, tzinfo=zone).astimezone(timezone.utc)
         return value.isoformat().replace("+00:00", "Z")
 
+    @contextmanager
+    def _serialized_write_transaction(self) -> Any:
+        """Serialize Check-in read/create decisions across database connections."""
+
+        session = self.session_factory()
+        try:
+            if self.engine.dialect.name == "sqlite":
+                session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+            else:
+                session.begin()
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
     def ensure_check_ins(self, today_value: str | None = None) -> list[dict[str, Any]]:
         explicit_today = date.fromisoformat(today_value) if today_value else None
         timestamp = now_iso()
-        with self.session_factory.begin() as session:
+        with self._serialized_write_transaction() as session:
             projects = session.scalars(
-                select(ProjectRecord).where(ProjectRecord.user_id == self.user_id, ProjectRecord.status == "active")
+                select(ProjectRecord).where(ProjectRecord.user_id == self.user_id, ProjectRecord.status == "active").with_for_update()
             ).all()
             created_or_pending: list[CheckInRecord] = []
             for project in projects:
@@ -1220,11 +1297,7 @@ class GoalControlService:
                     )
                 )
                 if schedule is None:
-                    preferences = session.scalar(
-                        select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == self.user_id)
-                    )
-                    timezone_name = str((preferences.preferences_json if preferences else {}).get("timezoneOverride") or "UTC")
-                    self._timezone(timezone_name)
+                    timezone_name, _zone = self._user_timezone(session)
                     schedule = CheckInScheduleRecord(
                         schedule_id=new_id("checkin_schedule"),
                         user_id=self.user_id,
@@ -1241,19 +1314,16 @@ class GoalControlService:
                     session.add(schedule)
                 if not schedule.enabled:
                     continue
-                zone = self._timezone(schedule.timezone)
-                today = explicit_today or datetime.now(zone).date()
+                today = explicit_today or self._user_today(session)
                 pending = session.scalar(
                     select(CheckInRecord).where(
                         CheckInRecord.user_id == self.user_id,
                         CheckInRecord.project_id == project.project_id,
                         CheckInRecord.status == "pending",
                     )
+                    .order_by(CheckInRecord.period_end.asc(), CheckInRecord.created_at.asc())
                 )
                 if pending:
-                    pending.period_end = today.isoformat()
-                    pending.questions_json = self._check_in_questions(session, project.project_id, pending.period_start, pending.period_end)
-                    pending.updated_at = timestamp
                     created_or_pending.append(pending)
                     continue
                 last_answered = session.scalar(
@@ -1279,26 +1349,43 @@ class GoalControlService:
                     )
                     .order_by(ConversationThreadRecord.updated_at.desc())
                 )
-                record = CheckInRecord(
-                    check_in_id=new_id("checkin"),
-                    user_id=self.user_id,
-                    project_id=project.project_id,
-                    thread_id=thread.thread_id if thread else None,
-                    period_start=start.isoformat(),
-                    period_end=today.isoformat(),
-                    due_at=self._check_in_due_at(today, schedule.local_time, schedule.timezone),
-                    status="pending",
-                    includes_review=includes_review,
-                    questions_json=self._check_in_questions(session, project.project_id, start.isoformat(), today.isoformat()),
-                    answers_json=[],
-                    summary_json={},
-                    answered_at=None,
-                    skipped_at=None,
-                    created_at=timestamp,
-                    updated_at=timestamp,
+                values = {
+                    "check_in_id": new_id("checkin"),
+                    "user_id": self.user_id,
+                    "project_id": project.project_id,
+                    "thread_id": thread.thread_id if thread else None,
+                    "period_start": start.isoformat(),
+                    "period_end": today.isoformat(),
+                    "due_at": self._check_in_due_at(today, schedule.local_time, schedule.timezone),
+                    "status": "pending",
+                    "includes_review": includes_review,
+                    "questions_json": self._check_in_questions(session, project.project_id, start.isoformat(), today.isoformat()),
+                    "answers_json": [],
+                    "summary_json": {},
+                    "answered_at": None,
+                    "skipped_at": None,
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                }
+                if self.engine.dialect.name == "mysql":
+                    session.execute(mysql_insert(CheckInRecord).values(**values).prefix_with("IGNORE"))
+                else:
+                    session.execute(
+                        sqlite_insert(CheckInRecord)
+                        .values(**values)
+                        .on_conflict_do_nothing(
+                            index_elements=["user_id", "project_id", "period_end"]
+                        )
+                    )
+                record = session.scalar(
+                    select(CheckInRecord).where(
+                        CheckInRecord.user_id == self.user_id,
+                        CheckInRecord.project_id == project.project_id,
+                        CheckInRecord.period_end == today.isoformat(),
+                    )
                 )
-                session.add(record)
-                created_or_pending.append(record)
+                if record is not None and record.status == "pending":
+                    created_or_pending.append(record)
             return [check_in_dict(record) for record in created_or_pending]
 
     def list_pending_check_ins(self) -> list[dict[str, Any]]:
@@ -1335,6 +1422,7 @@ class GoalControlService:
                 raise GoalControlNotFoundError(check_in_id)
             if record.status != "pending":
                 raise GoalControlConflictError("This check-in is already closed.")
+            project = self._project(session, record.project_id)
             question_map = {
                 str(question.get("id") or ""): question
                 for question in record.questions_json or []
@@ -1366,6 +1454,13 @@ class GoalControlService:
                     raise GoalControlValidationError(f"{question_id} does not accept a custom answer.")
                 if len(custom) > 500:
                     raise GoalControlValidationError(f"Custom answer for {question_id} is too long.")
+                if not selected and not custom.strip():
+                    raise GoalControlValidationError(f"Check-in question {question_id} requires an answer.")
+            missing_questions = sorted(set(question_map) - seen_questions)
+            if missing_questions:
+                raise GoalControlValidationError(
+                    f"Every Check-in question requires an answer. Missing: {', '.join(missing_questions)}"
+                )
             record.answers_json = copy.deepcopy(answers)
             record.status = "answered"
             record.answered_at = timestamp
@@ -1450,7 +1545,7 @@ class GoalControlService:
             session.add(
                 ProgressLogRecord(
                     progress_id=new_id("progress"), user_id=self.user_id, project_id=record.project_id,
-                    goal_id=None, action_id=None, log_type="review" if record.includes_review else "update",
+                    goal_id=project.goal_id, action_id=None, log_type="review" if record.includes_review else "update",
                     summary="Daily check-in recorded", details=str(summary["highlights"]),
                     metadata_json={"checkInId": check_in_id}, created_at=timestamp, updated_at=timestamp,
                 )
@@ -1953,6 +2048,7 @@ class GoalControlService:
             if record.status != "pending":
                 raise GoalControlConflictError("This proposal is already resolved.")
             if accept and record.project_id:
+                project = self._project(session, record.project_id)
                 latest = session.scalar(
                     select(PlanVersionRecord)
                     .where(PlanVersionRecord.user_id == self.user_id, PlanVersionRecord.project_id == record.project_id)
@@ -1973,7 +2069,7 @@ class GoalControlService:
                 if isinstance(progress_value, dict) and str(progress_value.get("summary") or "").strip():
                     session.add(ProgressLogRecord(
                         progress_id=new_id("progress"), user_id=self.user_id, project_id=record.project_id,
-                        goal_id=None, action_id=None, log_type=str(progress_value.get("logType") or "tool_result"),
+                        goal_id=project.goal_id, action_id=None, log_type=str(progress_value.get("logType") or "tool_result"),
                         summary=str(progress_value.get("summary"))[:500], details=str(progress_value.get("details") or ""),
                         metadata_json={"proposalId": proposal_id}, created_at=now_iso(), updated_at=now_iso(),
                     ))
@@ -2011,10 +2107,12 @@ class GoalControlService:
     def usage_summary(self, project_id: str | None = None) -> dict[str, Any]:
         resolution = self.resolve_usage(project_id)
         with self.session_factory() as session:
+            current = self._user_now(session)
+            current_month = month_key(current)
             monthly = session.scalar(
                 select(AIUsageMonthlyRecord).where(
                     AIUsageMonthlyRecord.user_id == self.user_id,
-                    AIUsageMonthlyRecord.month_key == month_key(),
+                    AIUsageMonthlyRecord.month_key == current_month,
                 )
             )
             preferences = session.scalar(select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == self.user_id))
@@ -2033,8 +2131,13 @@ class GoalControlService:
             "request_count": monthly.request_count if monthly else 0,
         }
         total = sum(value for key, value in values.items() if key.endswith("_tokens"))
-        current = datetime.now(timezone.utc)
-        reset_at = datetime(current.year + (1 if current.month == 12 else 0), 1 if current.month == 12 else current.month + 1, 1, tzinfo=timezone.utc)
+        reset_local = datetime(
+            current.year + (1 if current.month == 12 else 0),
+            1 if current.month == 12 else current.month + 1,
+            1,
+            tzinfo=current.tzinfo,
+        )
+        reset_at = reset_local.astimezone(timezone.utc)
         return {
             **values,
             "total_tokens": total,
@@ -2043,7 +2146,7 @@ class GoalControlService:
             "percent_used": round((total / hard) * 100, 1) if hard else 0,
             "degraded": bool(hard and total >= hard),
             "warning": bool(soft and total >= soft),
-            "month": month_key(),
+            "month": current_month,
             "reset_at": reset_at.isoformat().replace("+00:00", "Z"),
             "selected_mode": resolution.selected_mode,
             "effective_mode": resolution.effective_mode,
@@ -2051,6 +2154,52 @@ class GoalControlService:
             "server_default_mode": resolution.server_default_mode,
             "limits": resolution.limits,
         }
+
+    def _increment_monthly_usage(
+        self,
+        session: Any,
+        *,
+        current_month: str,
+        kind: str,
+        input_tokens: int,
+        output_tokens: int,
+        timestamp: str,
+    ) -> None:
+        routine_input = input_tokens if kind == "routine" else 0
+        routine_output = output_tokens if kind == "routine" else 0
+        planning_input = input_tokens if kind == "planning" else 0
+        planning_output = output_tokens if kind == "planning" else 0
+        values = {
+            "user_id": self.user_id,
+            "month_key": current_month,
+            "routine_input_tokens": routine_input,
+            "routine_output_tokens": routine_output,
+            "planning_input_tokens": planning_input,
+            "planning_output_tokens": planning_output,
+            "request_count": 1,
+            "updated_at": timestamp,
+        }
+        columns = AIUsageMonthlyRecord.__table__.c
+        updates = {
+            "routine_input_tokens": columns.routine_input_tokens + routine_input,
+            "routine_output_tokens": columns.routine_output_tokens + routine_output,
+            "planning_input_tokens": columns.planning_input_tokens + planning_input,
+            "planning_output_tokens": columns.planning_output_tokens + planning_output,
+            "request_count": columns.request_count + 1,
+            "updated_at": timestamp,
+        }
+        if self.engine.dialect.name == "sqlite":
+            statement = sqlite_insert(AIUsageMonthlyRecord).values(**values).on_conflict_do_update(
+                index_elements=["user_id", "month_key"],
+                set_=updates,
+            )
+        elif self.engine.dialect.name == "mysql":
+            statement = mysql_insert(AIUsageMonthlyRecord).values(**values).on_duplicate_key_update(
+                **updates
+            )
+        else:  # pragma: no cover - supported runtime databases are SQLite and MySQL
+            raise RuntimeError(f"Unsupported AI usage database: {self.engine.dialect.name}")
+        session.execute(statement)
 
     def record_usage(
         self,
@@ -2066,10 +2215,15 @@ class GoalControlService:
         thread_id: str | None = None,
     ) -> None:
         timestamp = now_iso()
-        kind = "planning" if operation in {"planning", "activation", "replan", "weekly_review"} else "routine"
+        normalized_operation = AI_OPERATION_ALIASES.get(operation, operation)
+        kind = "planning" if normalized_operation in AI_PLANNING_OPERATIONS else "routine"
+        clean_input_tokens = max(0, input_tokens)
+        clean_output_tokens = max(0, output_tokens)
         with self.session_factory.begin() as session:
+            current = self._user_now(session)
+            current_month = month_key(current)
             event_cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat().replace("+00:00", "Z")
-            monthly_cutoff = (date.today().replace(day=1) - timedelta(days=400)).strftime("%Y-%m")
+            monthly_cutoff = (current.date().replace(day=1) - timedelta(days=400)).strftime("%Y-%m")
             session.execute(
                 delete(AIUsageEventRecord).where(
                     AIUsageEventRecord.user_id == self.user_id,
@@ -2088,22 +2242,15 @@ class GoalControlService:
                 self._thread(session, thread_id)
             session.add(AIUsageEventRecord(
                 usage_event_id=new_id("ai_usage"), user_id=self.user_id, project_id=project_id, thread_id=thread_id,
-                operation=operation[:32], model=model[:120], usage_mode=clean_mode(usage_mode),
-                input_tokens=max(0, input_tokens), output_tokens=max(0, output_tokens), status=status[:24],
+                operation=normalized_operation[:32], model=model[:120], usage_mode=clean_mode(usage_mode),
+                input_tokens=clean_input_tokens, output_tokens=clean_output_tokens, status=status[:24],
                 estimated=estimated, created_at=timestamp,
             ))
-            monthly = session.scalar(select(AIUsageMonthlyRecord).where(AIUsageMonthlyRecord.user_id == self.user_id, AIUsageMonthlyRecord.month_key == month_key()))
-            if monthly is None:
-                monthly = AIUsageMonthlyRecord(
-                    user_id=self.user_id, month_key=month_key(), routine_input_tokens=0, routine_output_tokens=0,
-                    planning_input_tokens=0, planning_output_tokens=0, request_count=0, updated_at=timestamp,
-                )
-                session.add(monthly)
-            if kind == "planning":
-                monthly.planning_input_tokens += max(0, input_tokens)
-                monthly.planning_output_tokens += max(0, output_tokens)
-            else:
-                monthly.routine_input_tokens += max(0, input_tokens)
-                monthly.routine_output_tokens += max(0, output_tokens)
-            monthly.request_count += 1
-            monthly.updated_at = timestamp
+            self._increment_monthly_usage(
+                session,
+                current_month=current_month,
+                kind=kind,
+                input_tokens=clean_input_tokens,
+                output_tokens=clean_output_tokens,
+                timestamp=timestamp,
+            )

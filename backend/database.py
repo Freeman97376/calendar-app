@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Boolean, Float, ForeignKeyConstraint, Integer, JSON, String, Text, UniqueConstraint, create_engine, event, inspect, text
+from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKeyConstraint, Integer, JSON, String, Text, UniqueConstraint, create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -13,7 +13,7 @@ from sqlalchemy.pool import NullPool
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = PROJECT_ROOT / "backend" / "data" / "calendar_app.sqlite3"
 LOCAL_USER_ID = "local"
-ALEMBIC_HEAD = "20260715_0007"
+ALEMBIC_HEAD = "20260719_0008"
 
 
 class Base(DeclarativeBase):
@@ -68,14 +68,17 @@ def create_session_factory(engine: Engine) -> sessionmaker:
 
 
 def initialize_schema(engine: Engine, *, stamp_migration_head: bool = False) -> None:
+    """Create metadata only for isolated tests and legacy tools.
+
+    Runtime databases are migrated through Alembic. Refuse the former
+    create-all-then-stamp shortcut because it can claim constraints that were
+    never installed.
+    """
+    if stamp_migration_head:
+        raise RuntimeError("Direct migration stamping is disabled; run Alembic migrations.")
     Base.metadata.create_all(engine)
     if engine.dialect.name == "sqlite":
         _ensure_sqlite_forward_columns(engine)
-    if stamp_migration_head:
-        with engine.begin() as connection:
-            connection.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
-            connection.execute(text("DELETE FROM alembic_version"))
-            connection.execute(text("INSERT INTO alembic_version (version_num) VALUES (:revision)"), {"revision": ALEMBIC_HEAD})
 
 
 def _ensure_sqlite_forward_columns(engine: Engine) -> None:
@@ -163,6 +166,20 @@ class DataIntegrityQuarantineRecord(Base):
     reason: Mapped[str] = mapped_column(String(255), nullable=False)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     quarantined_at: Mapped[str] = mapped_column(String(40), nullable=False)
+
+
+class DataIntegrityRepairRecord(Base):
+    __tablename__ = "data_integrity_repairs"
+
+    row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_table: Mapped[str] = mapped_column(String(80), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    field_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    previous_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    repaired_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    repaired_at: Mapped[str] = mapped_column(String(40), nullable=False)
 
 
 class UserPreferenceRecord(Base):
@@ -270,6 +287,7 @@ class ProjectRecord(Base):
     __tablename__ = "projects"
     __table_args__ = (
         UniqueConstraint("user_id", "project_id", name="uq_projects_user_external"),
+        UniqueConstraint("user_id", "project_id", "goal_id", name="uq_projects_user_project_goal"),
         ForeignKeyConstraint(["user_id", "goal_id"], ["goals.user_id", "goals.goal_id"], name="fk_projects_goal", ondelete="CASCADE"),
     )
 
@@ -338,6 +356,8 @@ class ProgressLogRecord(Base):
         ForeignKeyConstraint(["user_id", "project_id"], ["projects.user_id", "projects.project_id"], name="fk_progress_project", ondelete="CASCADE"),
         ForeignKeyConstraint(["user_id", "goal_id"], ["goals.user_id", "goals.goal_id"], name="fk_progress_goal"),
         ForeignKeyConstraint(["user_id", "action_id"], ["action_items.user_id", "action_items.action_id"], name="fk_progress_action"),
+        ForeignKeyConstraint(["user_id", "project_id", "goal_id"], ["projects.user_id", "projects.project_id", "projects.goal_id"], name="fk_progress_project_goal"),
+        CheckConstraint("goal_id IS NOT NULL", name="ck_progress_project_goal_present"),
     )
 
     row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -360,6 +380,8 @@ class ToolRunRecord(Base):
         UniqueConstraint("user_id", "tool_run_id", name="uq_tool_runs_user_external"),
         ForeignKeyConstraint(["user_id", "project_id"], ["projects.user_id", "projects.project_id"], name="fk_tool_runs_project"),
         ForeignKeyConstraint(["user_id", "goal_id"], ["goals.user_id", "goals.goal_id"], name="fk_tool_runs_goal"),
+        ForeignKeyConstraint(["user_id", "project_id", "goal_id"], ["projects.user_id", "projects.project_id", "projects.goal_id"], name="fk_tool_runs_project_goal"),
+        CheckConstraint("project_id IS NULL OR goal_id IS NOT NULL", name="ck_tool_runs_project_goal_present"),
     )
 
     row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -434,6 +456,8 @@ class ConversationThreadRecord(Base):
         UniqueConstraint("user_id", "thread_id", name="uq_threads_user_external"),
         ForeignKeyConstraint(["user_id", "goal_id"], ["goals.user_id", "goals.goal_id"], name="fk_threads_goal"),
         ForeignKeyConstraint(["user_id", "project_id"], ["projects.user_id", "projects.project_id"], name="fk_threads_project"),
+        ForeignKeyConstraint(["user_id", "project_id", "goal_id"], ["projects.user_id", "projects.project_id", "projects.goal_id"], name="fk_threads_project_goal"),
+        CheckConstraint("project_id IS NULL OR goal_id IS NOT NULL", name="ck_threads_project_goal_present"),
     )
 
     row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -553,6 +577,7 @@ class CheckInRecord(Base):
     __tablename__ = "check_ins"
     __table_args__ = (
         UniqueConstraint("user_id", "check_in_id", name="uq_checkins_user_external"),
+        UniqueConstraint("user_id", "project_id", "period_end", name="uq_checkins_user_project_period"),
         ForeignKeyConstraint(["user_id", "project_id"], ["projects.user_id", "projects.project_id"], name="fk_checkins_project", ondelete="CASCADE"),
         ForeignKeyConstraint(["user_id", "thread_id"], ["conversation_threads.user_id", "conversation_threads.thread_id"], name="fk_checkins_thread"),
     )

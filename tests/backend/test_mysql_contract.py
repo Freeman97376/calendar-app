@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from backend.auth import AuthService
 from backend.calendar import CalendarRepository
-from backend.database import create_database_engine
+from backend.database import ALEMBIC_HEAD, create_database_engine
 
 
 MYSQL_TEST_URL = os.getenv("CALENDAR_MYSQL_TEST_URL", "").strip()
@@ -25,7 +25,7 @@ class MySqlContractTests(unittest.TestCase):
     def test_alembic_head_and_multi_user_repository_contract(self) -> None:
         with self.engine.connect() as connection:
             revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        self.assertEqual(revision, "20260715_0007")
+        self.assertEqual(revision, ALEMBIC_HEAD)
 
         suffix = uuid.uuid4().hex[:10]
         auth = AuthService(self.engine)

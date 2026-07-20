@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import re
 import secrets
 import uuid
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from threading import RLock
+from typing import Any, Iterator
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from .database import (
     AuthThrottleRecord,
@@ -31,6 +37,8 @@ PASSWORD_MIN_LENGTH = 12
 MAX_FAILURES = 5
 LOCK_MINUTES = 15
 SESSION_DAYS = 7
+GENERIC_LOGIN_MESSAGE = "Unable to sign in with those credentials."
+GENERIC_LOCKED_MESSAGE = "Sign-in is temporarily unavailable. Try again later or contact an administrator."
 
 
 class AuthError(ValueError):
@@ -48,6 +56,7 @@ class Principal:
     role: str
     csrf_token: str = ""
     session_id: str = ""
+    client_timezone: str = ""
 
 
 @dataclass(frozen=True)
@@ -95,6 +104,7 @@ class AuthService:
         self.session_factory = create_session_factory(engine)
         self.password_hasher = PasswordHasher()
         self._dummy_password_hash = self.password_hasher.hash("calendar-dummy-password")
+        self._sqlite_write_lock = RLock()
 
     def normalize_username(self, username: str) -> str:
         normalized = username.strip().lower()
@@ -197,29 +207,36 @@ class AuthService:
         normalized = username.strip().lower()
         self._enforce_login_rate_limit(client_ip, normalized)
         now = utc_now()
-        with self.session_factory() as session:
-            user = session.scalar(select(UserRecord).where(UserRecord.username == normalized))
+        with self._write_transaction() as session:
+            user = session.scalar(
+                select(UserRecord).where(UserRecord.username == normalized).with_for_update()
+            )
             if user is None:
                 self._dummy_verify(password)
-                raise AuthError("invalid_credentials", "Invalid username or password.", 401)
-            if not user.is_active:
-                raise AuthError("account_disabled", "Account is disabled.", 403)
+                raise AuthError("invalid_credentials", GENERIC_LOGIN_MESSAGE, 401)
             locked_until = parse_utc(user.locked_until)
             if locked_until and locked_until > now:
-                raise AuthError("account_locked", "Account is temporarily locked.", 423)
+                retry_after = max(1, math.ceil((locked_until - now).total_seconds()))
+                raise AuthError(
+                    "account_locked",
+                    GENERIC_LOCKED_MESSAGE,
+                    429,
+                    retry_after=retry_after,
+                )
 
             try:
                 verified = self.password_hasher.verify(user.password_hash, password)
             except (VerifyMismatchError, InvalidHashError):
                 verified = False
+            if not user.is_active:
+                raise AuthError("invalid_credentials", GENERIC_LOGIN_MESSAGE, 401)
             if not verified:
                 user.failed_login_count += 1
                 if user.failed_login_count >= MAX_FAILURES:
                     user.locked_until = utc_iso(now + timedelta(minutes=LOCK_MINUTES))
-                    user.failed_login_count = 0
+                    user.failed_login_count = MAX_FAILURES
                 user.updated_at = utc_iso(now)
-                session.commit()
-                raise AuthError("invalid_credentials", "Invalid username or password.", 401)
+                raise AuthError("invalid_credentials", GENERIC_LOGIN_MESSAGE, 401)
 
             if self.password_hasher.check_needs_rehash(user.password_hash):
                 user.password_hash = self.password_hasher.hash(password)
@@ -250,7 +267,6 @@ class AuthService:
                     AuthThrottleRecord.key_hash == hash_secret(normalized),
                 )
             )
-            session.commit()
         return LoginResult(principal, raw_token, csrf_token, expires_at)
 
     def authenticate(self, raw_token: str, csrf_token: str = "") -> Principal:
@@ -346,6 +362,62 @@ class AuthService:
         except (VerifyMismatchError, InvalidHashError):
             pass
 
+    @contextmanager
+    def _write_transaction(self) -> Iterator[Session]:
+        """Serialize SQLite writes and use a real transaction for auth counters.
+
+        MySQL callers additionally take row locks on the records they update.
+        SQLite's BEGIN IMMEDIATE prevents concurrent readers from performing the
+        same read-modify-write sequence before either writer commits.
+        """
+
+        guard = self._sqlite_write_lock if self.engine.dialect.name == "sqlite" else nullcontext()
+        with guard:
+            session = self.session_factory()
+            try:
+                if self.engine.dialect.name == "sqlite":
+                    session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+                else:
+                    session.begin()
+                yield session
+                session.commit()
+            except AuthError:
+                session.commit()
+                raise
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def _ensure_throttle_record(
+        self,
+        session: Session,
+        *,
+        scope: str,
+        key_hash: str,
+        timestamp: str,
+    ) -> None:
+        values = {
+            "scope": scope,
+            "key_hash": key_hash,
+            "attempts": 0,
+            "window_started_at": timestamp,
+            "blocked_until": None,
+            "updated_at": timestamp,
+        }
+        if self.engine.dialect.name == "mysql":
+            session.execute(mysql_insert(AuthThrottleRecord).values(**values).prefix_with("IGNORE"))
+            return
+        if self.engine.dialect.name == "sqlite":
+            session.execute(
+                sqlite_insert(AuthThrottleRecord)
+                .values(**values)
+                .on_conflict_do_nothing(index_elements=["scope", "key_hash"])
+            )
+            return
+        raise RuntimeError(f"Unsupported authentication database: {self.engine.dialect.name}")
+
     def _enforce_login_rate_limit(self, client_ip: str, normalized_username: str) -> None:
         now = utc_now()
         window_seconds = max(60, int(os.getenv("AUTH_LOGIN_WINDOW_SECONDS", "900")))
@@ -355,28 +427,27 @@ class AuthService:
         }
         keys = {"ip": client_ip.strip() or "unknown", "username": normalized_username[:256]}
         rate_error: AuthError | None = None
-        with self.session_factory.begin() as session:
+        with self._write_transaction() as session:
             for scope, raw_key in keys.items():
                 key_hash = hash_secret(raw_key)
+                timestamp = utc_iso(now)
+                self._ensure_throttle_record(
+                    session,
+                    scope=scope,
+                    key_hash=key_hash,
+                    timestamp=timestamp,
+                )
                 record = session.scalar(
                     select(AuthThrottleRecord).where(
                         AuthThrottleRecord.scope == scope,
                         AuthThrottleRecord.key_hash == key_hash,
-                    )
+                    ).with_for_update()
                 )
-                if record is None:
-                    record = AuthThrottleRecord(
-                        scope=scope,
-                        key_hash=key_hash,
-                        attempts=0,
-                        window_started_at=utc_iso(now),
-                        blocked_until=None,
-                        updated_at=utc_iso(now),
-                    )
-                    session.add(record)
+                if record is None:  # pragma: no cover - guarded by the atomic insert above
+                    raise RuntimeError("Unable to initialize login throttle bucket.")
                 blocked_until = parse_utc(record.blocked_until)
                 if blocked_until and blocked_until > now:
-                    retry_after = max(1, int((blocked_until - now).total_seconds()))
+                    retry_after = max(1, math.ceil((blocked_until - now).total_seconds()))
                     rate_error = AuthError(
                         "login_rate_limited",
                         "Too many sign-in attempts. Try again later.",

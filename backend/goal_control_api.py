@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from fastapi import Body, Depends, FastAPI, Query, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import Principal
 from .goal_control import (
@@ -19,7 +19,11 @@ from .goal_control import (
 )
 
 
-class CheckInMetricValuePayload(BaseModel):
+class StrictGoalControlDto(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CheckInMetricValuePayload(StrictGoalControlDto):
     metric_id: str
     value: float | None = None
     confidence: float = Field(default=1.0, ge=0, le=1)
@@ -28,7 +32,7 @@ class CheckInMetricValuePayload(BaseModel):
     notes: str = Field(default="", max_length=1000)
 
 
-class CheckInAnswerPayload(BaseModel):
+class CheckInAnswerPayload(StrictGoalControlDto):
     answers: dict[str, Any] | list[dict[str, Any]] = Field(default_factory=dict)
     effort_minutes: int = Field(default=0, ge=0, le=10_080)
     metric_values: list[CheckInMetricValuePayload] = Field(default_factory=list, max_length=10)
@@ -57,7 +61,12 @@ def install_goal_control_routes(
     current_principal: Callable[..., Principal],
 ) -> None:
     def control(principal: Principal) -> GoalControlService:
-        return GoalControlService(engine=engine, user_id=principal.user_id, app_mode=app_mode)
+        return GoalControlService(
+            engine=engine,
+            user_id=principal.user_id,
+            app_mode=app_mode,
+            client_timezone=principal.client_timezone,
+        )
 
     async def validation_error(_request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(

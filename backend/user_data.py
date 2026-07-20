@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import hashlib
 import json
 import uuid
@@ -113,12 +114,32 @@ BACKUP_V2_MODELS: dict[str, tuple[Any, str]] = {
     "actionEventLinks": (ActionEventLinkRecord, "link_id"),
 }
 
+BACKUP_ENTITY_IDS: dict[str, str] = {
+    "eventTypes": "id",
+    "todos": "id",
+    "events": "id",
+    "planningRuns": "id",
+    "goals": "goal_id",
+    "projects": "project_id",
+    "milestones": "milestone_id",
+    "actions": "action_id",
+    "progress": "progress_id",
+    "toolRuns": "tool_run_id",
+    "fridgeItems": "item_id",
+    "toolPresets": "id",
+    **{key: id_name for key, (_model, id_name) in BACKUP_V2_MODELS.items()},
+}
+
 
 class UserDataNotFoundError(KeyError):
     pass
 
 
 class BackupValidationError(ValueError):
+    pass
+
+
+class ImportPreviewStaleError(RuntimeError):
     pass
 
 
@@ -355,33 +376,184 @@ class DataPortabilityService:
         self.session_factory = create_session_factory(engine)
         self.app_mode = "desktop" if app_mode == "desktop" else "server"
 
+    def _export_entities(self, session: Any, user_id: str) -> dict[str, Any]:
+        preference = session.scalar(
+            select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == user_id)
+        )
+        return {
+            "eventTypes": [event_type_from_record(item) for item in self._all(session, EventTypeRecord, user_id)],
+            "todos": [todo_from_record(item) for item in self._all(session, TodoRecord, user_id)],
+            "events": [event_from_record(item) for item in self._all(session, EventRecord, user_id)],
+            "planningRuns": [planning_run_from_record(item) for item in self._all(session, PlanningRunRecord, user_id)],
+            "goals": [goal_from_record(item) for item in self._all(session, GoalRecord, user_id)],
+            "projects": [project_from_record(item) for item in self._all(session, ProjectRecord, user_id)],
+            "milestones": [milestone_from_record(item) for item in self._all(session, MilestoneRecord, user_id)],
+            "actions": [action_from_record(item) for item in self._all(session, ActionItemRecord, user_id)],
+            "progress": [progress_from_record(item) for item in self._all(session, ProgressLogRecord, user_id)],
+            "toolRuns": [tool_run_from_record(item) for item in self._all(session, ToolRunRecord, user_id)],
+            "fridgeItems": [fridge_from_record(item) for item in self._all(session, FridgeItemRecord, user_id)],
+            "toolPresets": [dict(item.preset_json) for item in self._all(session, ToolPresetRecord, user_id)],
+            "preferences": dict(preference.preferences_json) if preference else {},
+            **{
+                key: [personal_record_payload(item) for item in self._all(session, model, user_id)]
+                for key, (model, _id_name) in BACKUP_V2_MODELS.items()
+            },
+        }
+
     def export(self, user_id: str) -> dict[str, Any]:
         with self.session_factory() as session:
-            entities = {
-                "eventTypes": [event_type_from_record(item) for item in self._all(session, EventTypeRecord, user_id)],
-                "todos": [todo_from_record(item) for item in self._all(session, TodoRecord, user_id)],
-                "events": [event_from_record(item) for item in self._all(session, EventRecord, user_id)],
-                "planningRuns": [planning_run_from_record(item) for item in self._all(session, PlanningRunRecord, user_id)],
-                "goals": [goal_from_record(item) for item in self._all(session, GoalRecord, user_id)],
-                "projects": [project_from_record(item) for item in self._all(session, ProjectRecord, user_id)],
-                "milestones": [milestone_from_record(item) for item in self._all(session, MilestoneRecord, user_id)],
-                "actions": [action_from_record(item) for item in self._all(session, ActionItemRecord, user_id)],
-                "progress": [progress_from_record(item) for item in self._all(session, ProgressLogRecord, user_id)],
-                "toolRuns": [tool_run_from_record(item) for item in self._all(session, ToolRunRecord, user_id)],
-                "fridgeItems": [fridge_from_record(item) for item in self._all(session, FridgeItemRecord, user_id)],
-                "toolPresets": [dict(item.preset_json) for item in self._all(session, ToolPresetRecord, user_id)],
-                "preferences": PreferenceRepository(self.engine, user_id).get(),
-                **{
-                    key: [personal_record_payload(item) for item in self._all(session, model, user_id)]
-                    for key, (model, _id_name) in BACKUP_V2_MODELS.items()
-                },
-            }
+            entities = self._export_entities(session, user_id)
         return {
             "formatVersion": BACKUP_FORMAT_VERSION,
             "exportedAt": now_iso(),
             "entities": entities,
             "checksum": checksum_entities(entities),
         }
+
+    @staticmethod
+    def _validate_backup_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        if payload.get("formatVersion") not in {1, BACKUP_FORMAT_VERSION}:
+            raise BackupValidationError("Unsupported backup formatVersion.")
+        entities = payload.get("entities")
+        if not isinstance(entities, dict):
+            raise BackupValidationError("Backup entities must be an object.")
+        checksum = checksum_entities(entities)
+        if not payload.get("checksum") or payload.get("checksum") != checksum:
+            raise BackupValidationError("Backup checksum does not match its contents.")
+        return entities, checksum
+
+    @staticmethod
+    def _entity_id(key: str, item: dict[str, Any]) -> str:
+        field = BACKUP_ENTITY_IDS[key]
+        if key == "toolRuns":
+            return str(item.get(field) or item.get("id") or "")
+        return str(item.get(field) or "")
+
+    @staticmethod
+    def _entity_time(item: dict[str, Any]) -> datetime | None:
+        raw = item.get("updatedAt") or item.get("updated_at")
+        if not isinstance(raw, str) or not raw.strip():
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    @staticmethod
+    def _same_entity(left: Any, right: Any) -> bool:
+        return json.dumps(left, ensure_ascii=False, separators=(",", ":"), sort_keys=True) == json.dumps(
+            right, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        )
+
+    def _preview_with_session(
+        self,
+        session: Any,
+        user_id: str,
+        payload: dict[str, Any],
+        mode: str,
+    ) -> dict[str, Any]:
+        entities, backup_checksum = self._validate_backup_payload(payload)
+        if mode not in {"merge", "replace"}:
+            raise BackupValidationError("Import mode must be merge or replace.")
+        current_entities = self._export_entities(session, user_id)
+        relationship_errors: list[str] = []
+        try:
+            self._validate_relationships(session, user_id, entities, mode)
+        except BackupValidationError as error:
+            relationship_errors.append(str(error))
+
+        counts: dict[str, dict[str, int]] = {}
+        conflicts: list[dict[str, Any]] = []
+        ignored_items: list[dict[str, str]] = []
+        for key in self._loaders():
+            if key == "preferences":
+                raw_preferences = entities.get(key, {})
+                if not isinstance(raw_preferences, dict):
+                    raise BackupValidationError("preferences must be an object.")
+                incoming, ignored_keys = self._sanitize_preferences(raw_preferences)
+                current = current_entities.get(key, {})
+                changed = not self._same_entity(incoming, current)
+                counts[key] = {"new": 0, "updated": 0, "unchanged": int(not changed), "conflicts": int(changed)}
+                if changed:
+                    conflicts.append({
+                        "key": "preferences",
+                        "entity": key,
+                        "id": "preferences",
+                        "label": "Preferences",
+                        "localUpdatedAt": None,
+                        "backupUpdatedAt": None,
+                    })
+                for ignored_key in ignored_keys:
+                    ignored_items.append({"entity": key, "id": ignored_key, "reason": "server-managed-or-unknown"})
+                continue
+
+            incoming_items = entities.get(key, [])
+            if not isinstance(incoming_items, list):
+                raise BackupValidationError(f"{key} must be an array.")
+            current_items = current_entities.get(key, [])
+            current_map = {
+                self._entity_id(key, item): item
+                for item in current_items
+                if isinstance(item, dict) and self._entity_id(key, item)
+            }
+            entity_counts = {"new": 0, "updated": 0, "unchanged": 0, "conflicts": 0}
+            seen: set[str] = set()
+            for index, item in enumerate(incoming_items):
+                if not isinstance(item, dict):
+                    raise BackupValidationError(f"{key}[{index}] must be an object.")
+                external_id = self._entity_id(key, item)
+                if not external_id:
+                    raise BackupValidationError(f"{key}[{index}] must have a non-empty business ID.")
+                if external_id in seen:
+                    raise BackupValidationError(f"{key} contains duplicate business ID {external_id}.")
+                seen.add(external_id)
+                current = current_map.get(external_id)
+                if current is None:
+                    entity_counts["new"] += 1
+                elif self._same_entity(item, current):
+                    entity_counts["unchanged"] += 1
+                else:
+                    incoming_time = self._entity_time(item)
+                    current_time = self._entity_time(current)
+                    if incoming_time is not None and current_time is not None and incoming_time > current_time:
+                        entity_counts["updated"] += 1
+                    elif incoming_time is not None and current_time is not None and incoming_time < current_time:
+                        entity_counts["unchanged"] += 1
+                        ignored_items.append({"entity": key, "id": external_id, "reason": "local-is-newer"})
+                    else:
+                        entity_counts["conflicts"] += 1
+                        conflicts.append({
+                            "key": f"{key}:{external_id}",
+                            "entity": key,
+                            "id": external_id,
+                            "label": str(item.get("title") or item.get("label") or item.get("name") or item.get("item_name") or external_id),
+                            "localUpdatedAt": current.get("updatedAt") or current.get("updated_at"),
+                            "backupUpdatedAt": item.get("updatedAt") or item.get("updated_at"),
+                        })
+            counts[key] = entity_counts
+        return {
+            "formatVersion": payload["formatVersion"],
+            "backupChecksum": backup_checksum,
+            "currentChecksum": checksum_entities(current_entities),
+            "counts": counts,
+            "conflicts": conflicts,
+            "relationshipErrors": relationship_errors,
+            "ignoredItems": ignored_items,
+            "canImport": not relationship_errors,
+        }
+
+    def preview_import(
+        self,
+        user_id: str,
+        payload: dict[str, Any],
+        *,
+        mode: str = "merge",
+    ) -> dict[str, Any]:
+        with self.session_factory() as session:
+            return self._preview_with_session(session, user_id, payload, mode)
 
     def import_backup(
         self,
@@ -391,20 +563,17 @@ class DataPortabilityService:
         mode: str = "merge",
         replace_confirmed: bool = False,
         source: str = "api-backup",
+        expected_backup_checksum: str | None = None,
+        expected_current_checksum: str | None = None,
+        conflict_choices: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        if payload.get("formatVersion") not in {1, BACKUP_FORMAT_VERSION}:
-            raise BackupValidationError("Unsupported backup formatVersion.")
-        entities = payload.get("entities")
-        if not isinstance(entities, dict):
-            raise BackupValidationError("Backup entities must be an object.")
-        checksum = checksum_entities(entities)
-        if not payload.get("checksum") or payload.get("checksum") != checksum:
-            raise BackupValidationError("Backup checksum does not match its contents.")
+        original_entities, checksum = self._validate_backup_payload(payload)
         if mode not in {"merge", "replace"}:
             raise BackupValidationError("Import mode must be merge or replace.")
         if mode == "replace" and not replace_confirmed:
             raise BackupValidationError("Replace import requires explicit confirmation.")
 
+        choices = conflict_choices or {}
         report: dict[str, Any] = {
             "mode": mode,
             "counts": {},
@@ -413,6 +582,8 @@ class DataPortabilityService:
             "ignoredPreferenceKeys": [],
         }
         with self.session_factory.begin() as session:
+            for model in PERSONAL_MODELS:
+                list(session.scalars(select(model).where(model.user_id == user_id).with_for_update()))
             previous = session.scalar(
                 select(MigrationImportRecord).where(
                     MigrationImportRecord.user_id == user_id,
@@ -424,6 +595,47 @@ class DataPortabilityService:
                 return {**(previous.report_json or {}), "skipped": True}
             if previous is not None:
                 report["replayed"] = True
+
+            preview = self._preview_with_session(session, user_id, payload, mode)
+            if expected_backup_checksum is not None and preview["backupChecksum"] != expected_backup_checksum:
+                raise ImportPreviewStaleError("The selected backup changed after preview. Preview it again.")
+            if expected_current_checksum is not None and preview["currentChecksum"] != expected_current_checksum:
+                raise ImportPreviewStaleError("Current data changed after preview. Preview the backup again.")
+            if preview["relationshipErrors"]:
+                raise BackupValidationError(preview["relationshipErrors"][0])
+            conflict_keys = {item["key"] for item in preview["conflicts"]}
+            missing_choices = sorted(key for key in conflict_keys if choices.get(key) not in {"local", "backup"})
+            if missing_choices:
+                raise BackupValidationError(
+                    "Every equal-time conflict requires a local or backup choice: " + ", ".join(missing_choices[:10])
+                )
+            unknown_choices = sorted(key for key in choices if key not in conflict_keys)
+            if unknown_choices:
+                raise BackupValidationError("Conflict choices are stale or unknown: " + ", ".join(unknown_choices[:10]))
+
+            entities = deepcopy(original_entities)
+            current_entities = self._export_entities(session, user_id)
+            for conflict in preview["conflicts"]:
+                if choices.get(conflict["key"]) != "local":
+                    continue
+                key = conflict["entity"]
+                if key == "preferences":
+                    entities["preferences"] = current_entities.get("preferences", {})
+                    continue
+                external_id = conflict["id"]
+                incoming = entities.get(key, [])
+                current_item = next(
+                    (item for item in current_entities.get(key, []) if self._entity_id(key, item) == external_id),
+                    None,
+                )
+                entities[key] = [item for item in incoming if self._entity_id(key, item) != external_id]
+                if mode == "replace" and current_item is not None:
+                    entities[key].append(current_item)
+            report["preview"] = {
+                "backupChecksum": preview["backupChecksum"],
+                "currentChecksum": preview["currentChecksum"],
+                "counts": preview["counts"],
+            }
             self._validate_relationships(session, user_id, entities, mode)
             if mode == "replace":
                 for model in PERSONAL_MODELS:

@@ -13,17 +13,18 @@ import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
 import httpx
 import uvicorn
 from fastapi import Body, Cookie, Depends, FastAPI, File, Form, Header, Query, Request, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy.engine import Engine
 
 from .auth import AuthError, AuthService, Principal
@@ -36,11 +37,18 @@ from .database import (
     initialize_schema,
     require_migration_head,
 )
+from .desktop_migration import DesktopMigrationError, prepare_desktop_database
 from .fridge.config import fridge_data_dir, load_env_files
 from .fridge.deepseek_client import DEFAULT_BASE_URL as DEEPSEEK_DEFAULT_BASE_URL
 from .fridge.deepseek_client import DEFAULT_MODEL as DEEPSEEK_DEFAULT_MODEL
 from .fridge.pipeline import FridgePipelineError, ImageValidationError, InvalidRequestError, ReceiptAnalyzer
-from .goal_control import GoalControlService, USAGE_MODES, clean_mode
+from .goal_control import (
+    AI_OPERATION_ALIASES,
+    AI_PLANNING_OPERATIONS,
+    GoalControlService,
+    USAGE_MODES,
+    clean_mode,
+)
 from .goal_control_api import install_goal_control_routes, usage_capabilities
 from .memory import LongTermMemoryService, MemoryNotFoundError, MemoryValidationError
 from .server_paths import PROJECT_ROOT, application_data_dir, project_env_paths
@@ -49,6 +57,7 @@ from .user_data import (
     BackupValidationError,
     DataPortabilityService,
     FridgeRepository,
+    ImportPreviewStaleError,
     PreferenceRepository,
     ToolPresetRepository,
     UserDataNotFoundError,
@@ -84,29 +93,286 @@ AI_OPERATIONS = {
     "weekly_review",
     "replan",
 }
-AI_OPERATION_ALIASES = {"planning": "goal_plan"}
-AI_PLANNING_OPERATIONS = {"calendar_plan", "goal_plan", "activation", "replan", "weekly_review"}
 
 
 class MultipartParseError(ValueError):
     pass
 
 
-class LoginPayload(BaseModel):
-    username: str
-    password: str
+class StrictDto(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
-class ImportPayload(BaseModel):
+class LoginPayload(StrictDto):
+    username: str = Field(min_length=1, max_length=256)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class RecurrenceEndNever(StrictDto):
+    type: Literal["never"]
+
+
+class RecurrenceEndDate(StrictDto):
+    type: Literal["date"]
+    until: datetime
+
+
+class RecurrenceEndCount(StrictDto):
+    type: Literal["count"]
+    occurrences: int = Field(ge=1, le=10_000)
+
+
+RecurrenceEndCondition = Annotated[
+    RecurrenceEndNever | RecurrenceEndDate | RecurrenceEndCount,
+    Field(discriminator="type"),
+]
+
+
+class RecurrenceRulePayload(StrictDto):
+    frequency: Literal["daily", "weekly", "monthly", "custom"]
+    interval: int = Field(default=1, ge=1, le=365)
+    daysOfWeek: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]] | None = Field(
+        default=None,
+        max_length=7,
+    )
+    dayOfMonth: int | None = Field(default=None, ge=1, le=31)
+    endCondition: RecurrenceEndCondition = Field(default_factory=lambda: RecurrenceEndNever(type="never"))
+
+    @model_validator(mode="after")
+    def validate_weekdays(self) -> "RecurrenceRulePayload":
+        if self.frequency in {"weekly", "custom"} and not self.daysOfWeek:
+            raise ValueError("Weekly and custom recurrence require at least one weekday.")
+        return self
+
+
+class EventCreatePayload(StrictDto):
+    id: str | None = Field(default=None, min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+    displayDetails: str | None = Field(default=None, max_length=2_000)
+    startAt: datetime
+    endAt: datetime
+    allDay: bool = False
+    color: str | None = Field(default=None, max_length=32)
+    eventTypeId: str = Field(default="general", min_length=1, max_length=64)
+    linkedTodoId: str | None = Field(default=None, min_length=1, max_length=64)
+    recurrenceRule: RecurrenceRulePayload | None = None
+    masterId: str | None = Field(default=None, min_length=1, max_length=64)
+    exceptionFor: str | None = Field(default=None, min_length=1, max_length=64)
+    exceptionDate: date | None = None
+    deletedOccurrences: list[str] | None = Field(default=None, max_length=500)
+    syncStatus: Literal["synced", "pending", "conflict"] = "pending"
+    createdAt: datetime | None = None
+    updatedAt: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_time_range(self) -> "EventCreatePayload":
+        if self.startAt.tzinfo is None or self.endAt.tzinfo is None:
+            raise ValueError("Event timestamps must include a timezone offset.")
+        if self.endAt <= self.startAt:
+            raise ValueError("Event end time must be after start time.")
+        return self
+
+
+class EventUpdatePayload(StrictDto):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+    displayDetails: str | None = Field(default=None, max_length=2_000)
+    startAt: datetime | None = None
+    endAt: datetime | None = None
+    allDay: bool | None = None
+    color: str | None = Field(default=None, max_length=32)
+    eventTypeId: str | None = Field(default=None, min_length=1, max_length=64)
+    linkedTodoId: str | None = Field(default=None, min_length=1, max_length=64)
+    recurrenceRule: RecurrenceRulePayload | None = None
+    masterId: str | None = Field(default=None, min_length=1, max_length=64)
+    exceptionFor: str | None = Field(default=None, min_length=1, max_length=64)
+    exceptionDate: date | None = None
+    deletedOccurrences: list[str] | None = Field(default=None, max_length=500)
+    syncStatus: Literal["synced", "pending", "conflict"] | None = None
+    updatedAt: datetime | None = None
+
+    @model_validator(mode="after")
+    def reject_null_required_fields(self) -> "EventUpdatePayload":
+        required = {"title", "startAt", "endAt", "allDay", "eventTypeId", "syncStatus", "updatedAt"}
+        for field_name in required:
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null.")
+        return self
+
+
+class TodoLongProjectPayload(StrictDto):
+    memoryGoalId: str = Field(min_length=1, max_length=64)
+    memoryProjectId: str = Field(min_length=1, max_length=64)
+    sourceToolId: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class TodoCreatePayload(StrictDto):
+    id: str | None = Field(default=None, min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=200)
+    notes: str | None = Field(default=None, max_length=10_000)
+    status: Literal["todo", "doing", "done"] = "todo"
+    eventTypeId: str = Field(default="general", min_length=1, max_length=64)
+    dueDate: date | None = None
+    linkedEventId: str | None = Field(default=None, min_length=1, max_length=64)
+    longProject: TodoLongProjectPayload | None = None
+    etaMinutes: int = Field(default=30, ge=5, le=480)
+    energyNeeded: Literal["high", "medium", "low"] = "medium"
+    priority: Literal["high", "medium", "low"] = "medium"
+    createdAt: datetime | None = None
+    updatedAt: datetime | None = None
+    completedAt: datetime | None = None
+
+
+class TodoUpdatePayload(StrictDto):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    notes: str | None = Field(default=None, max_length=10_000)
+    status: Literal["todo", "doing", "done"] | None = None
+    eventTypeId: str | None = Field(default=None, min_length=1, max_length=64)
+    dueDate: date | None = None
+    linkedEventId: str | None = Field(default=None, min_length=1, max_length=64)
+    longProject: TodoLongProjectPayload | None = None
+    etaMinutes: int | None = Field(default=None, ge=5, le=480)
+    energyNeeded: Literal["high", "medium", "low"] | None = None
+    priority: Literal["high", "medium", "low"] | None = None
+    updatedAt: datetime | None = None
+    completedAt: datetime | None = None
+
+    @model_validator(mode="after")
+    def reject_null_required_fields(self) -> "TodoUpdatePayload":
+        required = {"title", "status", "eventTypeId", "etaMinutes", "energyNeeded", "priority", "updatedAt"}
+        for field_name in required:
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null.")
+        return self
+
+
+class ImportPreviewPayload(StrictDto):
     backup: dict[str, Any]
-    mode: str = "merge"
+    mode: Literal["merge", "replace"] = "merge"
+
+
+class ImportPayload(StrictDto):
+    backup: dict[str, Any]
+    mode: Literal["merge", "replace"] = "merge"
     replaceConfirmed: bool = False
-    source: str = "api-backup"
+    source: str = Field(default="api-backup", min_length=1, max_length=120)
+    expectedBackupChecksum: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    currentDataChecksum: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    conflictChoices: dict[str, Literal["local", "backup"]] = Field(default_factory=dict)
 
 
-class PreUpdateBackupPayload(BaseModel):
-    fromVersion: str
-    toVersion: str
+class PreUpdateBackupPayload(StrictDto):
+    fromVersion: str = Field(min_length=1, max_length=40)
+    toVersion: str = Field(min_length=1, max_length=40)
+
+
+@dataclass(frozen=True)
+class RequestLimits:
+    login: int
+    json: int
+    ai: int
+    backup: int
+    receipt_file: int
+    multipart: int
+
+    def for_path(self, path: str) -> tuple[int, str]:
+        if path == "/api/auth/login":
+            return self.login, "login_request_too_large"
+        if path == "/api/ai/chat/completions":
+            return self.ai, "ai_request_too_large"
+        if path in {"/api/data/import", "/api/data/import/preview"}:
+            return self.backup, "backup_request_too_large"
+        if path == "/api/fridge/receipt/analyze":
+            return self.multipart, "multipart_request_too_large"
+        return self.json, "request_too_large"
+
+
+def _request_limit_env(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a positive byte count.") from exc
+    if value <= 0 or value > 128 * 1024 * 1024:
+        raise RuntimeError(f"{name} must be between 1 and 134217728 bytes.")
+    return value
+
+
+def configured_request_limits() -> RequestLimits:
+    limits = RequestLimits(
+        login=_request_limit_env("CALENDAR_LOGIN_MAX_REQUEST_BYTES", 16 * 1024),
+        json=_request_limit_env("CALENDAR_JSON_MAX_REQUEST_BYTES", 1024 * 1024),
+        ai=_request_limit_env("AI_MAX_REQUEST_BYTES", 256 * 1024),
+        backup=_request_limit_env("CALENDAR_BACKUP_MAX_REQUEST_BYTES", 25 * 1024 * 1024),
+        receipt_file=_request_limit_env("CALENDAR_RECEIPT_MAX_FILE_BYTES", 8 * 1024 * 1024),
+        multipart=_request_limit_env("CALENDAR_MULTIPART_MAX_REQUEST_BYTES", 10 * 1024 * 1024),
+    )
+    if limits.receipt_file > limits.multipart:
+        raise RuntimeError("CALENDAR_RECEIPT_MAX_FILE_BYTES cannot exceed CALENDAR_MULTIPART_MAX_REQUEST_BYTES.")
+    return limits
+
+
+class RequestBodyLimitMiddleware:
+    def __init__(self, app: Any, *, limits: RequestLimits) -> None:
+        self.app = app
+        self.limits = limits
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http" or scope.get("method") in SAFE_METHODS:
+            await self.app(scope, receive, send)
+            return
+        limit, code = self.limits.for_path(str(scope.get("path") or ""))
+        headers = {key.lower(): value for key, value in scope.get("headers") or []}
+        content_length = headers.get(b"content-length")
+        if content_length:
+            try:
+                declared = int(content_length.decode("ascii"))
+            except (UnicodeDecodeError, ValueError):
+                await error_response("content_length_invalid", "Content-Length must be a valid byte count.", 400)(
+                    scope, receive, send
+                )
+                return
+            if declared < 0:
+                await error_response("content_length_invalid", "Content-Length must be a valid byte count.", 400)(
+                    scope, receive, send
+                )
+                return
+            if declared > limit:
+                await error_response(code, "Request body is too large.", 413, details={"maxBytes": limit})(
+                    scope, receive, send
+                )
+                return
+
+        messages: list[dict[str, Any]] = []
+        received = 0
+        while True:
+            message = await receive()
+            messages.append(message)
+            if message.get("type") == "http.request":
+                received += len(message.get("body") or b"")
+                if received > limit:
+                    await error_response(code, "Request body is too large.", 413, details={"maxBytes": limit})(
+                        scope, receive, send
+                    )
+                    return
+                if not message.get("more_body", False):
+                    break
+            elif message.get("type") == "http.disconnect":
+                break
+
+        position = 0
+        async def replay_receive() -> dict[str, Any]:
+            nonlocal position
+            if position >= len(messages):
+                return {"type": "http.disconnect"}
+            message = messages[position]
+            position += 1
+            return message
+
+        await self.app(scope, replay_receive, send)
 
 
 @dataclass
@@ -115,6 +381,7 @@ class ServerState:
     engine: Engine
     auth: AuthService
     analyzer: ReceiptAnalyzer
+    request_limits: RequestLimits
     launch_token: str = ""
     ai_requests: dict[str, deque[float]] = field(default_factory=lambda: defaultdict(deque))
 
@@ -166,15 +433,18 @@ def create_app(
     configured_database_url: str | None = None,
     launch_token: str | None = None,
 ) -> FastAPI:
+    request_limits = configured_request_limits()
     resolved_mode = app_mode(mode)
-    if configured_database_url:
-        engine = create_database_engine(configured_database_url)
-    elif resolved_mode == "desktop" and not os.getenv("CALENDAR_DATABASE_URL", "").strip():
-        data_dir = application_data_dir()
-        data_dir.mkdir(parents=True, exist_ok=True)
-        engine = create_database_engine(db_path=data_dir / "calendar_app.sqlite3")
+    if resolved_mode == "desktop":
+        resolved_database_url = configured_database_url or os.getenv("CALENDAR_DATABASE_URL", "").strip()
+        if not resolved_database_url:
+            data_dir = application_data_dir()
+            data_dir.mkdir(parents=True, exist_ok=True)
+            resolved_database_url = database_url(db_path=data_dir / "calendar_app.sqlite3")
+        prepare_desktop_database(resolved_database_url)
+        engine = create_database_engine(resolved_database_url)
     else:
-        engine = create_database_engine()
+        engine = create_database_engine(configured_database_url)
     if (
         resolved_mode == "server"
         and engine.dialect.name != "mysql"
@@ -184,8 +454,8 @@ def create_app(
         raise RuntimeError("Server mode requires a mysql+pymysql CALENDAR_DATABASE_URL.")
     if resolved_mode == "server" and engine.dialect.name == "mysql":
         require_migration_head(engine)
-    else:
-        initialize_schema(engine, stamp_migration_head=resolved_mode == "desktop")
+    elif resolved_mode == "server":
+        initialize_schema(engine)
     auth = AuthService(engine)
     if resolved_mode == "desktop":
         auth.ensure_desktop_user()
@@ -194,6 +464,7 @@ def create_app(
         engine=engine,
         auth=auth,
         analyzer=ReceiptAnalyzer(),
+        request_limits=request_limits,
         launch_token=launch_token or os.getenv("CALENDAR_DESKTOP_LAUNCH_TOKEN", "").strip(),
     )
 
@@ -215,12 +486,36 @@ def create_app(
         # ApiAIService uses an OpenAI-compatible Authorization header. In
         # desktop mode it contains only the non-secret proxy marker, while the
         # real provider key stays in Windows Credential Manager/backend env.
-        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Desktop-Token"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Desktop-Token", "X-Client-Timezone"],
     )
+    api.add_middleware(RequestBodyLimitMiddleware, limits=state.request_limits)
+
+    @api.exception_handler(RequestValidationError)
+    async def _request_validation_error(
+        _request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        field_errors: dict[str, list[str]] = {}
+        for issue in exc.errors():
+            location = ".".join(str(part) for part in issue.get("loc", ()) if part != "body")
+            field_errors.setdefault(location or "request", []).append(str(issue.get("msg") or "Invalid value."))
+        return error_response(
+            "validation_error",
+            "Request validation failed.",
+            422,
+            retryable=False,
+            field_errors=field_errors,
+        )
+    api.add_exception_handler(ValidationError, _request_validation_error)
 
     @api.exception_handler(AuthError)
     async def _auth_error(_request: Request, exc: AuthError) -> JSONResponse:
-        response = error_response(exc.code, str(exc), exc.status)
+        response = error_response(
+            exc.code,
+            str(exc),
+            exc.status,
+            retry_after_seconds=exc.retry_after,
+        )
         if exc.retry_after:
             response.headers["Retry-After"] = str(exc.retry_after)
         return response
@@ -244,6 +539,10 @@ def create_app(
     api.add_exception_handler(BackupValidationError, _validation_error)
     api.add_exception_handler(PreUpdateBackupError, _validation_error)
 
+    @api.exception_handler(ImportPreviewStaleError)
+    async def _import_preview_stale(_request: Request, exc: ImportPreviewStaleError) -> JSONResponse:
+        return error_response("import_preview_stale", str(exc), 409, retryable=True)
+
     async def _fridge_error(_request: Request, exc: Exception) -> JSONResponse:
         code = getattr(exc, "code", "invalid_request")
         status = int(getattr(exc, "status", 400))
@@ -259,10 +558,11 @@ def create_app(
         calendar_csrf: str = Cookie(default="", alias=CSRF_COOKIE),
         x_desktop_token: str = Header(default="", alias="X-Desktop-Token"),
     ) -> Principal:
+        client_timezone = request.headers.get("X-Client-Timezone", "").strip()
         if state.mode == "desktop":
             if state.launch_token and not constant_time_equal(x_desktop_token, state.launch_token):
                 raise AuthError("invalid_desktop_token", "Desktop launch token is invalid.", 401)
-            return Principal(LOCAL_USER_ID, "local", "admin", state.launch_token, "desktop")
+            return Principal(LOCAL_USER_ID, "local", "admin", state.launch_token, "desktop", client_timezone)
         principal = state.auth.authenticate(calendar_session, calendar_csrf)
         if request.method not in SAFE_METHODS:
             csrf_header = request.headers.get("X-CSRF-Token", "")
@@ -273,6 +573,7 @@ def create_app(
             principal.role,
             calendar_csrf,
             principal.session_id,
+            client_timezone,
         )
 
     def optional_principal(
@@ -396,12 +697,22 @@ def create_app(
         return {"success": True, "todos": CalendarRepository(engine=state.engine).list_todos(principal.user_id)}
 
     @api.post("/api/calendar/todos")
-    def create_todo(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "todo": CalendarRepository(engine=state.engine).create_todo(payload, principal.user_id)}
+    def create_todo(payload: TodoCreatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {
+            "success": True,
+            "todo": CalendarRepository(engine=state.engine).create_todo(
+                payload.model_dump(mode="json", exclude_none=True),
+                principal.user_id,
+            ),
+        }
 
     @api.patch("/api/calendar/todos/{todo_id}")
-    def update_todo(todo_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "todo": CalendarRepository(engine=state.engine).update_todo(todo_id, payload, principal.user_id)}
+    def update_todo(todo_id: str, payload: TodoUpdatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        changes = payload.model_dump(mode="json", exclude_unset=True)
+        return {
+            "success": True,
+            "todo": CalendarRepository(engine=state.engine).update_todo(todo_id, changes, principal.user_id),
+        }
 
     @api.delete("/api/calendar/todos/{todo_id}")
     def delete_todo(todo_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
@@ -417,12 +728,29 @@ def create_app(
         return {"success": True, "events": CalendarRepository(engine=state.engine).list_events(start, end, principal.user_id)}
 
     @api.post("/api/calendar/events")
-    def create_event(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "event": CalendarRepository(engine=state.engine).create_event(payload, principal.user_id)}
+    def create_event(payload: EventCreatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {
+            "success": True,
+            "event": CalendarRepository(engine=state.engine).create_event(
+                payload.model_dump(mode="json", exclude_none=True),
+                principal.user_id,
+            ),
+        }
 
     @api.patch("/api/calendar/events/{event_id}")
-    def update_event(event_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "event": CalendarRepository(engine=state.engine).update_event(event_id, payload, principal.user_id)}
+    def update_event(event_id: str, payload: EventUpdatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        repository = CalendarRepository(engine=state.engine)
+        changes = payload.model_dump(mode="json", exclude_unset=True)
+        EventCreatePayload.model_validate(
+            {
+                **repository.get_event(event_id, principal.user_id),
+                **changes,
+            }
+        )
+        return {
+            "success": True,
+            "event": repository.update_event(event_id, changes, principal.user_id),
+        }
 
     @api.delete("/api/calendar/events/{event_id}")
     def delete_event(event_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
@@ -529,21 +857,44 @@ def create_app(
         image: UploadFile = File(...),
         purchase_date: str | None = Form(default=None),
         timezone: str | None = Form(default=None),
-        _principal: Principal = Depends(current_principal),
-    ) -> dict[str, Any]:
-        content = await image.read()
+        principal: Principal = Depends(current_principal),
+    ) -> Any:
+        content = bytearray()
+        try:
+            while True:
+                chunk = await image.read(64 * 1024)
+                if not chunk:
+                    break
+                if len(content) + len(chunk) > state.request_limits.receipt_file:
+                    return error_response(
+                        "receipt_file_too_large",
+                        "Receipt image is too large.",
+                        413,
+                        details={"maxBytes": state.request_limits.receipt_file},
+                    )
+                content.extend(chunk)
+        finally:
+            await image.close()
         parsed_date = None
         if purchase_date:
             try:
                 parsed_date = date.fromisoformat(purchase_date)
             except ValueError as exc:
                 raise InvalidRequestError("purchase_date must be an ISO date string") from exc
+        control = GoalControlService(
+            engine=state.engine,
+            user_id=principal.user_id,
+            app_mode=state.mode,
+            client_timezone=timezone or principal.client_timezone,
+        )
+        with control.session_factory() as session:
+            effective_timezone, _zone = control._user_timezone(session)
         return state.analyzer.analyze(
-            content,
+            bytes(content),
             image.filename or "receipt",
             image.content_type or "application/octet-stream",
             purchase_date=parsed_date,
-            timezone=timezone,
+            timezone=effective_timezone,
         )
 
     @api.get("/api/fridge/items")
@@ -570,6 +921,9 @@ def create_app(
     @api.patch("/api/me/preferences")
     def update_preferences(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
         clean = {key: value for key, value in payload.items() if key in PERSONAL_PREFERENCE_KEYS}
+        timezone_override = str(clean.get("timezoneOverride") or "").strip()
+        if timezone_override:
+            GoalControlService._timezone(timezone_override)
         if "aiUsageMode" in clean:
             requested_mode = str(clean["aiUsageMode"] or "").strip().lower()
             maximum_mode = clean_mode(os.getenv("AI_MAX_USAGE_MODE", "balanced"))
@@ -612,6 +966,16 @@ def create_app(
             "backup": DataPortabilityService(state.engine, app_mode=state.mode).export(principal.user_id),
         }
 
+    @api.post("/api/data/import/preview")
+    def preview_import_data(
+        payload: ImportPreviewPayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        preview = DataPortabilityService(state.engine, app_mode=state.mode).preview_import(
+            principal.user_id, payload.backup, mode=payload.mode
+        )
+        return {"success": True, "preview": preview}
+
     @api.post("/api/data/import")
     def import_data(payload: ImportPayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
         report = DataPortabilityService(state.engine, app_mode=state.mode).import_backup(
@@ -620,6 +984,9 @@ def create_app(
             mode=payload.mode,
             replace_confirmed=payload.replaceConfirmed,
             source=payload.source,
+            expected_backup_checksum=payload.expectedBackupChecksum,
+            expected_current_checksum=payload.currentDataChecksum,
+            conflict_choices=payload.conflictChoices,
         )
         return {"success": True, "report": report}
 
@@ -651,9 +1018,6 @@ def create_app(
     @api.post("/api/ai/chat/completions")
     async def proxy_ai(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> Response:
         enforce_ai_limit(state, principal.user_id)
-        raw = json.dumps(payload).encode("utf-8")
-        if len(raw) > int(os.getenv("AI_MAX_REQUEST_BYTES", "262144")):
-            return error_response("ai_request_too_large", "AI request is too large.", 413)
         api_key = local_ai_key() if state.mode == "desktop" else os.getenv("DEEPSEEK_API_KEY", "").strip()
         if not api_key:
             return error_response("deepseek_missing_api_key", "AI API key is not configured.", 503)
@@ -669,7 +1033,12 @@ def create_app(
             )
         project_id = str(payload.pop("_calendarProjectId", "")).strip() or None
         thread_id = str(payload.pop("_calendarThreadId", "")).strip() or None
-        control = GoalControlService(engine=state.engine, user_id=principal.user_id, app_mode=state.mode)
+        control = GoalControlService(
+            engine=state.engine,
+            user_id=principal.user_id,
+            app_mode=state.mode,
+            client_timezone=principal.client_timezone,
+        )
         usage = control.usage_summary(project_id)
         if usage["degraded"]:
             return error_response("ai_monthly_hard_limit", "The monthly AI hard limit has been reached. Rule-based planning remains available.", 429)
@@ -800,6 +1169,8 @@ def error_response(
     *,
     retryable: bool | None = None,
     details: dict[str, Any] | None = None,
+    field_errors: dict[str, list[str]] | None = None,
+    retry_after_seconds: int | None = None,
 ) -> JSONResponse:
     error = {
         "code": code,
@@ -809,6 +1180,10 @@ def error_response(
     }
     if details:
         error["details"] = details
+    if field_errors:
+        error["fieldErrors"] = field_errors
+    if retry_after_seconds is not None:
+        error["retryAfterSeconds"] = max(0, retry_after_seconds)
     return JSONResponse(
         status_code=status,
         content={
@@ -974,7 +1349,16 @@ def run(
         listener.bind(("127.0.0.1", port))
         listener.listen(2048)
         actual_port = int(listener.getsockname()[1])
-        api = create_app(mode=resolved_mode, launch_token=launch_token)
+        try:
+            api = create_app(mode=resolved_mode, launch_token=launch_token)
+        except DesktopMigrationError as error:
+            listener.close()
+            print(
+                "CALENDAR_BACKEND_RECOVERY="
+                + json.dumps(error.recovery_payload(), separators=(",", ":")),
+                flush=True,
+            )
+            return
         print(
             "CALENDAR_BACKEND_READY="
             + json.dumps({"port": actual_port, "launchToken": launch_token}, separators=(",", ":")),

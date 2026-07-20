@@ -7,9 +7,9 @@ services:
       MYSQL_ROOT_PASSWORD: calendar_root_test
       MYSQL_USER: calendar_test
     ports:
-      - "33306:3306"
+      - '33306:3306'
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ucalendar_test", "-pcalendar_test"]
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-ucalendar_test', '-pcalendar_test']
       interval: 2s
       timeout: 3s
       retries: 30

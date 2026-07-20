@@ -9,6 +9,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from backend.server import create_app
+from backend.database import ALEMBIC_HEAD
 
 
 class DesktopAuthenticationTests(unittest.TestCase):
@@ -181,7 +182,7 @@ class DesktopAuthenticationTests(unittest.TestCase):
                 self.assertEqual(usage["hard_limit"], 3_000_000)
                 with app.state.calendar.engine.connect() as connection:
                     revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
-                self.assertEqual(revision, "20260715_0007")
+                self.assertEqual(revision, ALEMBIC_HEAD)
             finally:
                 app.state.calendar.engine.dispose()
 

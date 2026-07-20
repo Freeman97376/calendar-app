@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend.server import create_app
+from backend.database import ALEMBIC_HEAD
 from backend.update_backup import PreUpdateBackupError, create_pre_update_backup
 
 
@@ -37,7 +38,7 @@ class DesktopUpdateBackupTests(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(snapshot.read_bytes()).hexdigest(), metadata["checksum"])
                 with closing(sqlite3.connect(snapshot)) as connection:
                     revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()
-                self.assertEqual(revision, ("20260715_0007",))
+                self.assertEqual(revision, (ALEMBIC_HEAD,))
             finally:
                 app.state.calendar.engine.dispose()
 

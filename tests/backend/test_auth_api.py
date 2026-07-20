@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from backend.auth import AuthError, AuthService
-from backend.database import SessionRecord, create_database_engine
+from backend.database import SessionRecord, UserRecord, create_database_engine
 from backend.server import create_app
 from backend.user_data import checksum_entities
 
@@ -102,6 +103,62 @@ class AuthApiTests(unittest.TestCase):
         )
         self.assertEqual(cross_update.status_code, 404)
 
+    def test_calendar_write_dtos_reject_invalid_and_unknown_fields(self) -> None:
+        client, csrf = self.login("alice", "alice-password-123")
+        headers = {"X-CSRF-Token": csrf}
+        valid_event = {
+            "id": "validated-event",
+            "title": "Validated event",
+            "startAt": "2026-07-19T10:00:00Z",
+            "endAt": "2026-07-19T11:00:00Z",
+        }
+        created = client.post("/api/calendar/events", headers=headers, json=valid_event)
+        self.assertEqual(created.status_code, 200, created.text)
+
+        invalid_events = [
+            {**valid_event, "id": "unknown-field", "unexpected": True},
+            {**valid_event, "id": "empty-title", "title": ""},
+            {
+                **valid_event,
+                "id": "backwards",
+                "startAt": "2026-07-19T12:00:00Z",
+                "endAt": "2026-07-19T11:00:00Z",
+            },
+            {
+                **valid_event,
+                "id": "bad-recurrence",
+                "recurrenceRule": {
+                    "frequency": "weekly",
+                    "daysOfWeek": [],
+                    "endCondition": {"type": "never"},
+                },
+            },
+        ]
+        for payload in invalid_events:
+            response = client.post("/api/calendar/events", headers=headers, json=payload)
+            self.assertEqual(response.status_code, 422, response.text)
+            self.assertEqual(response.json()["error"]["code"], "validation_error")
+            self.assertTrue(response.json()["error"]["fieldErrors"])
+
+        invalid_patch = client.patch(
+            "/api/calendar/events/validated-event",
+            headers=headers,
+            json={"endAt": "2026-07-19T09:00:00Z"},
+        )
+        self.assertEqual(invalid_patch.status_code, 422, invalid_patch.text)
+        self.assertEqual(invalid_patch.json()["error"]["code"], "validation_error")
+
+        for payload in (
+            {"title": "Too short", "etaMinutes": 1},
+            {"title": "Bad status", "status": "maybe"},
+            {"title": "Unknown", "unexpected": True},
+            {"title": "x" * 201},
+        ):
+            response = client.post("/api/calendar/todos", headers=headers, json=payload)
+            self.assertEqual(response.status_code, 422, response.text)
+            self.assertEqual(response.json()["error"]["code"], "validation_error")
+            self.assertTrue(response.json()["error"]["fieldErrors"])
+
     def test_failed_logins_lock_and_cli_password_change_revokes_sessions(self) -> None:
         for _index in range(5):
             response = TestClient(self.app).post(
@@ -113,7 +170,9 @@ class AuthApiTests(unittest.TestCase):
             "/api/auth/login",
             json={"username": "bob", "password": "bob-password-123"},
         )
-        self.assertEqual(locked.status_code, 423)
+        self.assertEqual(locked.status_code, 429)
+        self.assertGreaterEqual(int(locked.headers["Retry-After"]), 1)
+        self.assertEqual(locked.json()["error"]["retryAfterSeconds"], int(locked.headers["Retry-After"]))
         self.auth.unlock("bob")
         client, _csrf = self.login("bob", "bob-password-123")
         self.auth.set_password("bob", "new-bob-password-123")
@@ -136,6 +195,29 @@ class AuthApiTests(unittest.TestCase):
         self.assertEqual(second.json()["error"]["code"], "login_rate_limited")
         self.assertEqual(self.auth._dummy_password_hash, dummy_hash)
 
+    def test_concurrent_failed_logins_preserve_every_counter_update(self) -> None:
+        def attempt(index: int) -> int:
+            try:
+                self.auth.login(
+                    "bob",
+                    "wrong-password",
+                    client_ip=f"203.0.113.{index}",
+                )
+            except AuthError as exc:
+                return exc.status
+            return 200
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            statuses = list(executor.map(attempt, range(8)))
+
+        self.assertEqual(statuses.count(401), 5)
+        self.assertEqual(statuses.count(429), 3)
+        with self.auth.session_factory() as session:
+            user = session.scalar(select(UserRecord).where(UserRecord.username == "bob"))
+            self.assertIsNotNone(user)
+            self.assertEqual(user.failed_login_count, 5)
+            self.assertIsNotNone(user.locked_until)
+
     def test_session_expiry_and_account_disable_revoke_access(self) -> None:
         expired_client, _csrf = self.login("bob", "bob-password-123")
         with self.auth.session_factory.begin() as session:
@@ -151,7 +233,8 @@ class AuthApiTests(unittest.TestCase):
             "/api/auth/login",
             json={"username": "bob", "password": "bob-password-123"},
         )
-        self.assertEqual(disabled_login.status_code, 403)
+        self.assertEqual(disabled_login.status_code, 401)
+        self.assertEqual(disabled_login.json()["error"]["code"], "invalid_credentials")
         self.auth.set_active("bob", True)
         self.login("bob", "bob-password-123")
 
@@ -170,6 +253,81 @@ class AuthApiTests(unittest.TestCase):
         self.assertEqual(first.status_code, 200, first.text)
         self.assertTrue(second.json()["report"]["skipped"])
         self.assertEqual(bob_client.get("/api/calendar/todos").json()["todos"][0]["title"], "Portable task")
+
+    def test_backup_preview_requires_equal_time_choices_and_rejects_stale_execution(self) -> None:
+        timestamp = "2026-07-19T12:00:00Z"
+        alice_client, alice_csrf = self.login("alice", "alice-password-123")
+        alice_client.post(
+            "/api/calendar/todos",
+            headers={"X-CSRF-Token": alice_csrf},
+            json={
+                "id": "shared-preview-id",
+                "title": "Backup title",
+                "createdAt": timestamp,
+                "updatedAt": timestamp,
+            },
+        )
+        backup = alice_client.get("/api/data/export").json()["backup"]
+
+        bob_client, bob_csrf = self.login("bob", "bob-password-123")
+        headers = {"X-CSRF-Token": bob_csrf}
+        bob_client.post(
+            "/api/calendar/todos",
+            headers=headers,
+            json={
+                "id": "shared-preview-id",
+                "title": "Local title",
+                "createdAt": timestamp,
+                "updatedAt": timestamp,
+            },
+        )
+        preview_response = bob_client.post(
+            "/api/data/import/preview",
+            headers=headers,
+            json={"backup": backup, "mode": "merge"},
+        )
+        self.assertEqual(preview_response.status_code, 200, preview_response.text)
+        preview = preview_response.json()["preview"]
+        self.assertEqual(preview["counts"]["todos"]["conflicts"], 1)
+        self.assertEqual(preview["conflicts"][0]["key"], "todos:shared-preview-id")
+
+        missing_choice = bob_client.post(
+            "/api/data/import",
+            headers=headers,
+            json={
+                "backup": backup,
+                "mode": "merge",
+                "source": "preview-conflict",
+                "expectedBackupChecksum": preview["backupChecksum"],
+                "currentDataChecksum": preview["currentChecksum"],
+            },
+        )
+        self.assertEqual(missing_choice.status_code, 400)
+        self.assertIn("requires a local or backup choice", missing_choice.text)
+
+        bob_client.patch(
+            "/api/calendar/todos/shared-preview-id",
+            headers=headers,
+            json={"title": "Changed after preview", "updatedAt": "2026-07-19T13:00:00Z"},
+        )
+        stale = bob_client.post(
+            "/api/data/import",
+            headers=headers,
+            json={
+                "backup": backup,
+                "mode": "merge",
+                "source": "preview-stale",
+                "expectedBackupChecksum": preview["backupChecksum"],
+                "currentDataChecksum": preview["currentChecksum"],
+                "conflictChoices": {"todos:shared-preview-id": "local"},
+            },
+        )
+        self.assertEqual(stale.status_code, 409, stale.text)
+        self.assertEqual(stale.json()["error"]["code"], "import_preview_stale")
+        self.assertEqual(
+            bob_client.get("/api/calendar/todos").json()["todos"][0]["title"],
+            "Changed after preview",
+        )
 
     def test_server_enforces_ai_mode_and_budget_policy(self) -> None:
         client, csrf = self.login("alice", "alice-password-123")

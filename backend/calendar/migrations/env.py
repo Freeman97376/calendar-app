@@ -20,6 +20,9 @@ def database_url() -> str:
     command_line_url = context.get_x_argument(as_dictionary=True).get("database_url")
     if command_line_url:
         return command_line_url
+    configured_url = config.get_main_option("sqlalchemy.url")
+    if configured_url:
+        return configured_url
     return os.getenv("CALENDAR_DATABASE_URL", "sqlite:///backend/data/calendar_app.sqlite3")
 
 
