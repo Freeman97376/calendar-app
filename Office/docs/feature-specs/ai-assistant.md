@@ -57,13 +57,13 @@ Action planning context reads the browser's local machine time and timezone thro
 
 ## Error Handling
 
-| Case | UI behavior |
-|------|-------------|
-| API selected without key | Show setup instructions and disable API-backed forms. |
-| Local selected | Enable planning without network or API key. |
-| API non-2xx response | Show provider request error. |
-| Invalid JSON | Show invalid JSON error. |
-| Schema validation failure | Show schema validation error and do not apply actions. |
+| Case                                | UI behavior                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| API selected without key            | Show setup instructions and disable API-backed forms.                                                            |
+| Local selected                      | Enable planning without network or API key.                                                                      |
+| API non-2xx response                | Show provider request error.                                                                                     |
+| Invalid JSON                        | Show invalid JSON error.                                                                                         |
+| Schema validation failure           | Show schema validation error and do not apply actions.                                                           |
 | Event action starts within 48 hours | Show a confirm-time warning and require the user to confirm near-term times before **Apply Actions** is enabled. |
 
 ## Testing Strategy

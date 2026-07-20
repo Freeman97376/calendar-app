@@ -35,4 +35,3 @@ All JSON remains camelCase to match the frontend Zod schemas.
 - Shared package: extract `src/domain` first so web, desktop, mobile, and backend contract tests share schemas.
 - Desktop: Tauri shell around the Vite app, talking to the backend API. Do not connect Tauri directly to MySQL.
 - Mobile: React Native/Expo app with native screens, shared domain schemas, shared API client, and later offline cache/push notifications.
-

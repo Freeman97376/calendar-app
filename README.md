@@ -22,6 +22,11 @@ DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 AI_REQUESTS_PER_MINUTE=30
+CALENDAR_LOGIN_MAX_REQUEST_BYTES=16384
+CALENDAR_JSON_MAX_REQUEST_BYTES=1048576
+CALENDAR_BACKUP_MAX_REQUEST_BYTES=26214400
+CALENDAR_RECEIPT_MAX_FILE_BYTES=8388608
+CALENDAR_MULTIPART_MAX_REQUEST_BYTES=10485760
 AI_MAX_REQUEST_BYTES=262144
 AI_ROUTINE_MODEL=deepseek-chat
 AI_PLANNING_MODEL=deepseek-chat
@@ -61,9 +66,13 @@ goal override -> user global default -> server default -> administrator maximum 
 
 The Settings page shows Economy, Balanced, and Quality-first behavior, current monthly routine/planning tokens, Soft/Hard limits, and degraded status. Server users cannot change budgets or model names. Desktop users can change local budgets. Reaching the Hard limit stops model calls without blocking Check-ins, charts, manual edits, versions, or local data. AI usage events are not included in backup v2.
 
-The database migration head is `20260715_0007`. Existing servers first upgrade to `20260715_0006`, run `python -m backend.audit_integrity`, archive and repair any reported orphan records with `--archive-and-repair`, and only then upgrade to `head`. Desktop SQLite databases are brought forward and stamped automatically at launch.
+The database migration head is `20260719_0008`. Existing servers first upgrade to `20260715_0006`, run `python -m backend.audit_integrity`, archive and repair any reported orphan records with `--archive-and-repair`, and only then upgrade explicitly to `head` while writes are stopped. Server startup never creates, stamps, or migrates the production schema.
+
+Desktop SQLite uses a migration lock and SQLite online backup to build a separate migration candidate. Known layouts, including a false `0007` stamp missing its foreign keys, are repaired and fully migrated; unknown layouts stop with `recovery_required`. The candidate must pass integrity, foreign-key, schema-fingerprint, revision, and record-count checks before it atomically replaces the original. The original and checksummed snapshot remain untouched on failure.
 
 ### Legacy import
+
+Settings first previews every backup import. Newer `updatedAt` values win; equal-time content conflicts require an explicit local/backup choice. Execution includes both preview checksums and returns 409 if current data changed. Replace mode is enabled only after a checksummed desktop SQLite snapshot or a downloaded server-account JSON backup succeeds.
 
 Back up the old files before migrating. After the MySQL migration and first account creation, import the old read-only SQLite/JSON sources:
 
@@ -110,7 +119,7 @@ npm.cmd run version:set -- 0.2.1
 npm.cmd run version:check
 ```
 
-Pushing the matching `v0.2.1` tag runs `.github/workflows/release-desktop.yml`, builds the Windows x64 artifacts, signs the updater payload, and creates a draft GitHub Release. Before the first tag, add the ignored local `calendar-app-updater.key` content as the repository secret `TAURI_SIGNING_PRIVATE_KEY`, and the ignored `.secrets/updater-password.txt` content as `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Publish the draft only after installing and smoke-testing its NSIS asset on a clean Windows machine.
+Pushing the matching `v0.2.1` tag runs `.github/workflows/release-desktop.yml`. The reusable validation workflow must first pass format, lint, Vitest, build, backend, OpenAPI, isolated desktop E2E, real-MySQL contract/server E2E, Rust, and dependency-audit gates. The Windows job then builds and signs the artifacts and creates a draft GitHub Release. Before the first tag, add the ignored local `calendar-app-updater.key` content as the repository secret `TAURI_SIGNING_PRIVATE_KEY`, and the ignored `.secrets/updater-password.txt` content as `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Publish the draft only after installing and smoke-testing both NSIS and portable assets on a clean Windows machine.
 
 The sidecar pre-binds its own random loopback socket and emits one stdout handshake containing its port and ephemeral token. The token is never passed in process arguments or environment variables. Tauri waits up to 15 seconds for the handshake and health check.
 
@@ -319,13 +328,20 @@ Complete release verification:
 
 ```powershell
 npm.cmd run version:check
+npm.cmd run format:check
 npm.cmd run lint
 npm.cmd run test:run
 npm.cmd run build
+npm.cmd run openapi:check
 python -m unittest discover tests.backend
+npm.cmd run test:e2e:desktop
 npm.cmd run test:mysql       # requires Docker/MySQL or CALENDAR_MYSQL_TEST_URL
-cargo check --manifest-path src-tauri\Cargo.toml
+$env:CALENDAR_E2E_DATABASE_URL = 'mysql+pymysql://calendar_test:calendar_test@127.0.0.1:33306/calendar_test?charset=utf8mb4'
+npm.cmd run test:e2e:server
+npm.cmd run rust:check
 npm.cmd audit
+python -m pip_audit -r requirements-server.lock
+python -m pip_audit -r requirements-desktop.lock
 npm.cmd run desktop:build
 ```
 

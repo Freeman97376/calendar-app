@@ -53,6 +53,7 @@ On reconnect (detected via `window.addEventListener('online', ...)`), `syncManag
 **Strategy: Last-write-wins on `updatedAt`**
 
 Every event has an `updatedAt: string` (ISO datetime) field. When syncing:
+
 1. Fetch the Firestore version of the event
 2. Compare `updatedAt` timestamps
 3. Whichever is newer wins (its values are written to both stores)
@@ -73,6 +74,7 @@ syncFields: z.object({
 ```
 
 The `syncStatus` field drives a small indicator in `EventCard`:
+
 - `synced` → no indicator (clean state)
 - `pending` → small cloud-with-arrow icon (saving...)
 - `conflict` → orange warning icon (rare — auto-resolved by last-write-wins)
@@ -110,9 +112,9 @@ interface IStorageAdapter {
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|----------|
-| User creates event offline, same ID created online by accident | Conflict resolution: newer `updatedAt` wins |
-| Firestore quota exceeded | Error logged to `office/tracking/errors.md`; local data preserved; user notified |
-| Very large event list (1000+ events) | `getEvents` takes a `DateRange` — never fetches all events; view window limits query |
-| User clears browser data | localStorage lost; Firestore is source of truth; re-sync on next login |
+| Case                                                           | Behaviour                                                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| User creates event offline, same ID created online by accident | Conflict resolution: newer `updatedAt` wins                                          |
+| Firestore quota exceeded                                       | Error logged to `office/tracking/errors.md`; local data preserved; user notified     |
+| Very large event list (1000+ events)                           | `getEvents` takes a `DateRange` — never fetches all events; view window limits query |
+| User clears browser data                                       | localStorage lost; Firestore is source of truth; re-sync on next login               |

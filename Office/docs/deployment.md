@@ -1,6 +1,6 @@
 # Deployment and Recovery Runbook
 
-> Updated: 2026-07-15. Server, desktop, and legacy migration commands are intentionally separate.
+> Updated: 2026-07-19. Server, desktop, and legacy migration commands are intentionally separate.
 
 ## MySQL server release
 
@@ -25,15 +25,25 @@ python -m venv .venv-server
 ```powershell
 .\.venv-server\Scripts\python.exe -m backend.audit_integrity --archive-and-repair
 .\.venv-server\Scripts\python.exe -m backend.audit_integrity
-.\.venv-server\Scripts\python.exe -m alembic upgrade 20260715_0007
+.\.venv-server\Scripts\python.exe -m alembic upgrade 20260719_0008
 ```
 
-6. Deploy the backward-compatible backend first. Create or manage accounts only through `python -m backend.manage_users`; no registration route exists.
-7. Deploy the frontend, then sign into two accounts and verify event, Tool, goal, Check-in, backup, and AI isolation. Monitor normalized AI error codes, login 429 responses, ignored import preferences, and sidecar startup failures without logging secrets or request bodies.
+Inspect the deterministic relationship repairs and quarantined duplicate/orphan rows before restoring writes:
+
+```sql
+SELECT * FROM data_integrity_repairs ORDER BY repaired_at DESC;
+```
+
+6. Verify `alembic current` is `20260719_0008`; application startup intentionally refuses a stale MySQL schema and never runs Alembic or `create_all`.
+7. Deploy the backend first. Create or manage accounts only through `python -m backend.manage_users`; no registration route exists. Deploy the frontend, then sign into two accounts and verify event, Tool, goal, Check-in, preview/import, and AI isolation. Monitor normalized AI error codes and login 429 responses without logging secrets or request bodies.
 
 ## Windows desktop release
 
-Desktop does not use MySQL and never displays the login page. Run:
+Desktop does not use MySQL and never displays the login page.
+
+Before the UI starts, the sidecar migrates a candidate copy under an exclusive lock. It switches files only after Alembic head, relationship audit, `integrity_check`, `foreign_key_check`, schema fingerprint, and record counts pass. An unknown or damaged layout returns structured `recovery_required`; the recovery screen exposes the original/snapshot locations, copy diagnostics, open directory, retry, and exit. It never opens an empty fallback database.
+
+Build both Windows packages with:
 
 ```powershell
 npm.cmd run desktop:build
@@ -46,7 +56,7 @@ The build uses `requirements-desktop.lock` with `pip --require-hashes` inside a 
 - `dist-desktop/Calendar App Portable.zip`
 - `dist-desktop/SHA256SUMS.txt`
 
-Test both formats in a clean Windows environment: start, create data, restart, OCR a receipt, export/replace/import a backup, and confirm persistence. The portable directory must contain `portable.mode` and `licenses/`.
+Test both formats in a clean Windows environment: migrate a populated pre-0008 database, start, create data, restart, OCR a receipt, preview merge conflicts, perform a checksummed replace backup/import, and confirm persistence. Also inject a damaged database and verify recovery without changing the original hash. The portable directory must contain `portable.mode` and `licenses/`.
 
 ### Signed updater release
 
@@ -67,7 +77,7 @@ git tag v0.2.1
 git push origin v0.2.1
 ```
 
-4. `.github/workflows/release-desktop.yml` validates the tag/version contract, frontend, backend, packaged sidecar, and signed NSIS build. It creates a draft release and uploads the NSIS updater artifacts, portable ZIP, and checksums.
+4. `.github/workflows/release-desktop.yml` calls the reusable full-gate workflow first: format, lint, Vitest, frontend build, OpenAPI snapshot, backend suite, both Playwright modes, real MySQL migration/contract, Rust check, npm audit, and both Python lock audits. Only then does it validate the tag/version contract and create the signed draft release.
 5. Download the draft NSIS installer and test it before publishing. A published release becomes the next `releases/latest` updater feed.
 
 Installed builds ask before downloading/installing. After the download and before installation, `POST /api/data/pre-update-backup` uses SQLite's online-backup API and retains three checksummed snapshots in the desktop data `backups` directory. Verify that an update preserves the database and that rollback data is readable. Portable builds only open the release page; replace the portable program files manually while retaining its `data` directory.
@@ -81,3 +91,5 @@ npm.cmd run legacy:firebase-export -- .\legacy-firebase-backup.json
 ```
 
 Import the resulting file only after signing into the intended owner account. Repeat merge imports are checksum-idempotent; a confirmed replace import deliberately replays the same backup.
+
+Every v1/v2 import first calls `/api/data/import/preview`. Equal-timestamp divergent records require a per-item or batch conflict choice. Import execution carries the backup and current-data checksums from that preview and rolls back the single transaction if either checksum is stale or any write fails.

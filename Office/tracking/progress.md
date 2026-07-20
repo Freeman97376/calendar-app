@@ -6,17 +6,17 @@
 
 ## Phase Completion Overview
 
-| Phase | Name | Progress | Status |
-|-------|------|----------|--------|
-| Pre-0 | Project Setup | 100% | Done |
-| 0 | Bootstrap | 100% (8/8) | Done |
-| 1 | Calendar Views | 100% (10/10) | Done |
-| 2 | Event CRUD | 100% (11/11) | Done |
-| 3 | Recurring Events | 100% (7/7) | Done |
-| 4 | Drag & Drop | 100% (7/7) | Done |
-| 5 | Persistence Layer | 100% (10/10) | Done |
-| 6 | AI Assistant | 100% (13/13) | Done |
-| 7 | Polish & QA | 50% (5/10) | Active sprint |
+| Phase | Name              | Progress     | Status        |
+| ----- | ----------------- | ------------ | ------------- |
+| Pre-0 | Project Setup     | 100%         | Done          |
+| 0     | Bootstrap         | 100% (8/8)   | Done          |
+| 1     | Calendar Views    | 100% (10/10) | Done          |
+| 2     | Event CRUD        | 100% (11/11) | Done          |
+| 3     | Recurring Events  | 100% (7/7)   | Done          |
+| 4     | Drag & Drop       | 100% (7/7)   | Done          |
+| 5     | Persistence Layer | 100% (10/10) | Done          |
+| 6     | AI Assistant      | 100% (13/13) | Done          |
+| 7     | Polish & QA       | 50% (5/10)   | Active sprint |
 
 **Overall:** Core feature phases are complete. The 2026-07-15 repair release has implemented its security/AI/desktop and long-term-plan/data-integrity changes; final full-suite, real-MySQL, and packaged Windows smoke verification are the remaining release gates.
 
@@ -24,19 +24,19 @@
 
 ## Milestone Log
 
-| Date | Milestone |
-|------|-----------|
-| 2026-05-24 | Project kickoff - office structure, architecture, and task board created |
-| 2026-05-25 | Phase 0 bootstrap verified |
-| 2026-05-25 | Phase 1 calendar views verified |
-| 2026-05-25 | Phase 2 event CRUD verified |
-| 2026-05-26 | Phase 3 recurring events verified |
-| 2026-05-26 | Phase 4 drag and drop verified |
-| 2026-05-26 | Phase 5 persistence layer verified |
-| 2026-05-26 | Phase 6 AI assistant verified |
-| 2026-06-07 | To-do list and editable event/task type extension verified |
-| 2026-06-07 | AI frontend action planning and application verified |
-| 2026-06-08 | Settings and Tools layer verified |
+| Date       | Milestone                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-24 | Project kickoff - office structure, architecture, and task board created                                                |
+| 2026-05-25 | Phase 0 bootstrap verified                                                                                              |
+| 2026-05-25 | Phase 1 calendar views verified                                                                                         |
+| 2026-05-25 | Phase 2 event CRUD verified                                                                                             |
+| 2026-05-26 | Phase 3 recurring events verified                                                                                       |
+| 2026-05-26 | Phase 4 drag and drop verified                                                                                          |
+| 2026-05-26 | Phase 5 persistence layer verified                                                                                      |
+| 2026-05-26 | Phase 6 AI assistant verified                                                                                           |
+| 2026-06-07 | To-do list and editable event/task type extension verified                                                              |
+| 2026-06-07 | AI frontend action planning and application verified                                                                    |
+| 2026-06-08 | Settings and Tools layer verified                                                                                       |
 | 2026-07-15 | Security, AI proxy, account reset, goal-control integrity, reproducible locks and release governance repair implemented |
 
 ### 2026-07-15 - Staged repair release

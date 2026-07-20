@@ -34,18 +34,18 @@ Current verification:
 
 ## Tasks
 
-| ID | Task | Status | Notes |
-|----|------|--------|-------|
-| 7.1 | Responsive design audit and fixes | Done | AI panel now stacks below calendar on smaller screens. |
-| 7.2 | ARIA labels on all interactive elements | Done | Existing controls reviewed; AI panel uses complementary landmark. |
-| 7.3 | Keyboard navigation | Done | Modal Escape handling existed; view switcher now supports arrow keys. |
-| 7.4 | Add `ErrorBoundary` around major sections | Done | Calendar shell wrapped in `ErrorBoundary`. |
-| 7.5 | Loading skeleton states | Done | Event loading status added; AI thinking state already present. |
-| 7.6 | E2E tests: create event flow | In progress | Tests written; execution blocked by escalation usage limit. |
-| 7.7 | E2E tests: AI breakdown and schedule flow | In progress | No-key AI E2E written; full API-backed flow remains integration-tested. |
-| 7.8 | E2E tests: drag and drop rescheduling | In progress | Tests written; execution blocked by escalation usage limit. |
-| 7.9 | Performance audit | In progress | Manual chunks added; production build rerun still needed. |
-| 7.10 | Final code review | Not started | |
+| ID   | Task                                      | Status      | Notes                                                                   |
+| ---- | ----------------------------------------- | ----------- | ----------------------------------------------------------------------- |
+| 7.1  | Responsive design audit and fixes         | Done        | AI panel now stacks below calendar on smaller screens.                  |
+| 7.2  | ARIA labels on all interactive elements   | Done        | Existing controls reviewed; AI panel uses complementary landmark.       |
+| 7.3  | Keyboard navigation                       | Done        | Modal Escape handling existed; view switcher now supports arrow keys.   |
+| 7.4  | Add `ErrorBoundary` around major sections | Done        | Calendar shell wrapped in `ErrorBoundary`.                              |
+| 7.5  | Loading skeleton states                   | Done        | Event loading status added; AI thinking state already present.          |
+| 7.6  | E2E tests: create event flow              | In progress | Tests written; execution blocked by escalation usage limit.             |
+| 7.7  | E2E tests: AI breakdown and schedule flow | In progress | No-key AI E2E written; full API-backed flow remains integration-tested. |
+| 7.8  | E2E tests: drag and drop rescheduling     | In progress | Tests written; execution blocked by escalation usage limit.             |
+| 7.9  | Performance audit                         | In progress | Manual chunks added; production build rerun still needed.               |
+| 7.10 | Final code review                         | Not started |                                                                         |
 
 ---
 

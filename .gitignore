@@ -29,13 +29,18 @@ pnpm-debug.log*
 # Tool caches
 .vite/
 .vitest/
+.pytest_cache/
 .eslintcache
 .turbo/
 *.tsbuildinfo
 __pycache__/
 *.py[cod]
-backend/data/calendar_app.sqlite3
+backend/data/*.sqlite*
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
 src-tauri/target/
+src-tauri/gen/schemas/
 src-tauri/binaries/*.exe
 src-tauri/resources/tesseract/*
 !src-tauri/resources/tesseract/.gitkeep
