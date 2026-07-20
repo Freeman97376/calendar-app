@@ -50,7 +50,9 @@ async function main() {
     toolPresets: [],
     toolRuns: [],
   }
-  const checksum = createHash('sha256').update(JSON.stringify(stable(entities))).digest('hex')
+  const checksum = createHash('sha256')
+    .update(JSON.stringify(stable(entities)))
+    .digest('hex')
   const backup = {
     checksum,
     entities,

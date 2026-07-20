@@ -9,7 +9,11 @@ permissions:
   contents: write
 
 jobs:
+  quality-gates:
+    uses: ./.github/workflows/validate.yml
+
   windows-x64:
+    needs: quality-gates
     runs-on: windows-latest
     steps:
       - name: Check out source

@@ -1,24 +1,32 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const mode = process.env.CALENDAR_E2E_MODE === 'server' ? 'server' : 'desktop'
+
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
-  fullyParallel: true,
+  testMatch: /.*\.test\.ts/,
+  testIgnore: mode === 'server' ? /^(?!.*server).*\.test\.ts/ : /server.*\.test\.ts/,
+  timeout: 45_000,
+  fullyParallel: false,
+  workers: 1,
+  retries: process.env.CI ? 1 : 0,
+  outputDir: `test-results/playwright-${mode}`,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: 'http://127.0.0.1:5173',
-    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
   },
   webServer: {
-    command:
-      '"C:\\Program Files\\nodejs\\node.exe" "node_modules\\vite\\bin\\vite.js" --host 127.0.0.1 --port 5173',
+    command: `node scripts/e2e-launcher.mjs --mode ${mode}`,
     url: 'http://127.0.0.1:5173',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
+    timeout: 90_000,
   },
   projects: [
     {
-      name: 'edge',
-      use: { ...devices['Desktop Chrome'], channel: 'msedge' },
+      name: `chromium-${mode}`,
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
 })
