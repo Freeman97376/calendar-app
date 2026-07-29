@@ -236,12 +236,18 @@ describe('ApiAIService', () => {
             {
               title: 'Workout A',
               dueDate: 'Day 1',
+              energyNeeded: 'High',
+              estimatedMinutes: '45',
+              priority: 'High',
               status: 'scheduled',
               milestoneTitle: 'Foundation block',
             },
             {
               title: 'Workout B',
               dueDate: '2026-06-29',
+              energyNeeded: 'Low',
+              estimatedMinutes: '30',
+              priority: 'Medium',
               status: 'todo',
             },
           ],
@@ -276,13 +282,19 @@ describe('ApiAIService', () => {
     expect(result.confirmedRequirements).toEqual(['Goal: Build consistent strength'])
     expect(result.needsUserConfirmation).toBe(false)
     expect(result.actions[0]).toMatchObject({
+      energyNeeded: 'high',
+      estimatedMinutes: 45,
       milestoneTitle: 'Foundation block',
+      priority: 'high',
       status: 'scheduled',
       title: 'Workout A',
     })
     expect(result.actions[0]).not.toHaveProperty('dueDate')
     expect(result.actions[1]).toMatchObject({
       dueDate: '2026-06-29',
+      energyNeeded: 'low',
+      estimatedMinutes: 30,
+      priority: 'medium',
       title: 'Workout B',
     })
     expect(result.milestones[0]).not.toHaveProperty('dueDate')
@@ -312,6 +324,8 @@ describe('ApiAIService', () => {
     })
 
     const result = await service.runToolActivation({
+      activationFields: [],
+      activationFormDraft: {},
       capabilityTags: ['inventory'],
       existingInstanceAliases: [],
       messages: [

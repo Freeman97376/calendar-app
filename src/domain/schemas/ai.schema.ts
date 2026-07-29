@@ -9,6 +9,7 @@ import { z } from 'zod'
 
 const TaskEnergySchema = z.enum(['high', 'medium', 'low'])
 const TaskEtaMinutesSchema = z.coerce.number().int().min(5).max(480)
+const TaskPrioritySchema = z.enum(['high', 'medium', 'low'])
 
 export const AIStepSchema = z.object({
   title: z.string().trim().min(1).max(100),
@@ -264,7 +265,10 @@ export const AIProgressToolActionContextSchema = z.object({
   description: z.string().default(''),
   due_date: ISODateSchema.nullable(),
   status: z.enum(['todo', 'scheduled', 'done', 'blocked', 'skipped']),
+  estimated_minutes: TaskEtaMinutesSchema.optional(),
+  energy_needed: TaskEnergySchema.optional(),
   metadata: MetadataSchema,
+  priority: TaskPrioritySchema.optional(),
 })
 
 export const AIProgressToolProgressContextSchema = z.object({
@@ -355,8 +359,11 @@ export const AIProgressToolMilestoneUpsertSchema = z.object({
 export const AIProgressToolActionUpsertSchema = z.object({
   description: z.string().trim().optional(),
   dueDate: ISODateSchema.optional(),
+  energyNeeded: TaskEnergySchema.default('medium'),
+  estimatedMinutes: TaskEtaMinutesSchema.default(30),
   existingActionId: z.string().trim().min(1).optional(),
   milestoneTitle: z.string().trim().optional(),
+  priority: TaskPrioritySchema.default('medium'),
   status: z.enum(['todo', 'scheduled', 'done', 'blocked', 'skipped']).default('todo'),
   title: z.string().trim().min(1).max(200),
 })
@@ -387,7 +394,25 @@ export const AIToolActivationMessageSchema = z.object({
   role: z.enum(['assistant', 'user']),
 })
 
+export const AIToolActivationFieldOptionSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  value: z.string().trim().min(1).max(80),
+})
+
+export const AIToolActivationFieldSchema = z.object({
+  accuracyImpact: z.string().trim().max(200).optional(),
+  defaultValue: z.string().trim().max(200).optional(),
+  id: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(120),
+  options: z.array(AIToolActivationFieldOptionSchema).max(20).optional(),
+  placeholder: z.string().trim().max(200).optional(),
+  recommended: z.boolean().default(false),
+  type: z.enum(['text', 'number', 'time', 'textarea', 'select']),
+})
+
 export const AIToolActivationRequestSchema = z.object({
+  activationFields: z.array(AIToolActivationFieldSchema).max(20).default([]),
+  activationFormDraft: z.record(z.string()).default({}),
   capabilityTags: z.array(z.string().trim().min(1)).max(12).default([]),
   existingInstanceAliases: z.array(z.string().trim().min(1)).max(20).default([]),
   messages: z.array(AIToolActivationMessageSchema).max(12).default([]),
@@ -456,5 +481,6 @@ export type AIProgressToolKind = z.infer<typeof AIProgressToolKindSchema>
 export type AIProgressToolMilestoneUpsert = z.infer<typeof AIProgressToolMilestoneUpsertSchema>
 export type AIProgressToolRequest = z.infer<typeof AIProgressToolRequestSchema>
 export type AIProgressToolResult = z.infer<typeof AIProgressToolResultSchema>
+export type AIToolActivationField = z.infer<typeof AIToolActivationFieldSchema>
 export type AIToolActivationRequest = z.infer<typeof AIToolActivationRequestSchema>
 export type AIToolActivationResult = z.infer<typeof AIToolActivationResultSchema>

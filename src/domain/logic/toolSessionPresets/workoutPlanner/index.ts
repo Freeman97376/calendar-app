@@ -64,6 +64,27 @@ export const workoutPlannerPreset: ToolPreset = {
       type: 'text',
     },
     {
+      id: 'heightCm',
+      label: 'Height cm',
+      placeholder: '178',
+      required: false,
+      type: 'number',
+    },
+    {
+      id: 'weightKg',
+      label: 'Weight kg',
+      placeholder: '76',
+      required: false,
+      type: 'number',
+    },
+    {
+      id: 'preferences',
+      label: 'Preferences',
+      placeholder: 'Morning sessions, low impact, no jumping',
+      required: false,
+      type: 'textarea',
+    },
+    {
       id: 'constraints',
       label: 'Constraints',
       placeholder: 'Knee pain, apartment-friendly',

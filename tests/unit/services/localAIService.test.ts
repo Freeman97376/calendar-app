@@ -1,8 +1,27 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AICalendarContext } from '../../../src/domain/types'
-import type { AIProgressToolRequest } from '../../../src/domain/types'
+import { planTodoSchedule } from '../../../src/domain/logic/taskPlanner'
+import { AIProgressToolResultSchema } from '../../../src/domain/schemas/ai.schema'
+import { TodoSchema } from '../../../src/domain/schemas/todo.schema'
+import type { AICalendarContext, AIProgressToolRequest, Todo } from '../../../src/domain/types'
 import { LocalAIService } from '../../../src/services/ai/localAIService'
+
+function localDateTime(value: string): string {
+  return new Date(value).toISOString()
+}
+
+function demoTodo(overrides: Partial<Todo> & Pick<Todo, 'id' | 'title'>): Todo {
+  return TodoSchema.parse({
+    createdAt: '2026-06-18T08:00:00.000Z',
+    energyNeeded: 'medium',
+    etaMinutes: 30,
+    eventTypeId: 'project',
+    priority: 'medium',
+    status: 'todo',
+    updatedAt: '2026-06-18T08:00:00.000Z',
+    ...overrides,
+  })
+}
 
 const context: AICalendarContext = {
   currentDate: '2026-06-18',
@@ -134,6 +153,145 @@ describe('LocalAIService', () => {
     expect(result.confirmedRequirements).toContain('Calendar sessions: 5')
   })
 
+  it('runs the hackathon fitness demo with schema-valid plan data and mixed task sorting', async () => {
+    const service = new LocalAIService()
+
+    const result = await service.runProgressTool({
+      actions: [],
+      calendarEvents: [],
+      formInput: {
+        constraints: 'Low impact because of knee discomfort',
+        equipment: 'Dumbbells and treadmill',
+        frequency: '4 times per week',
+        goal: 'Lose fat and build strength',
+        heightCm: '178',
+        level: 'intermediate',
+        preferences: 'Morning sessions, low impact, no jumping',
+        preferredTime: '06:30',
+        sessionLength: '50',
+        weightKg: '76',
+      },
+      memorySearchResults: [],
+      milestones: [],
+      progress: [],
+      sourceToolId: 'fitness-ai',
+      timezoneOffsetMinutes: -420,
+      today: '2026-06-18',
+      toolKind: 'fitness',
+      toolRuns: [],
+      userInstruction:
+        'Latest user message:\nGenerate next week full workout plan with 4 sessions.\n\nTask: confirm requirements through the conversation.',
+    })
+
+    expect(AIProgressToolResultSchema.parse(result)).toEqual(result)
+    expect(result.confirmedRequirements).toEqual(
+      expect.arrayContaining([
+        'Body metrics: Height: 178 cm, Weight: 76 kg',
+        'Preferences: Morning sessions, low impact, no jumping',
+      ]),
+    )
+    expect(result.milestones.map((milestone) => milestone.title)).toEqual([
+      'Baseline and habit setup',
+      'Progressive training rhythm',
+      'Review and adjust plan',
+    ])
+    expect(result.calendarEvents).toHaveLength(4)
+    expect(result.calendarEvents[0]).toMatchObject({
+      allDay: false,
+      startAt: '2026-06-22T13:30:00.000Z',
+      title: 'Lose fat and build strength baseline workout',
+    })
+    expect(result.calendarEvents[0].displayDetails).toContain('Height: 178 cm')
+    expect(result.calendarEvents[0].displayDetails).toContain('no jumping')
+    expect(result.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          energyNeeded: 'medium',
+          estimatedMinutes: 50,
+          priority: 'high',
+          status: 'scheduled',
+          title: 'Complete baseline workout',
+        }),
+        expect.objectContaining({
+          energyNeeded: 'low',
+          estimatedMinutes: 15,
+          priority: 'medium',
+          title: 'Log recovery and effort',
+        }),
+      ]),
+    )
+
+    const generatedFitnessTodos = result.actions.map((action, index) =>
+      demoTodo({
+        dueDate: action.dueDate,
+        energyNeeded: action.energyNeeded,
+        etaMinutes: action.estimatedMinutes,
+        id: `fitness-${index}`,
+        priority: action.priority,
+        status: action.status === 'done' ? 'done' : 'todo',
+        title: action.title,
+      }),
+    )
+    const mixedTodos = [
+      demoTodo({
+        dueDate: '2026-06-20',
+        energyNeeded: 'high',
+        etaMinutes: 20,
+        id: 'hackathon-pitch',
+        priority: 'high',
+        title: 'Hackathon pitch dry run',
+      }),
+      demoTodo({
+        dueDate: '2026-06-21',
+        energyNeeded: 'high',
+        etaMinutes: 45,
+        id: 'demo-copy',
+        priority: 'medium',
+        title: 'Prepare demo copy',
+      }),
+      demoTodo({
+        dueDate: '2026-06-22',
+        energyNeeded: 'high',
+        etaMinutes: 25,
+        id: 'sponsor-outreach',
+        priority: 'medium',
+        title: 'Sponsor outreach follow-up',
+      }),
+      demoTodo({
+        dueDate: '2026-06-20',
+        energyNeeded: 'low',
+        etaMinutes: 15,
+        id: 'admin-email',
+        priority: 'low',
+        title: 'Send admin email',
+      }),
+      ...generatedFitnessTodos,
+    ]
+
+    const plan = planTodoSchedule(mixedTodos, [], {
+      dayEndTime: '18:00',
+      dayStartTime: '09:00',
+      rangeEnd: localDateTime('2026-06-27T18:00:00'),
+      rangeStart: localDateTime('2026-06-20T09:00:00'),
+    })
+
+    expect(plan.warnings).toEqual([])
+    expect(plan.actions.map((action) => action.todoId)).toEqual([
+      'hackathon-pitch',
+      'fitness-0',
+      'demo-copy',
+      'sponsor-outreach',
+      'fitness-4',
+      'fitness-1',
+      'fitness-2',
+      'fitness-3',
+      'admin-email',
+    ])
+    expect(plan.actions.find((action) => action.todoId === 'fitness-0')?.reason).toContain(
+      '50 minute ETA',
+    )
+  })
+
   it('generates deterministic AI agent learning routes', async () => {
     const service = new LocalAIService()
 
@@ -165,6 +323,8 @@ describe('LocalAIService', () => {
     const service = new LocalAIService()
 
     const result = await service.runToolActivation({
+      activationFields: [],
+      activationFormDraft: {},
       capabilityTags: ['memory', 'fitness'],
       existingInstanceAliases: [],
       messages: [{ content: 'Build strength with dumbbells three times per week.', role: 'user' }],

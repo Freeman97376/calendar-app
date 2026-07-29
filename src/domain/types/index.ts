@@ -23,6 +23,7 @@ export type {
   AIProgressToolMilestoneUpsert,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationField,
   AIToolActivationRequest,
   AIToolActivationResult,
   AIStep,

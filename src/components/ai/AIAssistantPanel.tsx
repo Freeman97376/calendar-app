@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import type { AIAction, AIProvider } from '../../domain/types'
+import type { AIAction, AIProvider, AIToolActivationField } from '../../domain/types'
 import { useApprovalDrawer } from '../../hooks/useApprovalDrawer'
 import { useAI, type AIComposerOptions } from '../../hooks/useAI'
 import { useI18n } from '../../hooks/useI18n'
@@ -11,7 +11,7 @@ import AIMessageBubble from './AIMessageBubble'
 import AIScheduleSuggestion from './AIScheduleSuggestion'
 import GoalConversationPanel from './GoalConversationPanel'
 
-type ComposerMode = 'chat' | 'plan' | 'goal'
+type ComposerMode = 'chat' | 'plan' | 'goal' | 'tools'
 
 const providerLabels: Record<AIProvider, string> = {
   api: 'API',
@@ -44,13 +44,19 @@ function actionTitle(action: AIAction): string {
 function modeSubmitLabel(mode: ComposerMode, t: ReturnType<typeof useI18n>['t']): string {
   if (mode === 'goal') return t('ai.breakDownGoal')
   if (mode === 'plan') return t('ai.planActions')
+  if (mode === 'tools') return t('ai.findTool')
   return t('ai.sendMessage')
 }
 
 function modePlaceholder(mode: ComposerMode, t: ReturnType<typeof useI18n>['t']): string {
   if (mode === 'goal') return t('ai.goal')
   if (mode === 'plan') return t('ai.commandPlaceholder')
+  if (mode === 'tools') return t('ai.toolsPlaceholder')
   return t('ai.conversationPlaceholder')
+}
+
+function fieldInputMode(field: AIToolActivationField): 'decimal' | undefined {
+  return field.type === 'number' ? 'decimal' : undefined
 }
 
 export default function AIAssistantPanel() {
@@ -70,10 +76,17 @@ export default function AIAssistantPanel() {
   const [includeTodoContext, setIncludeTodoContext] = useState(true)
   const [taskStatus, setTaskStatus] = useState<string | null>(null)
   const [showGoalConversation, setShowGoalConversation] = useState(false)
+  const [activationDraft, setActivationDraft] = useState<Record<string, string>>({})
+  const [editingTemplateDetails, setEditingTemplateDetails] = useState(false)
 
   useEffect(() => {
     setModelDraft(ai.model)
   }, [ai.model, ai.provider])
+
+  useEffect(() => {
+    setActivationDraft(ai.pendingToolTemplateActivation?.activationFormDraft ?? {})
+    setEditingTemplateDetails(false)
+  }, [ai.pendingToolTemplateActivation])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -144,10 +157,10 @@ export default function AIAssistantPanel() {
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button onClick={() => workspace.openPanel('tools')} variant="ghost">
-              Templates
+              {t('panel.toolTemplates')}
             </Button>
             <Button onClick={() => setShowGoalConversation(true)} variant="primary">
-              New long-term goal / 新长期目标
+              {t('ai.newLongTermGoal')}
             </Button>
           </div>
         </div>
@@ -347,6 +360,164 @@ export default function AIAssistantPanel() {
           </section>
         ) : null}
 
+        {ai.pendingToolTemplateActivation ? (
+          <section className="space-y-3 rounded-md border border-indigo-200 bg-indigo-50 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-indigo-950">
+                  {t('ai.templateActivationTitle', {
+                    label: ai.pendingToolTemplateActivation.template.label,
+                  })}
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-indigo-800">
+                  {ai.pendingToolTemplateActivation.reason}
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-indigo-800">
+                {Math.round(ai.pendingToolTemplateActivation.confidence * 100)}%
+              </span>
+            </div>
+
+            {Object.entries(activationDraft).some(([, value]) => value.trim()) ? (
+              <div className="rounded-md bg-white p-2 text-xs leading-5 text-slate-700">
+                <p className="font-semibold text-slate-800">{t('ai.detectedParameters')}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {ai.pendingToolTemplateActivation.activationFields
+                    .filter((field) => activationDraft[field.id]?.trim())
+                    .map((field) => (
+                      <span
+                        className="rounded-full bg-slate-100 px-2 py-1 text-slate-700"
+                        key={field.id}
+                      >
+                        {field.label}: {activationDraft[field.id]}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            {ai.pendingToolTemplateActivation.missingRecommendedFieldIds.length ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-900">
+                <p className="font-semibold">{t('ai.missingRecommendedParameters')}</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {ai.pendingToolTemplateActivation.activationFields
+                    .filter((field) =>
+                      ai.pendingToolTemplateActivation?.missingRecommendedFieldIds.includes(
+                        field.id,
+                      ),
+                    )
+                    .map((field) => (
+                      <li key={field.id}>
+                        {field.label}: {field.accuracyImpact ?? t('ai.accuracyMayBeLower')}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="grid gap-2 rounded-md bg-white p-3 sm:grid-cols-2">
+              {ai.pendingToolTemplateActivation.activationFields.map((field) => {
+                const value = activationDraft[field.id] ?? ''
+                const label = field.recommended
+                  ? `${field.label} (${t('ai.recommended')})`
+                  : field.label
+
+                if (field.type === 'textarea') {
+                  return (
+                    <label className="sm:col-span-2 text-xs font-medium text-slate-700" key={field.id}>
+                      {label}
+                      <textarea
+                        className="mt-1 min-h-16 w-full rounded-md border border-slate-300 px-2 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                        onChange={(event) =>
+                          setActivationDraft((current) => ({
+                            ...current,
+                            [field.id]: event.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                        value={value}
+                      />
+                    </label>
+                  )
+                }
+
+                if (field.type === 'select') {
+                  return (
+                    <label className="text-xs font-medium text-slate-700" key={field.id}>
+                      {label}
+                      <select
+                        className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                        onChange={(event) =>
+                          setActivationDraft((current) => ({
+                            ...current,
+                            [field.id]: event.target.value,
+                          }))
+                        }
+                        value={value}
+                      >
+                        <option value="">{field.placeholder ?? t('ai.leaveBlank')}</option>
+                        {(field.options ?? []).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )
+                }
+
+                return (
+                  <label className="text-xs font-medium text-slate-700" key={field.id}>
+                    {label}
+                    <input
+                      className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                      inputMode={fieldInputMode(field)}
+                      onChange={(event) =>
+                        setActivationDraft((current) => ({
+                          ...current,
+                          [field.id]: event.target.value,
+                        }))
+                      }
+                      placeholder={field.placeholder}
+                      type={field.type === 'number' || field.type === 'time' ? field.type : 'text'}
+                      value={value}
+                    />
+                  </label>
+                )
+              })}
+            </div>
+
+            {editingTemplateDetails ? (
+              <p className="text-xs leading-5 text-indigo-800">
+                {t('ai.editDetailsHint')}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={ai.isLoading}
+                onClick={() => void ai.confirmToolTemplateActivation(activationDraft)}
+                variant="primary"
+              >
+                {t('ai.enableTemplate')}
+              </Button>
+              <Button
+                disabled={ai.isLoading}
+                onClick={() => setEditingTemplateDetails(true)}
+                variant="ghost"
+              >
+                {t('ai.editDetails')}
+              </Button>
+              <Button
+                disabled={ai.isLoading}
+                onClick={() => void ai.continueWithoutToolTemplateActivation()}
+              >
+                {t('ai.continueWithoutTool')}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         {ai.pendingActionPlan ? (
           <section className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
             <div>
@@ -383,6 +554,7 @@ export default function AIAssistantPanel() {
             { label: t('ai.chatMode'), value: 'chat' },
             { label: t('ai.planMode'), value: 'plan' },
             { label: t('ai.goalMode'), value: 'goal' },
+            { label: t('ai.toolsMode'), value: 'tools' },
           ].map((option) => (
             <button
               aria-label={`Mode: ${option.label}`}

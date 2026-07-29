@@ -3,19 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { activeToolsFromProjects, createActiveToolMetadata } from '../domain/logic/enabledTools'
 import { getConfiguredAIService } from '../store/aiStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
+import { templateToolName, type ToolTemplateMetadata } from '../domain/logic/toolTemplateMetadata'
 import { useEnabledToolsPanel } from './useEnabledToolsPanel'
-
-type ToolTemplate = {
-  activationPrompt?: string
-  adapterId?: 'ai-progress' | 'generic'
-  capabilityTags?: string[]
-  description?: string
-  id: string
-  label: string
-  routeTags?: string[]
-  toolKind?: 'fitness' | 'agent-learning'
-  toolName?: string
-}
 
 export type TemplateActivationMessage = {
   content: string
@@ -30,11 +19,7 @@ export type TemplateActivationResult = {
   warnings: string[]
 }
 
-function templateToolName(tool: ToolTemplate): string {
-  return tool.toolName ?? tool.label
-}
-
-export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
+export function useToolTemplateActivation(activeTemplate: ToolTemplateMetadata | null) {
   const activeToolsPanel = useEnabledToolsPanel()
   const goals = useLongTermMemoryStore((state) => state.goals)
   const projects = useLongTermMemoryStore((state) => state.projects)
@@ -83,6 +68,8 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplate | null) {
 
     try {
       const result = await service.runToolActivation({
+        activationFields: activeTemplate.activationFields ?? [],
+        activationFormDraft: {},
         capabilityTags: activeTemplate.capabilityTags ?? [],
         existingInstanceAliases: activeTools.map((instance) => instance.instanceAlias),
         messages: nextMessages,

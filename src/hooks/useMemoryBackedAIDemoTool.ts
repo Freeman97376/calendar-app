@@ -296,8 +296,11 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
       const changes = {
         description: action.description,
         due_date: action.dueDate,
+        energy_needed: action.energyNeeded,
+        estimated_minutes: action.estimatedMinutes,
         metadata: baseMetadata,
         milestone_id: matchedMilestone?.milestone_id,
+        priority: action.priority,
         project_id: projectId,
         status: action.status,
         title: action.title,

@@ -85,6 +85,7 @@ When userInstruction contains dialogue, treat the latest user message as the act
 If a critical detail is missing, ask one concise question in assistantReply, set needsUserConfirmation to true, and keep existing plan data instead of inventing a full replacement.
 When the user asks for multiple sessions, a full-week plan, or a next-week plan, return one calendarEvents draft per session up to the schema limit. Keep all events in preview only; never imply they are already applied.
 For fitness planning, keep advice general, conservative, and non-medical; add a warning when constraints or injury notes need professional review.
+For action entries, include estimatedMinutes, priority, and energyNeeded whenever the action represents schedulable work.
 For learning assistant planning, route by sourceToolId, formInput.learningTrack, goal, outcome, and the latest user message. Agent-learning aliases should produce agent/tool-use routes; SEO aliases should produce SEO, keyword, content, technical SEO, and analytics routes.
 For dueDate, output only YYYY-MM-DD strings. If the date is relative, vague, or not known, omit dueDate.
 Use only the documented keys. Omit optional fields instead of returning null.`
@@ -92,6 +93,8 @@ Use only the documented keys. Omit optional fields instead of returning null.`
 const toolActivationSystemPrompt = `You help users register a reusable parent tool template as one independent active tool.
 Return only a JSON object matching the requested schema.
 Use the conversation to confirm the instance's goal, constraints, cadence, and target outcome.
+Use activationFields and activationFormDraft as the editable form contract. Preserve supplied user values, keep intentionally blank optional or recommended fields blank, and do not invent body metrics or preferences.
+Missing recommended fields must not block activation; add concise warnings that plan accuracy may be lower.
 If critical details are missing, ask one concise follow-up question in assistantReply and set needsMoreInfo to true.
 When enough details are present, suggest a short editable instance alias, summarize the activation requirements, and return compact routeTags.
 Do not create projects, actions, or calendar events. Use only the documented keys. Omit optional fields instead of returning null.`
@@ -238,6 +241,9 @@ const progressToolJsonShape = `{
       "title": "string",
       "description": "optional string",
       "dueDate": "optional ISO date in YYYY-MM-DD format; omit if unsure",
+      "estimatedMinutes": 45,
+      "priority": "high | medium | low",
+      "energyNeeded": "high | medium | low",
       "status": "todo | scheduled | done | blocked | skipped",
       "milestoneTitle": "optional title of the milestone this belongs to",
       "existingActionId": "optional existing action id"
@@ -269,10 +275,10 @@ const toolActivationJsonShape = `{
   "suggestedInstanceAlias": "short editable alias",
   "activationSummary": "compact requirements summary",
   "activationForm": {
-    "goal": "optional compact field values inferred from the conversation"
+    "fieldId": "string field value; preserve blanks for omitted recommended fields"
   },
   "routeTags": ["compact routing tags"],
-  "warnings": []
+  "warnings": ["optional accuracy warning when recommended fields are blank"]
 }`
 
 const enabledToolRouteJsonShape = `{
@@ -708,8 +714,11 @@ function normalizeProgressToolOutput(value: unknown): unknown {
             ...action,
             description: optionalString(action.description),
             dueDate: optionalStrictDate(action.dueDate),
+            energyNeeded: enumLowercase(action.energyNeeded),
+            estimatedMinutes: numberFromUnknown(action.estimatedMinutes),
             existingActionId: optionalString(action.existingActionId),
             milestoneTitle: optionalString(action.milestoneTitle),
+            priority: enumLowercase(action.priority),
             status: enumLowercase(action.status),
           })
         })
@@ -808,6 +817,61 @@ function uniqueStringArray(values: unknown[]): string[] {
   return output.slice(0, 16)
 }
 
+function hasOwnValue(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function trimRecord(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {}
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      typeof entry === 'string' ? entry.trim() : String(entry ?? '').trim(),
+    ]),
+  )
+}
+
+function normalizeActivationForm(
+  value: unknown,
+  request?: AIToolActivationRequest,
+): Record<string, string> | undefined {
+  const modelForm = trimRecord(value)
+  const activationFields = request?.activationFields ?? []
+  if (!activationFields.length) {
+    return Object.fromEntries(Object.entries(modelForm).filter(([, entry]) => Boolean(entry)))
+  }
+
+  const draft = request?.activationFormDraft ?? {}
+  const form = Object.fromEntries(
+    activationFields.map((field) => {
+      const draftValue = hasOwnValue(draft, field.id) ? draft[field.id]?.trim() ?? '' : undefined
+      const modelValue = hasOwnValue(modelForm, field.id) ? modelForm[field.id]?.trim() ?? '' : ''
+      const value = draftValue || modelValue || (draftValue === '' ? '' : field.defaultValue ?? '')
+      return [field.id, value]
+    }),
+  )
+
+  return { ...modelForm, ...form }
+}
+
+function activationFieldWarnings(
+  request: AIToolActivationRequest | undefined,
+  form: Record<string, string> | undefined,
+): string[] {
+  const activationFields = request?.activationFields ?? []
+  if (!activationFields.length || !form) return []
+
+  return activationFields
+    .filter((field) => field.recommended && !form[field.id]?.trim())
+    .map(
+      (field) =>
+        `Missing recommended ${field.label}; plan accuracy may be lower${
+          field.accuracyImpact ? ` because ${field.accuracyImpact}` : '.'
+        }`,
+    )
+}
+
 function normalizeToolActivationOutput(value: unknown, request?: AIToolActivationRequest): unknown {
   const output = unwrapStructuredOutput(value)
   if (!isRecord(output)) return output
@@ -832,26 +896,23 @@ function normalizeToolActivationOutput(value: unknown, request?: AIToolActivatio
             fallbackAlias,
           ])
         : normalizedRouteTags
+  const activationForm = normalizeActivationForm(output.activationForm, request)
+  const normalizedWarnings = normalizeWarnings(output.warnings)
+  const warnings = uniqueStringArray([
+    ...(Array.isArray(normalizedWarnings) ? normalizedWarnings : []),
+    ...activationFieldWarnings(request, activationForm),
+  ])
 
   return compactUndefined({
     ...output,
-    activationForm: isRecord(output.activationForm)
-      ? Object.fromEntries(
-          Object.entries(output.activationForm)
-            .map(([key, entry]) => [
-              key,
-              typeof entry === 'string' ? entry.trim() : String(entry ?? ''),
-            ])
-            .filter(([, entry]) => Boolean(entry)),
-        )
-      : undefined,
+    activationForm,
     activationSummary: nonEmptyString(output.activationSummary) ?? fallbackSummary,
     assistantReply: nonEmptyString(output.assistantReply) ?? fallbackReply,
     needsMoreInfo:
       booleanFromUnknown(output.needsMoreInfo) ?? (request ? !latestMessage : undefined),
     routeTags,
     suggestedInstanceAlias: nonEmptyString(output.suggestedInstanceAlias) ?? fallbackAlias,
-    warnings: normalizeWarnings(output.warnings),
+    warnings,
   })
 }
 

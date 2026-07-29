@@ -85,8 +85,12 @@ class MemoryClient implements LongTermMemoryClientContract {
       created_at: timestamp(),
       description: input.description ?? '',
       due_date: input.due_date ?? null,
+      energy_needed: input.energy_needed,
+      estimated_minutes: input.estimated_minutes,
+      execution_tier: input.execution_tier,
       metadata: input.metadata ?? {},
       milestone_id: input.milestone_id ?? null,
+      priority: input.priority,
       project_id: input.project_id,
       status: input.status ?? 'todo',
       title: input.title,
@@ -353,6 +357,16 @@ describe('AI demo tools and Todo long projects', () => {
     expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
     expect(await screen.findByText('Baseline and habit setup')).toBeInTheDocument()
     expect(screen.getByText('Latest Calendar Plan')).toBeInTheDocument()
+    expect(memoryClient.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          energy_needed: expect.stringMatching(/^(high|medium|low)$/),
+          estimated_minutes: 45,
+          priority: expect.stringMatching(/^(high|medium|low)$/),
+          title: 'Complete baseline workout',
+        }),
+      ]),
+    )
     expect(useEventStore.getState().events).toHaveLength(0)
     await user.click(screen.getByRole('button', { name: 'Review plan' }))
     await user.click(await screen.findByRole('button', { name: 'Apply to calendar' }))

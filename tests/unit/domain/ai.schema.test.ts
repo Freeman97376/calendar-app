@@ -192,6 +192,11 @@ describe('AIProgressTool schemas', () => {
     expect(request.toolKind).toBe('fitness')
     expect(result.assistantReply).toBe('Confirmed the requirements.')
     expect(result.confirmedRequirements).toEqual(['Goal: Build strength'])
+    expect(result.actions[0]).toMatchObject({
+      energyNeeded: 'medium',
+      estimatedMinutes: 30,
+      priority: 'medium',
+    })
     expect(result.calendarEvents[0].title).toBe('Workout 1')
   })
 

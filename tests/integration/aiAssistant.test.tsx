@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '../../src/App'
+import { createActiveToolMetadata } from '../../src/domain/logic/enabledTools'
 import type {
   AIBreakdownResult,
   AICalendarActionPlan,
@@ -22,6 +23,7 @@ import type {
   AIConversationMessage,
   IAIService,
 } from '../../src/services/ai/IAIService'
+import type { LongTermGoal, LongTermProject } from '../../src/domain/types/longTermMemory'
 import { configureAIService, useAIStore } from '../../src/store/aiStore'
 import { useCalendarStore } from '../../src/store/calendarStore'
 import { configureEventSync, useEventStore } from '../../src/store/eventStore'
@@ -85,6 +87,15 @@ class MockAIService implements IAIService {
     ) => Promise<AIConversationResult> = async (messages) => ({
       reply: `Mock reply: ${messages[messages.length - 1]?.content ?? ''}`,
     }),
+    private readonly route: (
+      request: AIEnabledToolRouteRequest,
+    ) => Promise<AIEnabledToolRouteResult> = async () => ({
+      confidence: 0,
+      matchedProjectId: null,
+      needsConfirmation: true,
+      reason: 'No active tool matched.',
+      rewrittenInstruction: 'No route',
+    }),
   ) {}
 
   isAvailable(): boolean {
@@ -121,18 +132,34 @@ class MockAIService implements IAIService {
     throw new Error('Not used')
   }
 
-  async runToolActivation(_request: AIToolActivationRequest): Promise<AIToolActivationResult> {
-    throw new Error('Not used')
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    const latest =
+      request.messages
+        .slice()
+        .reverse()
+        .find((message) => message.role === 'user')?.content ?? ''
+    const activationFields = request.activationFields ?? []
+    const draft = request.activationFormDraft ?? {}
+    const activationForm = Object.fromEntries(
+      activationFields.map((field) => [field.id, draft[field.id]?.trim() ?? field.defaultValue ?? '']),
+    )
+    const warnings = activationFields
+      .filter((field) => field.recommended && !activationForm[field.id]?.trim())
+      .map((field) => `Missing recommended ${field.label}; plan accuracy may be lower.`)
+
+    return {
+      activationForm,
+      activationSummary: `Prepared ${request.templateLabel} active tool for: ${latest}`,
+      assistantReply: `I can register "${request.templateLabel} plan" from ${request.templateLabel}.`,
+      needsMoreInfo: false,
+      routeTags: request.routeTags,
+      suggestedInstanceAlias: `${request.templateLabel} plan`,
+      warnings,
+    }
   }
 
-  async routeEnabledTool(_request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
-    return {
-      confidence: 0,
-      matchedProjectId: null,
-      needsConfirmation: true,
-      reason: 'No active tool matched.',
-      rewrittenInstruction: 'No route',
-    }
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return this.route(request)
   }
 
   async continueConversation(
@@ -162,12 +189,25 @@ async function openPanel() {
 
 async function submitComposer(
   user: ReturnType<typeof userEvent.setup>,
-  mode: 'chat' | 'plan' | 'goal',
+  mode: 'chat' | 'plan' | 'goal' | 'tools',
   message: string,
 ) {
-  const modeLabel = mode === 'chat' ? 'Chat' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
+  const modeLabel =
+    mode === 'chat'
+      ? 'Chat'
+      : mode === 'plan'
+        ? 'Plan actions'
+        : mode === 'goal'
+          ? 'Break down goal'
+          : 'Tools'
   const submitLabel =
-    mode === 'chat' ? 'Send message' : mode === 'plan' ? 'Plan actions' : 'Break down goal'
+    mode === 'chat'
+      ? 'Send message'
+      : mode === 'plan'
+        ? 'Plan actions'
+        : mode === 'goal'
+          ? 'Break down goal'
+          : 'Find tool'
 
   await user.click(screen.getByRole('button', { name: `Mode: ${modeLabel}` }))
   await user.type(screen.getByLabelText('AI message'), message)
@@ -177,6 +217,115 @@ async function submitComposer(
 async function reviewPlan() {
   await screen.findByRole('button', { name: 'Review plan' })
   await userEvent.setup().click(screen.getByRole('button', { name: 'Review plan' }))
+}
+
+function nowIso() {
+  return '2026-05-25T12:00:00.000Z'
+}
+
+function goalFixture(
+  goalId: string,
+  title: string,
+  metadata: Record<string, unknown> = {},
+): LongTermGoal {
+  return {
+    created_at: nowIso(),
+    description: '',
+    goal_id: goalId,
+    metadata,
+    status: 'active',
+    title,
+    updated_at: nowIso(),
+  }
+}
+
+function projectFixture(
+  projectId: string,
+  goalId: string,
+  title: string,
+  metadata: Record<string, unknown> = {},
+): LongTermProject {
+  return {
+    created_at: nowIso(),
+    description: '',
+    goal_id: goalId,
+    metadata,
+    project_id: projectId,
+    status: 'active',
+    title,
+    updated_at: nowIso(),
+  }
+}
+
+function createMemoryClient(
+  initialGoals: LongTermGoal[] = [],
+  initialProjects: LongTermProject[] = [],
+) {
+  const state = {
+    goals: [...initialGoals],
+    projects: [...initialProjects],
+  }
+
+  const client: LongTermMemoryClientContract = {
+    createAction: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    createGoal: vi.fn(async (input) => {
+      const goal = goalFixture(`goal-${state.goals.length + 1}`, input.title, input.metadata)
+      goal.description = input.description ?? ''
+      goal.status = input.status ?? 'active'
+      state.goals.push(goal)
+      return goal
+    }),
+    createMilestone: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    createProgress: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    createProject: vi.fn(async (input) => {
+      const project = projectFixture(
+        `project-${state.projects.length + 1}`,
+        input.goal_id,
+        input.title,
+        input.metadata,
+      )
+      project.description = input.description ?? ''
+      project.status = input.status ?? 'active'
+      state.projects.push(project)
+      return project
+    }),
+    createToolRun: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    getProject: vi.fn(async (projectId) => {
+      const project = state.projects.find((candidate) => candidate.project_id === projectId)
+      if (!project) throw new Error(`Project not found: ${projectId}`)
+      return project
+    }),
+    listActions: vi.fn(async () => []),
+    listGoals: vi.fn(async () => state.goals),
+    listMilestones: vi.fn(async () => []),
+    listProgress: vi.fn(async () => []),
+    listProjects: vi.fn(async () => state.projects),
+    listToolRuns: vi.fn(async () => []),
+    listToolRunsForProject: vi.fn(async () => []),
+    search: vi.fn(async () => []),
+    updateAction: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    updateGoal: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    updateMilestone: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+    updateProject: vi.fn(async () => {
+      throw new Error('Not used')
+    }),
+  }
+
+  return { client, state }
 }
 
 async function openWorkspaceEntry(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -209,10 +358,7 @@ describe('AI Assistant - integration', () => {
     configureEventSync(null)
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_ai_event_types'))
     configureTodoService(new LocalTodoService(localStorage, 'test_ai_todos'))
-    configureLongTermMemoryClient({
-      listGoals: vi.fn(async () => []),
-      listProjects: vi.fn(async () => []),
-    } as unknown as LongTermMemoryClientContract)
+    configureLongTermMemoryClient(createMemoryClient().client)
     useAIStore.getState().reset()
     useCalendarStore.getState().reset({ focusedDate: '2026-05-25', view: 'month' })
     useEventStore.getState().reset()
@@ -733,6 +879,116 @@ describe('AI Assistant - integration', () => {
     await submitComposer(user, 'goal', 'Prepare for interview')
 
     expect(await screen.findByText('AI unavailable')).toBeInTheDocument()
+  })
+
+  it('shows English-only top-level AI tool action buttons', async () => {
+    configureAIService(new MockAIService(async () => suggestion))
+
+    await openPanel()
+
+    expect(screen.getByRole('button', { name: 'Tool Templates' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New long-term goal' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /New long-term goal\s*\//i })).not.toBeInTheDocument()
+  })
+
+  it('suggests Fitness AI from Chinese fitness intent and prefills detected fields', async () => {
+    configureAIService(new MockAIService(async () => suggestion))
+    const user = await openPanel()
+
+    await submitComposer(
+      user,
+      'tools',
+      '\u6211\u60f3\u505a\u5065\u8eab\u8ba1\u5212\uff0c\u8eab\u9ad8178\uff0c\u4f53\u91cd76\uff0c\u504f\u597d\u4f4e\u51b2\u51fb',
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Enable Fitness AI?' })).toBeInTheDocument()
+    expect(screen.getByText('Detected parameters')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('178')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('76')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('\u4f4e\u51b2\u51fb')).toBeInTheDocument()
+  })
+
+  it('allows blank recommended fitness fields and records lower-accuracy warnings', async () => {
+    const memory = createMemoryClient()
+    configureLongTermMemoryClient(memory.client)
+    configureAIService(new MockAIService(async () => suggestion))
+    const user = await openPanel()
+
+    await submitComposer(user, 'tools', '\u6211\u60f3\u505a\u5065\u8eab\u8ba1\u5212')
+
+    expect(await screen.findByRole('heading', { name: 'Enable Fitness AI?' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Height cm/)).toHaveValue(null)
+    expect(screen.getByText(/Missing recommended parameters/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Enable template' }))
+
+    await waitFor(() => {
+      expect(memory.state.projects).toHaveLength(1)
+    })
+    const metadata = memory.state.projects[0].metadata as {
+      activationForm: Record<string, string>
+      activationSummary: string
+    }
+    expect(metadata.activationForm.heightCm).toBe('')
+    expect(metadata.activationForm.weightKg).toBe('')
+    expect(metadata.activationForm.preferences).toBe('')
+    expect(metadata.activationSummary).toContain('Accuracy notes')
+    expect(metadata.activationSummary).toContain('Missing recommended Height cm')
+  })
+
+  it('prefers an existing Fitness Active Tool route over suggesting the template again', async () => {
+    const goal = goalFixture('goal-fitness', 'Fitness AI plan')
+    const project = projectFixture(
+      'project-fitness',
+      goal.goal_id,
+      'Fitness AI plan',
+      createActiveToolMetadata({
+        activationSummary: 'Existing fitness active tool',
+        instanceAlias: 'Fitness AI plan',
+        parentTemplateId: 'fitness-ai',
+        parentTemplateLabel: 'Fitness AI',
+        routeTags: ['fitness', '\u5065\u8eab'],
+        sourceToolId: 'fitness-ai',
+        templateId: 'fitness-ai',
+        toolKind: 'fitness',
+        toolName: 'Fitness AI',
+      }),
+    )
+    configureLongTermMemoryClient(createMemoryClient([goal], [project]).client)
+    configureAIService(
+      new MockAIService(
+        async () => suggestion,
+        undefined,
+        true,
+        undefined,
+        async () => ({
+          confidence: 0.9,
+          matchedProjectId: project.project_id,
+          needsConfirmation: true,
+          reason: 'Matched existing fitness active tool.',
+          rewrittenInstruction: 'Create a fitness plan with the existing active tool.',
+        }),
+      ),
+    )
+    const user = await openPanel()
+
+    await submitComposer(user, 'tools', '\u6211\u60f3\u505a\u5065\u8eab\u8ba1\u5212')
+
+    expect(await screen.findByText('Active Tool Route')).toBeInTheDocument()
+    expect(screen.getAllByText(/Fitness AI plan \| Fitness AI/).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('heading', { name: 'Enable Fitness AI?' })).not.toBeInTheDocument()
+  })
+
+  it('continues ordinary chat when the user declines a matched template', async () => {
+    configureAIService(new MockAIService(async () => suggestion))
+    const user = await openPanel()
+
+    await submitComposer(user, 'tools', '\u6211\u60f3\u505a\u5065\u8eab\u8ba1\u5212')
+    expect(await screen.findByRole('heading', { name: 'Enable Fitness AI?' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Continue without tool' }))
+
+    expect(await screen.findByText(/Mock reply:/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Enable Fitness AI?' })).not.toBeInTheDocument()
   })
 
   it('no API key shows setup instructions, not an error', async () => {

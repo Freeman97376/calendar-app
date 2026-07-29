@@ -16,6 +16,9 @@ export default defineConfig({
   },
   plugins: [react()],
   server: {
+    watch: {
+      ignored: ['**/src-tauri/target/**'],
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8787',

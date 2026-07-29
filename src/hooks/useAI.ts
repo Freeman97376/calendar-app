@@ -23,7 +23,7 @@ import { useEventTypeStore } from '../store/eventTypeStore'
 import { useTodoStore } from '../store/todoStore'
 import { useUIStore } from '../store/uiStore'
 
-export type { AIMessage } from '../store/aiStore'
+export type { AIMessage, PendingToolTemplateActivation } from '../store/aiStore'
 
 export type AIComposerOptions = {
   allowActiveToolRouting?: boolean
@@ -301,12 +301,22 @@ export function useAI() {
   const messages = useAIStore((state) => state.messages)
   const pendingActionPlan = useAIStore((state) => state.pendingActionPlan)
   const pendingEnabledToolRoute = useAIStore((state) => state.pendingEnabledToolRoute)
+  const pendingToolTemplateActivation = useAIStore(
+    (state) => state.pendingToolTemplateActivation,
+  )
   const pendingSuggestion = useAIStore((state) => state.pendingSuggestion)
   const provider = useAIStore((state) => state.provider)
   const clearActionPlan = useAIStore((state) => state.clearActionPlan)
   const clearEnabledToolRoute = useAIStore((state) => state.clearEnabledToolRoute)
   const clearHistory = useAIStore((state) => state.clearHistory)
+  const clearToolTemplateActivation = useAIStore((state) => state.clearToolTemplateActivation)
   const confirmEnabledToolRouteInStore = useAIStore((state) => state.confirmEnabledToolRoute)
+  const confirmToolTemplateActivationInStore = useAIStore(
+    (state) => state.confirmToolTemplateActivation,
+  )
+  const continueWithoutToolTemplateActivationInStore = useAIStore(
+    (state) => state.continueWithoutToolTemplateActivation,
+  )
   const dismissSuggestion = useAIStore((state) => state.dismissSuggestion)
   const markActionPlanApplied = useAIStore((state) => state.markActionPlanApplied)
   const markSuggestionAccepted = useAIStore((state) => state.acceptSuggestion)
@@ -422,6 +432,14 @@ export function useAI() {
 
   async function confirmEnabledToolRoute() {
     await confirmEnabledToolRouteInStore(buildContext())
+  }
+
+  async function confirmToolTemplateActivation(formDraft?: Record<string, string>) {
+    await confirmToolTemplateActivationInStore(formDraft)
+  }
+
+  async function continueWithoutToolTemplateActivation() {
+    await continueWithoutToolTemplateActivationInStore(buildContext())
   }
 
   function startTaskStepConversation(
@@ -555,7 +573,10 @@ export function useAI() {
     clearActionPlan,
     clearEnabledToolRoute,
     clearHistory,
+    clearToolTemplateActivation,
     confirmEnabledToolRoute,
+    confirmToolTemplateActivation,
+    continueWithoutToolTemplateActivation,
     currentModel: model,
     currentProvider: provider,
     conversationContext,
@@ -569,6 +590,7 @@ export function useAI() {
     pendingActionPlan,
     pendingEnabledToolRoute,
     pendingSuggestion,
+    pendingToolTemplateActivation,
     provider,
     sendActionCommand,
     sendConversationMessage,

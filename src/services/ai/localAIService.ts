@@ -669,17 +669,30 @@ function activationAlias(request: AIToolActivationRequest, latest: string): stri
   return candidate.length > 48 ? candidate.slice(0, 48).trimEnd() : candidate
 }
 
-function activationForm(request: AIToolActivationRequest, latest: string): Record<string, string> {
+function baseActivationForm(
+  request: AIToolActivationRequest,
+  latest: string,
+): Record<string, string> {
   const lower = `${request.templateId} ${request.templateLabel} ${latest}`.toLowerCase()
-  if (lower.includes('fitness') || lower.includes('workout') || lower.includes('train')) {
+  if (
+    lower.includes('fitness') ||
+    lower.includes('workout') ||
+    lower.includes('train') ||
+    lower.includes('\u5065\u8eab') ||
+    lower.includes('\u8bad\u7ec3') ||
+    lower.includes('\u8dd1\u6b65')
+  ) {
     return {
       constraints: latest,
-      equipment: 'available equipment',
+      equipment: '',
       frequency: '3 times per week',
       goal: latest || 'Build a fitness routine',
+      heightCm: '',
       level: 'beginner',
+      preferences: '',
       preferredTime: '07:00',
       sessionLength: '45',
+      weightKg: '',
     }
   }
 
@@ -694,7 +707,7 @@ function activationForm(request: AIToolActivationRequest, latest: string): Recor
     }
   }
 
-  if (lower.includes('learn') || lower.includes('agent')) {
+  if (lower.includes('learn') || lower.includes('agent') || lower.includes('\u5b66\u4e60')) {
     return {
       goal: latest || 'Learn AI agent skills',
       learningTrack: lower.includes('seo') ? 'SEO skills' : 'AI agent skills',
@@ -708,6 +721,38 @@ function activationForm(request: AIToolActivationRequest, latest: string): Recor
   return {
     requirement: latest || request.templateDescription || request.templateLabel,
   }
+}
+
+function hasOwnString(record: Record<string, string>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function activationForm(request: AIToolActivationRequest, latest: string): Record<string, string> {
+  const inferred = baseActivationForm(request, latest)
+  const activationFields = request.activationFields ?? []
+  if (!activationFields.length) return inferred
+
+  return Object.fromEntries(
+    activationFields.map((field) => {
+      const draft = request.activationFormDraft ?? {}
+      if (hasOwnString(draft, field.id)) return [field.id, draft[field.id]?.trim() ?? '']
+      return [field.id, inferred[field.id]?.trim() || field.defaultValue || '']
+    }),
+  )
+}
+
+function activationWarnings(
+  request: AIToolActivationRequest,
+  form: Record<string, string>,
+): string[] {
+  return (request.activationFields ?? [])
+    .filter((field) => field.recommended && !form[field.id]?.trim())
+    .map(
+      (field) =>
+        `Missing recommended ${field.label}; plan accuracy may be lower${
+          field.accuracyImpact ? ` because ${field.accuracyImpact}` : '.'
+        }`,
+    )
 }
 
 function routeScore(
@@ -742,19 +787,22 @@ function routeScore(
   }
 
   if (
-    /\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) &&
+    (/\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) ||
+      /\u5065\u8eab|\u8bad\u7ec3|\u8dd1\u6b65|\u953b\u70bc|\u8fd0\u52a8|\u529b\u91cf/.test(lower)) &&
     tool.sourceToolId.includes('fitness')
   ) {
     score += 3
   }
   if (
-    /\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) &&
+    (/\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) ||
+      /\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d|\u5185\u5bb9|\u6d41\u91cf/.test(lower)) &&
     tool.sourceToolId.includes('seo')
   ) {
     score += 3
   }
   if (
-    /\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) &&
+    (/\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) ||
+      /\u667a\u80fd\u4f53|\u63d0\u793a\u8bcd|\u68c0\u7d22|\u8bb0\u5fc6|\u8bc4\u4f30/.test(lower)) &&
     tool.sourceToolId.includes('agent')
   ) {
     score += 3
@@ -856,8 +904,10 @@ export class LocalAIService implements IAIService {
       ? `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
       : `Prepared ${request.templateLabel} active tool for: ${latest}`
 
+    const form = activationForm(request, latest)
+
     return AIToolActivationResultSchema.parse({
-      activationForm: activationForm(request, latest),
+      activationForm: form,
       activationSummary,
       assistantReply: needsMoreInfo
         ? `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
@@ -865,7 +915,7 @@ export class LocalAIService implements IAIService {
       needsMoreInfo,
       routeTags,
       suggestedInstanceAlias,
-      warnings: [],
+      warnings: activationWarnings(request, form),
     })
   }
 
@@ -1047,6 +1097,15 @@ export class LocalAIService implements IAIService {
     const durationMinutes = Math.min(180, Math.max(15, Number(request.inputs.sessionLength || 45)))
     const equipment = request.inputs.equipment || 'available equipment'
     const constraints = request.inputs.constraints || 'none listed'
+    const heightCm = request.inputs.heightCm || request.inputs.height || ''
+    const weightKg = request.inputs.weightKg || request.inputs.weight || ''
+    const preferences = request.inputs.preferences || request.inputs.preference || ''
+    const bodyMetrics = [
+      heightCm ? `Height: ${heightCm} cm` : '',
+      weightKg ? `Weight: ${weightKg} kg` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
 
     const events = [0, 2, 4].map((dayOffset, index) => {
       const date = addDays(startDate, dayOffset)
@@ -1059,8 +1118,12 @@ export class LocalAIService implements IAIService {
           `Level: ${level}`,
           `Equipment: ${equipment}`,
           `Constraints: ${constraints}`,
+          bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+          preferences ? `Preferences: ${preferences}` : '',
           `Focus: ${index === 0 ? 'Foundation' : index === 1 ? 'Progression' : 'Review and repeatable routine'}`,
-        ].join('\n'),
+        ]
+          .filter(Boolean)
+          .join('\n'),
         startAt,
         endAt: addMinutes(startAt, durationMinutes),
         allDay: false,
@@ -1081,6 +1144,24 @@ export class LocalAIService implements IAIService {
     const level = request.formInput.level || 'beginner'
     const equipment = request.formInput.equipment || 'bodyweight'
     const constraints = request.formInput.constraints || 'none listed'
+    const heightCm = request.formInput.heightCm || request.formInput.height || ''
+    const weightKg = request.formInput.weightKg || request.formInput.weight || ''
+    const preferences = request.formInput.preferences || request.formInput.preference || ''
+    const bodyMetrics = [
+      heightCm ? `Height: ${heightCm} cm` : '',
+      weightKg ? `Weight: ${weightKg} kg` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    const profileDetails = [
+      bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+      preferences ? `Preferences: ${preferences}` : '',
+    ].filter(Boolean)
+    const lowImpactRequested =
+      /\b(low impact|no jumping|pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(
+        [constraints, preferences].join(' '),
+      )
+    const workoutEnergy = lowImpactRequested ? 'medium' : 'high'
     const frequency = request.formInput.frequency || '3 times per week'
     const durationMinutes = Math.min(
       120,
@@ -1106,7 +1187,7 @@ export class LocalAIService implements IAIService {
       warnings.push('Adjusted one or more workout blocks to avoid supplied calendar conflicts.')
     }
 
-    if (/\b(pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(constraints)) {
+    if (lowImpactRequested) {
       warnings.push(
         'Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.',
       )
@@ -1124,7 +1205,9 @@ export class LocalAIService implements IAIService {
         `Frequency: ${frequency}`,
         `Calendar sessions: ${sessionCount}`,
         `Session length: ${durationMinutes} minutes`,
-      ],
+        bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+        preferences ? `Preferences: ${preferences}` : '',
+      ].filter(Boolean),
       summary: `Built a ${frequency} ${level} fitness plan for ${goal} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
       currentRecommendation: `Next session: ${durationMinutes} minutes focused on ${goal}, using ${equipment}. Preview includes ${sessionCount} session${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
       milestones: [
@@ -1153,17 +1236,31 @@ export class LocalAIService implements IAIService {
             session.index === 0
               ? 'Complete baseline workout'
               : `Complete workout session ${session.index + 1}`,
-          description: `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
+          description: [
+            `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
+            ...profileDetails,
+          ].join(' '),
           dueDate: session.date,
+          energyNeeded: workoutEnergy,
+          estimatedMinutes: durationMinutes,
           milestoneTitle:
             session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
+          priority: session.index === 0 ? 'high' : 'medium',
           status: 'scheduled' as const,
         })),
         {
           title: 'Log recovery and effort',
-          description: 'Record effort, soreness, and any constraint notes after the first session.',
+          description: [
+            'Record effort, soreness, and any constraint notes after the first session.',
+            preferences ? `Preferences to review: ${preferences}.` : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
           dueDate: startDate,
+          energyNeeded: 'low',
+          estimatedMinutes: 15,
           milestoneTitle: 'Baseline and habit setup',
+          priority: 'medium',
           status: 'todo',
         },
       ],
@@ -1197,8 +1294,12 @@ export class LocalAIService implements IAIService {
             `Goal: ${goal}`,
             `Equipment: ${equipment}`,
             `Constraints: ${constraints}`,
+            bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+            preferences ? `Preferences: ${preferences}` : '',
             `Focus: ${focus}.`,
-          ].join('\n'),
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: session.startAt,
           endAt: addMinutes(session.startAt, durationMinutes),
           allDay: false as const,
