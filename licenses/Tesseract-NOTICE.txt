@@ -1,0 +1,9 @@
+Tesseract OCR
+Copyright 2006 Google Inc. and project contributors.
+
+Tesseract is licensed under the Apache License, Version 2.0.
+The complete Apache-2.0 license is included as Apache-2.0.txt in each packaged
+installer and portable archive.
+
+Project: https://github.com/tesseract-ocr/tesseract
+License: https://www.apache.org/licenses/LICENSE-2.0

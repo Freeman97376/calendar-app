@@ -4,10 +4,10 @@
 
 ## TL;DR Rules
 
-| | Action |
-|--|--------|
-| Autonomous | Planning, reading anything, writing to `Office/`, writing to `tests/`, writing to `scratch/` |
-| Needs approval | Editing `src/`, `package.json`, config files, git ops, destructive commands |
+|                | Action                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| Autonomous     | Planning, reading anything, writing to `Office/`, writing to `tests/`, writing to `scratch/` |
+| Needs approval | Editing `src/`, `package.json`, config files, git ops, destructive commands                  |
 
 **Approval flow:** Post `APPROVAL REQUIRED` + exact diff, wait for "approved", then act.
 

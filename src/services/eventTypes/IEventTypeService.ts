@@ -16,4 +16,3 @@ export interface IEventTypeService {
   getEventTypes(): Promise<EventType[]>
   updateEventType(id: string, changes: EventTypeUpdate): Promise<EventType>
 }
-

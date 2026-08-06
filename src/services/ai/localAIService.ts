@@ -1,7 +1,9 @@
 import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
+  AIEnabledToolRouteResultSchema,
   AIProgressToolResultSchema,
+  AIToolActivationResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -9,8 +11,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -41,7 +47,8 @@ type TimezoneContext = {
 function toISODateTime(date: string, hour: number, minute = 0, context?: TimezoneContext): string {
   const [year, month, day] = date.split('-').map(Number)
   if (typeof context?.timezoneOffsetMinutes === 'number') {
-    const utcTime = Date.UTC(year, month - 1, day, hour, minute, 0, 0) - context.timezoneOffsetMinutes * 60_000
+    const utcTime =
+      Date.UTC(year, month - 1, day, hour, minute, 0, 0) - context.timezoneOffsetMinutes * 60_000
 
     return new Date(utcTime).toISOString()
   }
@@ -119,7 +126,9 @@ function parseRequestedSessionCount(value: string): number | undefined {
   if (/\b(daily|every day)\b|每天/.test(value.toLowerCase())) return 7
   if (/\bweekdays?\b|工作日/.test(value.toLowerCase())) return 5
 
-  const digitMatch = value.match(/(\d{1,2})\s*(?:sessions?|blocks?|workouts?|lessons?|classes?|times?|hours?|hrs?|次|节|个|小时)/i)
+  const digitMatch = value.match(
+    /(\d{1,2})\s*(?:sessions?|blocks?|workouts?|lessons?|classes?|times?|hours?|hrs?|次|节|个|小时)/i,
+  )
   if (digitMatch) return Number(digitMatch[1])
 
   const chineseCounts: Array<[RegExp, number]> = [
@@ -154,7 +163,9 @@ function latestProgressToolMessage(request: AIProgressToolRequest): string {
   const instruction = request.userInstruction?.trim()
   if (!instruction) return ''
 
-  const match = instruction.match(/Latest user message:\s*([\s\S]*?)(?:\n\nRecent tool conversation:|\n\nTask:|$)/i)
+  const match = instruction.match(
+    /Latest user message:\s*([\s\S]*?)(?:\n\nRecent tool conversation:|\n\nTask:|$)/i,
+  )
   return truncateText((match?.[1] ?? instruction).trim(), 220)
 }
 
@@ -162,8 +173,152 @@ function isAutomaticRequirementConfirmation(message: string): boolean {
   return /^confirm current requirements\b/i.test(message.trim())
 }
 
-function learningSessionTopic(index: number, outcome: string, goal: string) {
-  const topics = [
+type LearningRouteKind = 'agent' | 'seo'
+
+function learningRouteKindFromInput(request: AIProgressToolRequest): LearningRouteKind {
+  const text = [
+    request.formInput.learningTrack,
+    request.formInput.goal,
+    request.formInput.outcome,
+    request.sourceToolId,
+    request.userInstruction,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return /\bseo\b|search engine|keyword|on-page|technical seo|搜索引擎|关键词|排名/.test(text)
+    ? 'seo'
+    : 'agent'
+}
+
+function learningRouteLabel(kind: LearningRouteKind): string {
+  return kind === 'seo' ? 'SEO' : 'AI agent'
+}
+
+function learningRouteArticle(kind: LearningRouteKind): string {
+  return kind === 'agent' ? 'an' : 'a'
+}
+
+function learningMilestones(
+  kind: LearningRouteKind,
+  outcome: string,
+  today: string,
+  hasExisting: boolean,
+) {
+  if (kind === 'seo') {
+    return [
+      {
+        title: 'SEO foundations and keyword research',
+        description: 'Understand search intent, keyword groups, competitors, and baseline metrics.',
+        dueDate: addDays(today, 7),
+        status: hasExisting ? 'in_progress' : 'not_started',
+      },
+      {
+        title: 'On-page and technical SEO',
+        description:
+          'Practice page titles, internal links, crawlability, performance, and indexability checks.',
+        dueDate: addDays(today, 14),
+        status: 'not_started',
+      },
+      {
+        title: 'Content strategy and analytics',
+        description: 'Build a content plan, measurement loop, and weekly review habit.',
+        dueDate: addDays(today, 21),
+        status: 'not_started',
+      },
+      {
+        title: 'SEO project build',
+        description: `Create and present a repeatable SEO workflow for: ${outcome}.`,
+        dueDate: addDays(today, 28),
+        status: 'not_started',
+      },
+    ] as const
+  }
+
+  return [
+    {
+      title: 'Foundations and task framing',
+      description: 'Understand agent goals, state, constraints, and success criteria.',
+      dueDate: addDays(today, 7),
+      status: hasExisting ? 'in_progress' : 'not_started',
+    },
+    {
+      title: 'Tool use and structured outputs',
+      description: 'Practice tool calls, schemas, validation, and review-before-apply flows.',
+      dueDate: addDays(today, 14),
+      status: 'not_started',
+    },
+    {
+      title: 'Retrieval, memory, and evaluation',
+      description: 'Add memory/retrieval context, compact prompts, and acceptance checks.',
+      dueDate: addDays(today, 21),
+      status: 'not_started',
+    },
+    {
+      title: 'Demo agent build',
+      description: `Build and present a demo that achieves: ${outcome}.`,
+      dueDate: addDays(today, 28),
+      status: 'not_started',
+    },
+  ] as const
+}
+
+function learningSessionTopic(
+  index: number,
+  outcome: string,
+  goal: string,
+  kind: LearningRouteKind,
+) {
+  const seoTopics = [
+    {
+      actionTitle: 'Create the SEO baseline audit',
+      description: `Define audience, target pages, baseline traffic, rankings, and technical risks for ${goal}.`,
+      eventTitle: 'SEO learning block: baseline audit',
+      focus: 'baseline audit, goals, search intent, and current performance',
+      milestoneTitle: 'SEO foundations and keyword research',
+    },
+    {
+      actionTitle: 'Build a keyword and intent map',
+      description: 'Group seed keywords by intent, difficulty, funnel stage, and page target.',
+      eventTitle: 'SEO learning block: keyword research',
+      focus: 'keyword research, intent mapping, and competitor comparison',
+      milestoneTitle: 'SEO foundations and keyword research',
+    },
+    {
+      actionTitle: 'Draft an on-page SEO checklist',
+      description:
+        'Practice titles, headings, internal links, schema candidates, and content relevance checks.',
+      eventTitle: 'SEO learning block: on-page optimization',
+      focus: 'on-page optimization and reusable checklist design',
+      milestoneTitle: 'On-page and technical SEO',
+    },
+    {
+      actionTitle: 'Run technical SEO checks',
+      description:
+        'Review crawlability, indexability, performance, mobile usability, and broken-link risks.',
+      eventTitle: 'SEO learning block: technical checks',
+      focus: 'technical SEO checks and remediation notes',
+      milestoneTitle: 'On-page and technical SEO',
+    },
+    {
+      actionTitle: 'Create a content plan and analytics loop',
+      description:
+        'Turn keyword groups into content briefs, publishing cadence, and analytics checkpoints.',
+      eventTitle: 'SEO learning block: content analytics',
+      focus: 'content planning, measurement, and weekly review',
+      milestoneTitle: 'Content strategy and analytics',
+    },
+    {
+      actionTitle: 'Build the SEO workflow demo',
+      description: `Package the audit, keyword map, and content plan into a repeatable workflow for ${outcome}.`,
+      eventTitle: 'SEO learning block: project build',
+      focus: `build the smallest SEO workflow demo for ${outcome}`,
+      milestoneTitle: 'SEO project build',
+    },
+  ]
+
+  const agentTopics = [
     {
       actionTitle: 'Write the agent task contract',
       description: `Define goal, audience, input/output, constraints, and success criteria for ${goal}.`,
@@ -173,14 +328,16 @@ function learningSessionTopic(index: number, outcome: string, goal: string) {
     },
     {
       actionTitle: 'Practice prompt and task framing',
-      description: 'Turn one broad request into a precise task, inputs, constraints, and acceptance checks.',
+      description:
+        'Turn one broad request into a precise task, inputs, constraints, and acceptance checks.',
       eventTitle: 'AI agent skill block: prompt framing',
       focus: 'prompt shape, task boundaries, and acceptance criteria',
       milestoneTitle: 'Foundations and task framing',
     },
     {
       actionTitle: 'Implement one structured tool call exercise',
-      description: 'Create a small JSON schema, mock a tool response, validate it, and handle failures.',
+      description:
+        'Create a small JSON schema, mock a tool response, validate it, and handle failures.',
       eventTitle: 'AI agent skill block: tool use',
       focus: 'tool calls, schemas, validation, and review-before-apply behavior',
       milestoneTitle: 'Tool use and structured outputs',
@@ -215,6 +372,7 @@ function learningSessionTopic(index: number, outcome: string, goal: string) {
     },
   ]
 
+  const topics = kind === 'seo' ? seoTopics : agentTopics
   return topics[index % topics.length]
 }
 
@@ -249,7 +407,8 @@ function currentWallClockFromContext(context: TimezoneContext): {
     }
   }
 
-  const now = 'today' in context ? currentDateTimeFromContext(context as AICalendarContext) : new Date()
+  const now =
+    'today' in context ? currentDateTimeFromContext(context as AICalendarContext) : new Date()
 
   return {
     date: context.currentDate ?? context.today ?? toISODate(now),
@@ -300,7 +459,11 @@ function parseDate(command: string, today: string): string {
   return addDays(today, dayOffset)
 }
 
-function parseTime(command: string, context: AICalendarContext, date: string): { hour: number; minute: number } {
+function parseTime(
+  command: string,
+  context: AICalendarContext,
+  date: string,
+): { hour: number; minute: number } {
   const lower = command.toLowerCase()
   const meridiemMatch = command.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
   const atMatch = meridiemMatch ? null : command.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i)
@@ -354,6 +517,24 @@ function parseDurationMinutes(command: string): number {
   if (minutes) return Math.min(480, Math.max(5, Number(minutes[1])))
 
   return 60
+}
+
+function taskEtaMinutesFromCommand(command: string): number {
+  if (/\b(?:for|lasting)\s+\d+\s*(?:hour|hours|hr|hrs|minute|minutes|min|mins)\b/i.test(command)) {
+    return parseDurationMinutes(command)
+  }
+
+  if (/\b\d+[-\s]*(?:hour|hr)\s+(?:task|todo|work|focus|block)\b/i.test(command)) {
+    return parseDurationMinutes(command)
+  }
+
+  return 30
+}
+
+function taskEnergyNeededFromCommand(command: string): 'high' | 'medium' | 'low' {
+  if (/\b(deep work|hard|intense|high energy|focus)\b/i.test(command)) return 'high'
+  if (/\b(easy|quick|light|low energy|admin)\b/i.test(command)) return 'low'
+  return 'medium'
 }
 
 function parseRelativeStartAt(command: string, context: AICalendarContext): string | null {
@@ -412,7 +593,10 @@ function cleanupTitle(command: string): string {
     .replace(/\b(create|add|schedule|make|new|please)\b/gi, '')
     .replace(/\b(a|an|the)\b/gi, '')
     .replace(/\b(calendar\s+event|event|meeting|appointment|todo|task|to-do)\b/gi, '')
-    .replace(/\b(later today|today|tomorrow|tonight|soon|later|this|next|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
+    .replace(
+      /\b(later today|today|tomorrow|tonight|soon|later|this|next|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+      '',
+    )
     .replace(/\bin\s+(\d+|a|an|one)\s*(minutes?|mins?|hours?|hrs?)\b/gi, '')
     .replace(/\bhalf\s+an\s+hour\b/gi, '')
     .replace(/\b\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
@@ -452,6 +636,181 @@ function eventTypeIdFromCommand(command: string, context: AICalendarContext): st
   return undefined
 }
 
+function activationLatestMessage(request: AIToolActivationRequest): string {
+  return (
+    request.messages
+      .slice()
+      .reverse()
+      .find((message) => message.role === 'user')
+      ?.content.trim() ?? ''
+  )
+}
+
+function uniqueTags(values: string[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+
+  for (const value of values) {
+    const tag = value.trim().toLowerCase()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    output.push(tag)
+  }
+
+  return output.slice(0, 16)
+}
+
+function activationAlias(request: AIToolActivationRequest, latest: string): string {
+  const fromFor = latest.match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]?.trim()
+  const base = fromFor || request.templateLabel
+  const candidate = base.replace(/\s+/g, ' ').trim()
+
+  if (!candidate) return request.templateLabel
+  return candidate.length > 48 ? candidate.slice(0, 48).trimEnd() : candidate
+}
+
+function baseActivationForm(
+  request: AIToolActivationRequest,
+  latest: string,
+): Record<string, string> {
+  const lower = `${request.templateId} ${request.templateLabel} ${latest}`.toLowerCase()
+  if (
+    lower.includes('fitness') ||
+    lower.includes('workout') ||
+    lower.includes('train') ||
+    lower.includes('\u5065\u8eab') ||
+    lower.includes('\u8bad\u7ec3') ||
+    lower.includes('\u8dd1\u6b65')
+  ) {
+    return {
+      constraints: latest,
+      equipment: '',
+      frequency: '3 times per week',
+      goal: latest || 'Build a fitness routine',
+      heightCm: '',
+      level: 'beginner',
+      preferences: '',
+      preferredTime: '07:00',
+      sessionLength: '45',
+      weightKg: '',
+    }
+  }
+
+  if (lower.includes('seo')) {
+    return {
+      goal: latest || 'Learn SEO skills',
+      learningTrack: 'SEO skills',
+      level: 'beginner',
+      outcome: 'build a repeatable SEO audit and content plan',
+      preferredTime: '19:00',
+      weeklyTime: '3 hours per week',
+    }
+  }
+
+  if (lower.includes('learn') || lower.includes('agent') || lower.includes('\u5b66\u4e60')) {
+    return {
+      goal: latest || 'Learn AI agent skills',
+      learningTrack: lower.includes('seo') ? 'SEO skills' : 'AI agent skills',
+      level: 'beginner',
+      outcome: lower.includes('seo') ? 'build an SEO workflow' : 'ship a small AI agent demo',
+      preferredTime: '19:00',
+      weeklyTime: '3 hours per week',
+    }
+  }
+
+  return {
+    requirement: latest || request.templateDescription || request.templateLabel,
+  }
+}
+
+function hasOwnString(record: Record<string, string>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function activationForm(request: AIToolActivationRequest, latest: string): Record<string, string> {
+  const inferred = baseActivationForm(request, latest)
+  const activationFields = request.activationFields ?? []
+  if (!activationFields.length) return inferred
+
+  return Object.fromEntries(
+    activationFields.map((field) => {
+      const draft = request.activationFormDraft ?? {}
+      if (hasOwnString(draft, field.id)) return [field.id, draft[field.id]?.trim() ?? '']
+      return [field.id, inferred[field.id]?.trim() || field.defaultValue || '']
+    }),
+  )
+}
+
+function activationWarnings(
+  request: AIToolActivationRequest,
+  form: Record<string, string>,
+): string[] {
+  return (request.activationFields ?? [])
+    .filter((field) => field.recommended && !form[field.id]?.trim())
+    .map(
+      (field) =>
+        `Missing recommended ${field.label}; plan accuracy may be lower${
+          field.accuracyImpact ? ` because ${field.accuracyImpact}` : '.'
+        }`,
+    )
+}
+
+function routeScore(
+  message: string,
+  tool: AIEnabledToolRouteRequest['enabledTools'][number],
+): number {
+  const lower = message.toLowerCase()
+  const fields = [
+    tool.instanceAlias,
+    tool.toolName,
+    tool.templateId,
+    tool.sourceToolId,
+    tool.activationSummary,
+    tool.longTermGoalLabel ?? '',
+    ...tool.toolFeatures,
+    ...tool.implementationPlan,
+    ...tool.routeTags,
+  ]
+  let score = 0
+
+  for (const field of fields) {
+    const normalized = field.toLowerCase()
+    if (!normalized) continue
+    if (lower.includes(normalized)) {
+      score += normalized === tool.instanceAlias.toLowerCase() ? 4 : 2
+      continue
+    }
+
+    for (const token of normalized.split(/[^a-z0-9]+/).filter((entry) => entry.length > 2)) {
+      if (lower.includes(token)) score += 1
+    }
+  }
+
+  if (
+    (/\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) ||
+      /\u5065\u8eab|\u8bad\u7ec3|\u8dd1\u6b65|\u953b\u70bc|\u8fd0\u52a8|\u529b\u91cf/.test(lower)) &&
+    tool.sourceToolId.includes('fitness')
+  ) {
+    score += 3
+  }
+  if (
+    (/\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) ||
+      /\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d|\u5185\u5bb9|\u6d41\u91cf/.test(lower)) &&
+    tool.sourceToolId.includes('seo')
+  ) {
+    score += 3
+  }
+  if (
+    (/\b(agent|prompt|tool use|retrieval|memory|eval)\b/i.test(lower) ||
+      /\u667a\u80fd\u4f53|\u63d0\u793a\u8bcd|\u68c0\u7d22|\u8bb0\u5fc6|\u8bc4\u4f30/.test(lower)) &&
+    tool.sourceToolId.includes('agent')
+  ) {
+    score += 3
+  }
+
+  return score
+}
+
 export class LocalAIService implements IAIService {
   isAvailable(): boolean {
     return true
@@ -468,6 +827,7 @@ export class LocalAIService implements IAIService {
           title: isProject ? `Plan ${title}` : title,
           description: 'Generated by the local fallback planner.',
           durationMinutes: isProject ? 45 : 60,
+          energyNeeded: isProject ? 'high' : 'medium',
           suggestedDayOffset: 0,
           suggestedHour: 9,
           priority: isProject ? 'high' : 'medium',
@@ -477,6 +837,7 @@ export class LocalAIService implements IAIService {
               {
                 title: `Execute ${title}`,
                 durationMinutes: 60,
+                energyNeeded: 'medium',
                 suggestedDayOffset: 1,
                 suggestedHour: 10,
                 priority: 'medium',
@@ -502,7 +863,9 @@ export class LocalAIService implements IAIService {
     }
 
     if (lower.includes('complete') || lower.includes('done') || lower.includes('finish')) {
-      return todo ? this.planTodoAction(command, context, todo) : this.planEventAction(command, context, event)
+      return todo
+        ? this.planTodoAction(command, context, todo)
+        : this.planEventAction(command, context, event)
     }
 
     return this.planEventAction(command, context, event)
@@ -526,6 +889,64 @@ export class LocalAIService implements IAIService {
     return this.planFitnessProgressTool(request)
   }
 
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    const latest = activationLatestMessage(request)
+    const needsMoreInfo = !latest
+    const suggestedInstanceAlias = activationAlias(request, latest)
+    const routeTags = uniqueTags([
+      ...request.routeTags,
+      ...request.capabilityTags,
+      request.templateLabel,
+      suggestedInstanceAlias,
+      ...latest.split(/[^a-zA-Z0-9]+/).filter((entry) => entry.length > 3),
+    ])
+    const activationSummary = needsMoreInfo
+      ? `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
+      : `Prepared ${request.templateLabel} active tool for: ${latest}`
+
+    const form = activationForm(request, latest)
+
+    return AIToolActivationResultSchema.parse({
+      activationForm: form,
+      activationSummary,
+      assistantReply: needsMoreInfo
+        ? `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
+        : `I can register "${suggestedInstanceAlias}" from ${request.templateLabel}. Review the name, then register the active tool.`,
+      needsMoreInfo,
+      routeTags,
+      suggestedInstanceAlias,
+      warnings: activationWarnings(request, form),
+    })
+  }
+
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    const candidates = request.enabledTools.filter(
+      (tool) => tool.routingEnabled && tool.status === 'active',
+    )
+    const ranked = candidates
+      .map((tool) => ({ score: routeScore(request.userMessage, tool), tool }))
+      .sort((left, right) => right.score - left.score)
+    const best = ranked[0]
+
+    if (!best || best.score <= 0) {
+      return AIEnabledToolRouteResultSchema.parse({
+        confidence: 0,
+        matchedProjectId: null,
+        needsConfirmation: true,
+        reason: 'No active tool matched the message.',
+        rewrittenInstruction: request.userMessage,
+      })
+    }
+
+    return AIEnabledToolRouteResultSchema.parse({
+      confidence: Math.min(0.95, 0.45 + best.score / 20),
+      matchedProjectId: best.tool.projectId,
+      needsConfirmation: true,
+      reason: `Matched ${best.tool.instanceAlias} by alias, tool name, or route tags.`,
+      rewrittenInstruction: request.userMessage,
+    })
+  }
+
   async continueConversation(
     messages: AIConversationMessage[],
     context: AICalendarContext,
@@ -533,15 +954,13 @@ export class LocalAIService implements IAIService {
   ): Promise<AIConversationResult> {
     const latest = messages[messages.length - 1]?.content.trim() ?? ''
     const lower = latest.toLowerCase()
-    const wantsSchedulablePlan = /\b(schedule|calendar|plan|add|create|time|tomorrow|today|date)\b/i.test(
-      latest,
-    )
+    const wantsSchedulablePlan =
+      /\b(schedule|calendar|plan|add|create|time|tomorrow|today|date)\b/i.test(latest)
 
     if (conversationContext?.kind === 'todo-step-refinement') {
       const selected = conversationContext.selectedItems
-      const wantsRewrite = /\b(rewrite|refine|edit|change|improve|simplify|split|shorten|clarify)\b/i.test(
-        latest,
-      )
+      const wantsRewrite =
+        /\b(rewrite|refine|edit|change|improve|simplify|split|shorten|clarify)\b/i.test(latest)
 
       if (wantsSchedulablePlan) {
         return {
@@ -578,12 +997,14 @@ export class LocalAIService implements IAIService {
     if (conversationContext?.kind === 'draft-action-plan') {
       if (!wantsSchedulablePlan && /\b(unclear|not sure|clarify|question)\b/i.test(latest)) {
         return {
-          reply: 'Which part of the draft should change: time, duration, order, title, or priority?',
+          reply:
+            'Which part of the draft should change: time, duration, order, title, or priority?',
         }
       }
 
       return {
-        reply: 'Kept the current draft available for review. Use Plan actions for precise local edits.',
+        reply:
+          'Kept the current draft available for review. Use Plan actions for precise local edits.',
         actionPlan: conversationContext.actionPlan,
       }
     }
@@ -600,7 +1021,8 @@ export class LocalAIService implements IAIService {
     }
 
     return {
-      reply: 'I can help clarify this. What part is uncertain: timing, task scope, priority, or the exact next action?',
+      reply:
+        'I can help clarify this. What part is uncertain: timing, task scope, priority, or the exact next action?',
     }
   }
 
@@ -623,8 +1045,12 @@ export class LocalAIService implements IAIService {
           displayDetails: [
             `Guests: ${guests}`,
             request.inputs.budget ? `Budget: ${request.inputs.budget}` : '',
-            isCooking ? 'Prepare ingredients and confirm dietary constraints.' : 'Confirm reservation, route, and guest count.',
-          ].filter(Boolean).join('\n'),
+            isCooking
+              ? 'Prepare ingredients and confirm dietary constraints.'
+              : 'Confirm reservation, route, and guest count.',
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: addMinutes(diningStart, isCooking ? -180 : -120),
           endAt: addMinutes(diningStart, isCooking ? -120 : -90),
           allDay: false,
@@ -638,7 +1064,9 @@ export class LocalAIService implements IAIService {
             `Meal type: ${mealType}`,
             `Guests: ${guests}`,
             request.inputs.dietaryNotes ? `Dietary notes: ${request.inputs.dietaryNotes}` : '',
-          ].filter(Boolean).join('\n'),
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: isCooking ? addMinutes(diningStart, -90) : diningStart,
           endAt: isCooking ? diningStart : addMinutes(diningStart, 90),
           allDay: false,
@@ -669,6 +1097,15 @@ export class LocalAIService implements IAIService {
     const durationMinutes = Math.min(180, Math.max(15, Number(request.inputs.sessionLength || 45)))
     const equipment = request.inputs.equipment || 'available equipment'
     const constraints = request.inputs.constraints || 'none listed'
+    const heightCm = request.inputs.heightCm || request.inputs.height || ''
+    const weightKg = request.inputs.weightKg || request.inputs.weight || ''
+    const preferences = request.inputs.preferences || request.inputs.preference || ''
+    const bodyMetrics = [
+      heightCm ? `Height: ${heightCm} cm` : '',
+      weightKg ? `Weight: ${weightKg} kg` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
 
     const events = [0, 2, 4].map((dayOffset, index) => {
       const date = addDays(startDate, dayOffset)
@@ -681,8 +1118,12 @@ export class LocalAIService implements IAIService {
           `Level: ${level}`,
           `Equipment: ${equipment}`,
           `Constraints: ${constraints}`,
+          bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+          preferences ? `Preferences: ${preferences}` : '',
           `Focus: ${index === 0 ? 'Foundation' : index === 1 ? 'Progression' : 'Review and repeatable routine'}`,
-        ].join('\n'),
+        ]
+          .filter(Boolean)
+          .join('\n'),
         startAt,
         endAt: addMinutes(startAt, durationMinutes),
         allDay: false,
@@ -703,14 +1144,37 @@ export class LocalAIService implements IAIService {
     const level = request.formInput.level || 'beginner'
     const equipment = request.formInput.equipment || 'bodyweight'
     const constraints = request.formInput.constraints || 'none listed'
+    const heightCm = request.formInput.heightCm || request.formInput.height || ''
+    const weightKg = request.formInput.weightKg || request.formInput.weight || ''
+    const preferences = request.formInput.preferences || request.formInput.preference || ''
+    const bodyMetrics = [
+      heightCm ? `Height: ${heightCm} cm` : '',
+      weightKg ? `Weight: ${weightKg} kg` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+    const profileDetails = [
+      bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+      preferences ? `Preferences: ${preferences}` : '',
+    ].filter(Boolean)
+    const lowImpactRequested =
+      /\b(low impact|no jumping|pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(
+        [constraints, preferences].join(' '),
+      )
+    const workoutEnergy = lowImpactRequested ? 'medium' : 'high'
     const frequency = request.formInput.frequency || '3 times per week'
-    const durationMinutes = Math.min(120, Math.max(20, Number(request.formInput.sessionLength || 45)))
+    const durationMinutes = Math.min(
+      120,
+      Math.max(20, Number(request.formInput.sessionLength || 45)),
+    )
     const preferredTime = request.formInput.preferredTime || '07:00'
     const latestMessage = latestProgressToolMessage(request)
     const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
     const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
     const sessionCount = clampSessionCount(
-      parseRequestedSessionCount(latestMessage) ?? parseRequestedSessionCount(frequency) ?? (fullWeekRequested ? 5 : 2),
+      parseRequestedSessionCount(latestMessage) ??
+        parseRequestedSessionCount(frequency) ??
+        (fullWeekRequested ? 5 : 2),
     )
     const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
       const date = addDays(startDate, offset)
@@ -723,14 +1187,17 @@ export class LocalAIService implements IAIService {
       warnings.push('Adjusted one or more workout blocks to avoid supplied calendar conflicts.')
     }
 
-    if (/\b(pain|injury|doctor|medical|knee|back|shoulder)\b/i.test(constraints)) {
-      warnings.push('Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.')
+    if (lowImpactRequested) {
+      warnings.push(
+        'Fitness constraints mention possible injury or medical concerns. Keep the demo plan conservative and seek professional guidance when needed.',
+      )
     }
 
     return AIProgressToolResultSchema.parse({
-      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-        ? `Confirmed: ${latestMessage}. I updated the workout plan, next actions, and progress log.`
-        : `Confirmed ${goal}: ${level}, ${frequency}, ${durationMinutes} minute sessions.`,
+      assistantReply:
+        latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+          ? `Confirmed: ${latestMessage}. I updated the workout plan, next actions, and progress log.`
+          : `Confirmed ${goal}: ${level}, ${frequency}, ${durationMinutes} minute sessions.`,
       confirmedRequirements: [
         `Goal: ${goal}`,
         `Level: ${level}`,
@@ -738,7 +1205,9 @@ export class LocalAIService implements IAIService {
         `Frequency: ${frequency}`,
         `Calendar sessions: ${sessionCount}`,
         `Session length: ${durationMinutes} minutes`,
-      ],
+        bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+        preferences ? `Preferences: ${preferences}` : '',
+      ].filter(Boolean),
       summary: `Built a ${frequency} ${level} fitness plan for ${goal} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
       currentRecommendation: `Next session: ${durationMinutes} minutes focused on ${goal}, using ${equipment}. Preview includes ${sessionCount} session${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
       milestones: [
@@ -767,16 +1236,31 @@ export class LocalAIService implements IAIService {
             session.index === 0
               ? 'Complete baseline workout'
               : `Complete workout session ${session.index + 1}`,
-          description: `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
+          description: [
+            `Level: ${level}. Equipment: ${equipment}. Constraints: ${constraints}.`,
+            ...profileDetails,
+          ].join(' '),
           dueDate: session.date,
-          milestoneTitle: session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
+          energyNeeded: workoutEnergy,
+          estimatedMinutes: durationMinutes,
+          milestoneTitle:
+            session.index === 0 ? 'Baseline and habit setup' : 'Progressive training rhythm',
+          priority: session.index === 0 ? 'high' : 'medium',
           status: 'scheduled' as const,
         })),
         {
           title: 'Log recovery and effort',
-          description: 'Record effort, soreness, and any constraint notes after the first session.',
+          description: [
+            'Record effort, soreness, and any constraint notes after the first session.',
+            preferences ? `Preferences to review: ${preferences}.` : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
           dueDate: startDate,
+          energyNeeded: 'low',
+          estimatedMinutes: 15,
           milestoneTitle: 'Baseline and habit setup',
+          priority: 'medium',
           status: 'todo',
         },
       ],
@@ -810,8 +1294,12 @@ export class LocalAIService implements IAIService {
             `Goal: ${goal}`,
             `Equipment: ${equipment}`,
             `Constraints: ${constraints}`,
+            bodyMetrics ? `Body metrics: ${bodyMetrics}` : '',
+            preferences ? `Preferences: ${preferences}` : '',
             `Focus: ${focus}.`,
-          ].join('\n'),
+          ]
+            .filter(Boolean)
+            .join('\n'),
           startAt: session.startAt,
           endAt: addMinutes(session.startAt, durationMinutes),
           allDay: false as const,
@@ -830,12 +1318,14 @@ export class LocalAIService implements IAIService {
     const outcome = request.formInput.outcome || 'ship a small agent demo'
     const preferredTime = request.formInput.preferredTime || '19:00'
     const durationMinutes = 60
+    const routeKind = learningRouteKindFromInput(request)
+    const routeLabel = learningRouteLabel(routeKind)
     const latestMessage = latestProgressToolMessage(request)
     const fullWeekRequested = latestMessage ? isFullWeekRequest(latestMessage) : false
     const startDate = fullWeekRequested ? nextWeekday(request.today, 1) : request.today
     const sessionCount = clampSessionCount(
       parseRequestedSessionCount(latestMessage) ??
-        (fullWeekRequested ? parseRequestedSessionCount(weeklyTime) ?? 5 : 1),
+        (fullWeekRequested ? (parseRequestedSessionCount(weeklyTime) ?? 5) : 1),
     )
     const scheduledSessions = sessionOffsets(sessionCount).map((offset, index) => {
       const date = addDays(startDate, offset)
@@ -849,46 +1339,28 @@ export class LocalAIService implements IAIService {
     }
 
     return AIProgressToolResultSchema.parse({
-      assistantReply: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-        ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
-        : `Confirmed ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
+      assistantReply:
+        latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+          ? `Confirmed: ${latestMessage}. I updated the learning route, next lesson, and progress log.`
+          : `Confirmed ${routeLabel} learning for ${goal}: ${level}, ${weeklyTime}, target outcome ${outcome}.`,
       confirmedRequirements: [
         `Goal: ${goal}`,
+        `Route: ${routeLabel}`,
         `Level: ${level}`,
         `Weekly time: ${weeklyTime}`,
         `Calendar sessions: ${sessionCount}`,
         `Outcome: ${outcome}`,
       ],
-      summary: `Built an AI agent learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
-      currentRecommendation: `Start with foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
-      milestones: [
-        {
-          title: 'Foundations and task framing',
-          description: 'Understand agent goals, state, constraints, and success criteria.',
-          dueDate: addDays(request.today, 7),
-          status: request.milestones.length ? 'in_progress' : 'not_started',
-        },
-        {
-          title: 'Tool use and structured outputs',
-          description: 'Practice tool calls, schemas, validation, and review-before-apply flows.',
-          dueDate: addDays(request.today, 14),
-          status: 'not_started',
-        },
-        {
-          title: 'Retrieval, memory, and evaluation',
-          description: 'Add memory/retrieval context, compact prompts, and acceptance checks.',
-          dueDate: addDays(request.today, 21),
-          status: 'not_started',
-        },
-        {
-          title: 'Demo agent build',
-          description: `Build and present a demo that achieves: ${outcome}.`,
-          dueDate: addDays(request.today, 28),
-          status: 'not_started',
-        },
-      ],
+      summary: `Built ${learningRouteArticle(routeKind)} ${routeLabel} learning route toward ${outcome} with ${sessionCount} calendar session${sessionCount === 1 ? '' : 's'}.`,
+      currentRecommendation: `Start with ${routeLabel} foundations and a small working loop. For ${level} level and ${weeklyTime}, preview includes ${sessionCount} learning block${sessionCount === 1 ? '' : 's'} starting ${startDate}.`,
+      milestones: learningMilestones(
+        routeKind,
+        outcome,
+        request.today,
+        Boolean(request.milestones.length),
+      ),
       actions: scheduledSessions.map((session) => {
-        const lesson = learningSessionTopic(session.index, outcome, goal)
+        const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
         return {
           title: lesson.actionTitle,
           description: lesson.description,
@@ -904,12 +1376,13 @@ export class LocalAIService implements IAIService {
             : ''
         }Search context: ${request.memorySearchResults.map((result) => result.title).join(', ')}`,
         logType: 'tool_result',
-        summary: latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
-          ? 'Updated local AI agent learning route from conversation.'
-          : 'Generated a local AI agent learning route.',
+        summary:
+          latestMessage && !isAutomaticRequirementConfirmation(latestMessage)
+            ? `Updated local ${routeLabel} learning route from conversation.`
+            : `Generated a local ${routeLabel} learning route.`,
       },
       calendarEvents: scheduledSessions.map((session) => {
-        const lesson = learningSessionTopic(session.index, outcome, goal)
+        const lesson = learningSessionTopic(session.index, outcome, goal, routeKind)
         return {
           title: lesson.eventTitle,
           description: `Learning route for ${goal}.`,
@@ -957,7 +1430,9 @@ export class LocalAIService implements IAIService {
 
       return AICalendarActionPlanSchema.parse({
         summary: `Update event "${event.title}".`,
-        actions: [{ type: 'update_event', eventId: event.id, changes, reason: 'Matched by title.' }],
+        actions: [
+          { type: 'update_event', eventId: event.id, changes, reason: 'Matched by title.' },
+        ],
       })
     }
 
@@ -994,6 +1469,9 @@ export class LocalAIService implements IAIService {
     }
 
     if (todo && /\b(schedule|calendar)\b/i.test(command)) {
+      const explicitStartAt = hasExplicitTime(command)
+        ? parseCommandStartAt(command, context)
+        : undefined
       return AICalendarActionPlanSchema.parse({
         summary: `Schedule task "${todo.title}".`,
         actions: [
@@ -1001,6 +1479,8 @@ export class LocalAIService implements IAIService {
             type: 'schedule_todo',
             todoId: todo.id,
             date: parseDate(command, context.currentDate ?? context.today),
+            startAt: explicitStartAt,
+            endAt: explicitStartAt ? addMinutes(explicitStartAt, todo.etaMinutes) : undefined,
             reason: 'Matched by title.',
           },
         ],
@@ -1042,6 +1522,8 @@ export class LocalAIService implements IAIService {
           type: 'create_todo',
           title: bestTitle(command, 'New task'),
           dueDate: parseDate(command, context.currentDate ?? context.today),
+          energyNeeded: taskEnergyNeededFromCommand(command),
+          etaMinutes: taskEtaMinutesFromCommand(command),
           priority: /urgent|important|high/i.test(command) ? 'high' : 'medium',
           eventTypeId: eventTypeIdFromCommand(command, context),
           reason: 'Local fallback inferred a task.',
@@ -1088,7 +1570,8 @@ export class LocalAIService implements IAIService {
 function localRefinedStepText(value: string, instruction: string): string {
   const cleaned = value.replace(/\s+/g, ' ').trim()
 
-  if (instruction.includes('shorten')) return cleaned.length > 80 ? `${cleaned.slice(0, 77)}...` : cleaned
+  if (instruction.includes('shorten'))
+    return cleaned.length > 80 ? `${cleaned.slice(0, 77)}...` : cleaned
   if (instruction.includes('simplify')) return `Clarify the next action for: ${cleaned}`
   if (instruction.includes('split')) return `Break into smaller follow-up tasks: ${cleaned}`
 

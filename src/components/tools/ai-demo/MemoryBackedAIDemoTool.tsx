@@ -1,14 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { AIProgressToolKind } from '../../../domain/types'
-import type {
-  ActionItemStatus,
-  MilestoneStatus,
-} from '../../../domain/types/longTermMemory'
+import type { ActionItemStatus, MilestoneStatus } from '../../../domain/types/longTermMemory'
 import { useMemoryBackedAIDemoTool } from '../../../hooks/useMemoryBackedAIDemoTool'
 import Button from '../../ui/Button'
 
-type Field =
+export type Field =
   | {
       id: string
       label: string
@@ -25,12 +22,19 @@ type Field =
     }
 
 type MemoryBackedAIDemoToolProps = {
+  alias?: string
   defaultProjectDescription: string
   defaultProjectTitle: string
   fields: Field[]
+  modules?: AIDemoToolModule[]
   sourceToolId: string
   toolKind: AIProgressToolKind
   toolName: string
+}
+
+export type AIDemoToolModule = Omit<MemoryBackedAIDemoToolProps, 'modules'> & {
+  id: string
+  routeKeywords?: string[]
 }
 
 const inputClass =
@@ -38,10 +42,29 @@ const inputClass =
 const textareaClass =
   'mt-1 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100'
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const milestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
 
 function defaultForm(fields: Field[]): Record<string, string> {
   return Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? '']))
+}
+
+function baseModuleFromProps(props: MemoryBackedAIDemoToolProps): AIDemoToolModule {
+  return {
+    alias: props.alias,
+    defaultProjectDescription: props.defaultProjectDescription,
+    defaultProjectTitle: props.defaultProjectTitle,
+    fields: props.fields,
+    id: props.sourceToolId,
+    sourceToolId: props.sourceToolId,
+    toolKind: props.toolKind,
+    toolName: props.toolName,
+  }
 }
 
 function label(value: string): string {
@@ -63,28 +86,67 @@ function statusClass(status: string): string {
   return 'bg-white text-slate-600'
 }
 
-export default function MemoryBackedAIDemoTool({
-  defaultProjectDescription,
-  defaultProjectTitle,
-  fields,
-  sourceToolId,
-  toolKind,
-  toolName,
-}: MemoryBackedAIDemoToolProps) {
+function routeModule(
+  modules: AIDemoToolModule[],
+  enabledModuleIds: string[],
+  activeModule: AIDemoToolModule,
+  message: string,
+): AIDemoToolModule {
+  const lower = message.toLowerCase()
+  return (
+    modules.find(
+      (module) =>
+        enabledModuleIds.includes(module.id) &&
+        module.routeKeywords?.some((keyword) => lower.includes(keyword.toLowerCase())),
+    ) ?? activeModule
+  )
+}
+
+export default function MemoryBackedAIDemoTool(props: MemoryBackedAIDemoToolProps) {
+  const modules = props.modules?.length ? props.modules : [baseModuleFromProps(props)]
+  const [activeModuleId, setActiveModuleId] = useState(modules[0].id)
+  const activeModule = modules.find((module) => module.id === activeModuleId) ?? modules[0]
+  const [enabledModuleIds, setEnabledModuleIds] = useState(() => modules.map((module) => module.id))
   const tool = useMemoryBackedAIDemoTool({
-    defaultProjectDescription,
-    defaultProjectTitle,
-    sourceToolId,
-    toolKind,
-    toolName,
+    defaultProjectDescription: activeModule.defaultProjectDescription,
+    defaultProjectTitle: activeModule.defaultProjectTitle,
+    sourceToolId: activeModule.sourceToolId,
+    toolKind: activeModule.toolKind,
+    toolName: activeModule.toolName,
   })
-  const [form, setForm] = useState(() => defaultForm(fields))
+  const [form, setForm] = useState(() => defaultForm(activeModule.fields))
   const [draftMessage, setDraftMessage] = useState('')
+  const [pendingSubmission, setPendingSubmission] = useState<{
+    content: string
+    form: Record<string, string>
+    moduleId: string
+  } | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
-    setForm(defaultForm(fields))
-  }, [fields])
+    setForm(defaultForm(activeModule.fields))
+  }, [activeModule.fields])
+
+  useEffect(() => {
+    if (enabledModuleIds.includes(activeModuleId)) return
+    setEnabledModuleIds((current) => [...current, activeModuleId])
+  }, [activeModuleId, enabledModuleIds])
+
+  useEffect(() => {
+    if (!pendingSubmission || pendingSubmission.moduleId !== activeModule.id) return
+
+    const submission = pendingSubmission
+    setPendingSubmission(null)
+    setStatus(null)
+
+    void (async () => {
+      const result = await tool.sendConversationMessage(submission.form, submission.content)
+      if (result) {
+        setDraftMessage('')
+        setStatus(result.summary)
+      }
+    })()
+  }, [activeModule.id, pendingSubmission, tool])
 
   async function run(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -96,33 +158,110 @@ export default function MemoryBackedAIDemoTool({
     if (result) setStatus(result.summary)
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setStatus(null)
-    const result = await tool.sendConversationMessage(form, draftMessage)
-    if (result) {
-      setDraftMessage('')
-      setStatus(result.summary)
+
+    const routedModule = routeModule(modules, enabledModuleIds, activeModule, draftMessage)
+    if (routedModule.id !== activeModule.id) {
+      const nextForm = defaultForm(routedModule.fields)
+      setActiveModuleId(routedModule.id)
+      setForm(nextForm)
+      setPendingSubmission({
+        content: draftMessage,
+        form: nextForm,
+        moduleId: routedModule.id,
+      })
+      return
     }
+
+    void (async () => {
+      const result = await tool.sendConversationMessage(form, draftMessage)
+      if (result) {
+        setDraftMessage('')
+        setStatus(result.summary)
+      }
+    })()
   }
 
   async function applyEvents() {
-    const created = await tool.applyCalendarEvents()
-    setStatus(`Applied ${created.length} calendar event${created.length === 1 ? '' : 's'}.`)
+    const applyResult = await tool.applyCalendarEvents()
+    setStatus(
+      `Applied ${applyResult.created.length} calendar event${
+        applyResult.created.length === 1 ? '' : 's'
+      }.${
+        applyResult.skippedDuplicateCount
+          ? ` Skipped ${applyResult.skippedDuplicateCount} duplicate${
+              applyResult.skippedDuplicateCount === 1 ? '' : 's'
+            }.`
+          : ''
+      }`,
+    )
   }
 
   return (
     <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4">
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-slate-950">{toolName}</h3>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            {activeModule.alias ? (
+              <p className="truncate text-xs font-medium text-slate-500">{activeModule.alias}</p>
+            ) : null}
+            <h3 className="truncate text-sm font-semibold text-slate-950">
+              {activeModule.toolName}
+            </h3>
+          </div>
+          {activeModule.alias ? (
+            <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
+              {activeModule.alias}
+            </span>
+          ) : null}
+        </div>
+        {modules.length > 1 ? (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase text-slate-500">Enabled modules</p>
+              <p className="text-xs text-slate-500">Routes chat by topic</p>
+            </div>
+            <div className="mt-2 space-y-2">
+              {modules.map((module) => (
+                <label className="flex items-center justify-between gap-3 text-sm" key={module.id}>
+                  <span>
+                    <span className="font-medium text-slate-800">
+                      {module.alias ?? module.toolName}
+                    </span>
+                    <span className="ml-2 text-xs text-slate-500">{module.toolName}</span>
+                  </span>
+                  <input
+                    aria-label={`Enable ${module.alias ?? module.toolName}`}
+                    checked={enabledModuleIds.includes(module.id)}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
+                    onChange={(event) => {
+                      setEnabledModuleIds((current) => {
+                        if (event.target.checked) return [...new Set([...current, module.id])]
+                        return current.length === 1
+                          ? current
+                          : current.filter((moduleId) => moduleId !== module.id)
+                      })
+                    }}
+                    type="checkbox"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {tool.projects.length ? (
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={`${sourceToolId}-project`}>
+            <label
+              className="block text-sm font-medium text-slate-700"
+              htmlFor={`${activeModule.sourceToolId}-project`}
+            >
               Project
             </label>
             <select
               className={inputClass}
-              id={`${sourceToolId}-project`}
+              id={`${activeModule.sourceToolId}-project`}
               onChange={(event) => tool.setSelectedProjectId(event.target.value)}
               value={tool.selectedProjectId}
             >
@@ -140,25 +279,35 @@ export default function MemoryBackedAIDemoTool({
         )}
       </section>
 
-      <form className="space-y-3 border-t border-slate-200 pt-4" onSubmit={(event) => void run(event)}>
-        {fields.map((field) => (
+      <form
+        className="space-y-3 border-t border-slate-200 pt-4"
+        onSubmit={(event) => void run(event)}
+      >
+        {activeModule.fields.map((field) => (
           <div key={field.id}>
-            <label className="block text-sm font-medium text-slate-700" htmlFor={`${sourceToolId}-${field.id}`}>
+            <label
+              className="block text-sm font-medium text-slate-700"
+              htmlFor={`${activeModule.sourceToolId}-${field.id}`}
+            >
               {field.label}
             </label>
             {field.type === 'textarea' ? (
               <textarea
                 className={textareaClass}
-                id={`${sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                id={`${activeModule.sourceToolId}-${field.id}`}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 placeholder={field.placeholder}
                 value={form[field.id] ?? ''}
               />
             ) : field.type === 'select' ? (
               <select
                 className={inputClass}
-                id={`${sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                id={`${activeModule.sourceToolId}-${field.id}`}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 value={form[field.id] ?? ''}
               >
                 {field.options.map((option) => (
@@ -170,8 +319,10 @@ export default function MemoryBackedAIDemoTool({
             ) : (
               <input
                 className={inputClass}
-                id={`${sourceToolId}-${field.id}`}
-                onChange={(event) => setForm((current) => ({ ...current, [field.id]: event.target.value }))}
+                id={`${activeModule.sourceToolId}-${field.id}`}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [field.id]: event.target.value }))
+                }
                 placeholder={field.placeholder}
                 type={field.type}
                 value={form[field.id] ?? ''}
@@ -199,7 +350,7 @@ export default function MemoryBackedAIDemoTool({
                 key={message.id}
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {message.role === 'assistant' ? toolName : 'You'}
+                  {message.role === 'assistant' ? activeModule.toolName : 'You'}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{message.content}</p>
               </article>
@@ -211,14 +362,17 @@ export default function MemoryBackedAIDemoTool({
           )}
         </div>
         <form className="space-y-2" onSubmit={(event) => void sendMessage(event)}>
-          <label className="block text-sm font-medium text-slate-700" htmlFor={`${sourceToolId}-conversation`}>
+          <label
+            className="block text-sm font-medium text-slate-700"
+            htmlFor={`${activeModule.sourceToolId}-conversation`}
+          >
             Conversation message
           </label>
           <textarea
             className={textareaClass}
-            id={`${sourceToolId}-conversation`}
+            id={`${activeModule.sourceToolId}-conversation`}
             onChange={(event) => setDraftMessage(event.target.value)}
-            placeholder="Make this lower impact and move the next block to evening."
+            placeholder="Route this to SEO learning and make a full-week plan."
             value={draftMessage}
           />
           <Button disabled={tool.isRunning || !draftMessage.trim()} type="submit" variant="primary">
@@ -231,9 +385,12 @@ export default function MemoryBackedAIDemoTool({
         <section className="space-y-3 border-t border-slate-200 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h4 className="truncate text-sm font-semibold text-slate-950">{tool.selectedProject.title}</h4>
+              <h4 className="truncate text-sm font-semibold text-slate-950">
+                {tool.selectedProject.title}
+              </h4>
               <p className="mt-1 text-xs text-slate-500">
-                {tool.progressSummary.completed}/{tool.progressSummary.total} complete from {tool.progressSummary.source}
+                {tool.progressSummary.completed}/{tool.progressSummary.total} complete from{' '}
+                {tool.progressSummary.source}
               </p>
             </div>
             <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
@@ -242,7 +399,7 @@ export default function MemoryBackedAIDemoTool({
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div
-              aria-label={`${toolName} progress`}
+              aria-label={`${activeModule.toolName} progress`}
               className="h-full rounded-full bg-emerald-700"
               style={{ width: `${tool.progressSummary.percent}%` }}
             />
@@ -255,15 +412,22 @@ export default function MemoryBackedAIDemoTool({
           <h4 className="text-sm font-semibold text-slate-950">Milestones</h4>
           <div className="space-y-2">
             {tool.milestones.map((milestone) => (
-              <article className="rounded-md border border-slate-200 p-3" key={milestone.milestone_id}>
+              <article
+                className="rounded-md border border-slate-200 p-3"
+                key={milestone.milestone_id}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-950">{milestone.title}</p>
+                    <p className="truncate text-sm font-semibold text-slate-950">
+                      {milestone.title}
+                    </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {milestone.due_date ? `Due ${milestone.due_date}` : 'No due date'}
                     </p>
                     {milestone.description ? (
-                      <p className="mt-2 text-xs leading-5 text-slate-600">{milestone.description}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">
+                        {milestone.description}
+                      </p>
                     ) : null}
                   </div>
                   <select
@@ -306,7 +470,9 @@ export default function MemoryBackedAIDemoTool({
                   <select
                     aria-label={`Action status for ${action.title}`}
                     className={`h-8 shrink-0 rounded-md border border-slate-200 px-2 text-xs ${statusClass(action.status)}`}
-                    onChange={(event) => void tool.setActionStatus(action, event.target.value as ActionItemStatus)}
+                    onChange={(event) =>
+                      void tool.setActionStatus(action, event.target.value as ActionItemStatus)
+                    }
                     value={action.status}
                   >
                     {actionStatuses.map((candidate) => (
@@ -332,7 +498,9 @@ export default function MemoryBackedAIDemoTool({
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-950">{entry.summary}</p>
                     {entry.details ? (
-                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{entry.details}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
+                        {entry.details}
+                      </p>
                     ) : null}
                   </div>
                   <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">
@@ -353,7 +521,10 @@ export default function MemoryBackedAIDemoTool({
               <h4 className="text-sm font-semibold text-slate-950">Confirmed Requirements</h4>
               <div className="mt-2 flex flex-wrap gap-2">
                 {tool.result.confirmedRequirements.map((requirement) => (
-                  <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700" key={requirement}>
+                  <span
+                    className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                    key={requirement}
+                  >
                     {requirement}
                   </span>
                 ))}
@@ -375,7 +546,10 @@ export default function MemoryBackedAIDemoTool({
             <div className="space-y-2">
               <h5 className="text-sm font-semibold text-slate-950">Calendar Preview</h5>
               {tool.result.calendarEvents.map((event, index) => (
-                <article className="rounded-md border border-slate-200 bg-slate-50 p-3" key={`${event.title}-${index}`}>
+                <article
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  key={`${event.title}-${index}`}
+                >
                   <p className="text-sm font-semibold text-slate-950">{event.title}</p>
                   <p className="mt-1 text-xs text-slate-500">
                     {formatDateTime(event.startAt)} - {formatDateTime(event.endAt)}
@@ -387,7 +561,11 @@ export default function MemoryBackedAIDemoTool({
                   ) : null}
                 </article>
               ))}
-              <Button disabled={tool.isApplyingEvents} onClick={() => void applyEvents()} variant="primary">
+              <Button
+                disabled={tool.isApplyingEvents}
+                onClick={() => void applyEvents()}
+                variant="primary"
+              >
                 {tool.isApplyingEvents ? 'Applying...' : 'Apply events'}
               </Button>
             </div>
@@ -408,7 +586,9 @@ export default function MemoryBackedAIDemoTool({
       {status ? (
         <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{status}</p>
       ) : null}
-      {tool.isDetailLoading || tool.isLoading ? <p className="text-sm text-slate-500">Loading memory...</p> : null}
+      {tool.isDetailLoading || tool.isLoading ? (
+        <p className="text-sm text-slate-500">Loading memory...</p>
+      ) : null}
     </div>
   )
 }

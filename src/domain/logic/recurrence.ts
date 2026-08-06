@@ -99,7 +99,12 @@ function includeOccurrence(
   }
 }
 
-function expandDaily(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, rangeEnd: Date): Event[] {
+function expandDaily(
+  baseEvent: Event,
+  rule: RecurrenceRule,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Event[] {
   const baseStart = parseISO(baseEvent.startAt)
   const instances: Event[] = []
   let cursor = baseStart
@@ -114,7 +119,12 @@ function expandDaily(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, r
   return instances
 }
 
-function expandWeekly(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, rangeEnd: Date): Event[] {
+function expandWeekly(
+  baseEvent: Event,
+  rule: RecurrenceRule,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Event[] {
   const baseStart = parseISO(baseEvent.startAt)
   const baseWeek = startOfWeek(baseStart, { weekStartsOn: WEEK_STARTS_ON })
   const selectedDays = new Set(rule.daysOfWeek ?? [weekdayByIndex[baseStart.getDay()]])
@@ -127,7 +137,8 @@ function expandWeekly(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, 
     const weekDelta = differenceInCalendarWeeks(cursor, baseWeek, { weekStartsOn: WEEK_STARTS_ON })
     const isSelectedDay = selectedDays.has(weekdayByIndex[cursor.getDay()])
     const isValidInterval = weekDelta >= 0 && weekDelta % rule.interval === 0
-    const isBeforeFirstOccurrence = isBefore(candidate, baseStart) && !isSameDay(candidate, baseStart)
+    const isBeforeFirstOccurrence =
+      isBefore(candidate, baseStart) && !isSameDay(candidate, baseStart)
 
     if (isSelectedDay && isValidInterval && !isBeforeFirstOccurrence) {
       if (shouldStop(rule, candidate, generatedCount)) break
@@ -142,7 +153,12 @@ function expandWeekly(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, 
   return instances
 }
 
-function expandMonthly(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date, rangeEnd: Date): Event[] {
+function expandMonthly(
+  baseEvent: Event,
+  rule: RecurrenceRule,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Event[] {
   const baseStart = parseISO(baseEvent.startAt)
   const dayOfMonth = rule.dayOfMonth ?? baseStart.getDate()
   const instances: Event[] = []
@@ -164,7 +180,11 @@ function expandMonthly(baseEvent: Event, rule: RecurrenceRule, rangeStart: Date,
   return instances
 }
 
-export function expandRecurrence(baseEvent: Event, rule: RecurrenceRule, viewRange: DateRange): Event[] {
+export function expandRecurrence(
+  baseEvent: Event,
+  rule: RecurrenceRule,
+  viewRange: DateRange,
+): Event[] {
   const rangeStart = parseISO(viewRange.start)
   const rangeEnd = parseISO(viewRange.end)
 

@@ -21,6 +21,8 @@ export class LocalTodoService implements ITodoService {
       notes: draft.notes,
       eventTypeId: draft.eventTypeId ?? 'general',
       dueDate: draft.dueDate,
+      etaMinutes: draft.etaMinutes ?? 30,
+      energyNeeded: draft.energyNeeded ?? 'medium',
       longProject: draft.longProject,
       priority: draft.priority ?? 'medium',
       createdAt: timestamp,
@@ -52,7 +54,10 @@ export class LocalTodoService implements ITodoService {
     const updated = TodoSchema.parse({
       ...current,
       ...changes,
-      completedAt: nextStatus === 'done' ? (changes.completedAt ?? current.completedAt ?? new Date().toISOString()) : undefined,
+      completedAt:
+        nextStatus === 'done'
+          ? (changes.completedAt ?? current.completedAt ?? new Date().toISOString())
+          : undefined,
       updatedAt: new Date().toISOString(),
     })
     const nextTodos = [...todos]

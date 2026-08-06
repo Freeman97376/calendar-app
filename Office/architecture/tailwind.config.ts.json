@@ -1,0 +1,120 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "tailwind.config.ts",
+        "id": "ev:8095c97b8dc9e05119d585f4",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7a393342bf314a60a61e4e457721c3acf191941557477d351cd657e1228ca2fb",
+        "startLine": 1,
+        "symbolId": "sym:typescript:tailwind.config.ts:tailwind.config.ts:b498ea01dc0ef071"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 9,
+        "file": "tailwind.config.ts",
+        "id": "ev:file:655dc9e3d0aa561e3fa164bf",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7a393342bf314a60a61e4e457721c3acf191941557477d351cd657e1228ca2fb",
+        "startLine": 1,
+        "symbolId": "sym:typescript:tailwind.config.ts:tailwind.config.ts:b498ea01dc0ef071"
+      }
+    ],
+    "paths": [
+      "tailwind.config.ts"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:8095c97b8dc9e05119d585f4"
+        ],
+        "id": "edge:7a571bcf3769ce514c41e0bd",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:tailwind.config.ts:tailwind.config.ts:b498ea01dc0ef071",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "tailwindcss"
+        },
+        "type": "imports"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "7a393342bf314a60a61e4e457721c3acf191941557477d351cd657e1228ca2fb",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:655dc9e3d0aa561e3fa164bf"
+        ],
+        "generated": false,
+        "id": "sym:typescript:tailwind.config.ts:tailwind.config.ts:b498ea01dc0ef071",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 9,
+          "file": "tailwind.config.ts",
+          "startLine": 1
+        },
+        "name": "tailwind.config",
+        "output": null,
+        "qualifiedName": "tailwind.config.ts",
+        "sideEffects": [],
+        "signature": "module tailwind.config.ts",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:655dc9e3d0aa561e3fa164bf"
+            ],
+            "inputs": [],
+            "normalized": "module tailwind.config.ts",
+            "output": null,
+            "raw": "module tailwind.config.ts",
+            "signatureId": "sig:b498ea01dc0ef071d8d650c7",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "tailwind.config.ts",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

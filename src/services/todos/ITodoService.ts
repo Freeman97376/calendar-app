@@ -5,6 +5,8 @@ export type TodoDraft = {
   notes?: string
   eventTypeId?: string
   dueDate?: string
+  etaMinutes?: Todo['etaMinutes']
+  energyNeeded?: Todo['energyNeeded']
   longProject?: Todo['longProject']
   priority?: Todo['priority']
 }

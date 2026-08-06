@@ -6,4 +6,3 @@ export function useFridgePanel() {
 
   return { isOpen, toggle }
 }
-

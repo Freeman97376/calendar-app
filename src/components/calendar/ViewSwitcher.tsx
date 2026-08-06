@@ -1,35 +1,40 @@
 import type { CalendarView } from '../../domain/types'
 import type { KeyboardEvent } from 'react'
 
+import { useI18n } from '../../hooks/useI18n'
+
 type ViewSwitcherProps = {
   view: CalendarView
   onViewChange: (view: CalendarView) => void
 }
 
-const options: Array<{ value: CalendarView; label: string }> = [
-  { value: 'month', label: 'Month' },
-  { value: 'week', label: 'Week' },
-  { value: 'day', label: 'Day' },
-]
+const optionValues: CalendarView[] = ['month', 'week', 'day']
 
 export default function ViewSwitcher({ view, onViewChange }: ViewSwitcherProps) {
+  const { t } = useI18n()
+  const options: Array<{ value: CalendarView; label: string }> = [
+    { value: 'month', label: t('calendar.month') },
+    { value: 'week', label: t('calendar.week') },
+    { value: 'day', label: t('calendar.day') },
+  ]
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = options.findIndex((option) => option.value === view)
+    const currentIndex = optionValues.findIndex((option) => option === view)
 
     if (event.key === 'ArrowRight') {
       event.preventDefault()
-      onViewChange(options[(currentIndex + 1) % options.length].value)
+      onViewChange(optionValues[(currentIndex + 1) % optionValues.length])
     }
 
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
-      onViewChange(options[(currentIndex + options.length - 1) % options.length].value)
+      onViewChange(optionValues[(currentIndex + optionValues.length - 1) % optionValues.length])
     }
   }
 
   return (
     <div
-      aria-label="Calendar view"
+      aria-label={t('calendar.view')}
       className="inline-flex rounded-md border border-slate-200 bg-white p-1 shadow-sm"
       onKeyDown={handleKeyDown}
       role="tablist"

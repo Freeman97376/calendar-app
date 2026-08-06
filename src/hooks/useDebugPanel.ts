@@ -7,7 +7,7 @@ import { useTodoStore } from '../store/todoStore'
 import { useUIStore } from '../store/uiStore'
 
 export function useDebugPanel() {
-  const isOpen = useUIStore((state) => state.debugPanelOpen)
+  const isOpen = useUIStore((state) => state.activeWorkspacePanel === 'debug')
   const close = useUIStore((state) => state.closeDebugPanel)
   const toggle = useUIStore((state) => state.toggleDebugPanel)
 
@@ -30,6 +30,7 @@ export function useDebugInfo() {
   const aiError = useAIStore((state) => state.error)
   const pendingActionPlan = useAIStore((state) => state.pendingActionPlan)
   const pendingSuggestion = useAIStore((state) => state.pendingSuggestion)
+  const activeWorkspacePanel = useUIStore((state) => state.activeWorkspacePanel)
   const aiPanelOpen = useUIStore((state) => state.aiPanelOpen)
   const debugPanelOpen = useUIStore((state) => state.debugPanelOpen)
   const todoPanelOpen = useUIStore((state) => state.todoPanelOpen)
@@ -70,6 +71,7 @@ export function useDebugInfo() {
     time: timeContext,
     ui: {
       activeToolId,
+      activeWorkspacePanel,
       aiPanelOpen,
       debugPanelOpen,
       todoPanelOpen,

@@ -1,0 +1,151 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 32,
+        "file": "playwright.config.ts",
+        "id": "ev:19ed10bd79cc891026382033",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "90754b1ea6b0a5b91e472e995eeb5d60f086dc46c512d53f692cb5df26ac9de7",
+        "startLine": 5,
+        "symbolId": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "playwright.config.ts",
+        "id": "ev:75d257a905355bd5cf278678",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "90754b1ea6b0a5b91e472e995eeb5d60f086dc46c512d53f692cb5df26ac9de7",
+        "startLine": 1,
+        "symbolId": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 32,
+        "file": "playwright.config.ts",
+        "id": "ev:file:f679bf1e58e8dddfc6cff0fa",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "90754b1ea6b0a5b91e472e995eeb5d60f086dc46c512d53f692cb5df26ac9de7",
+        "startLine": 1,
+        "symbolId": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9"
+      }
+    ],
+    "paths": [
+      "playwright.config.ts"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:19ed10bd79cc891026382033"
+        ],
+        "id": "edge:a5015bf8b08fe2cc9a3575c4",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "defineConfig"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:75d257a905355bd5cf278678"
+        ],
+        "id": "edge:ff540d4aadf66a5fdc2ce861",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "@playwright/test"
+        },
+        "type": "imports"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "90754b1ea6b0a5b91e472e995eeb5d60f086dc46c512d53f692cb5df26ac9de7",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:f679bf1e58e8dddfc6cff0fa"
+        ],
+        "generated": false,
+        "id": "sym:typescript:playwright.config.ts:playwright.config.ts:00de3a3a8eae9ec9",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 32,
+          "file": "playwright.config.ts",
+          "startLine": 1
+        },
+        "name": "playwright.config",
+        "output": null,
+        "qualifiedName": "playwright.config.ts",
+        "sideEffects": [],
+        "signature": "module playwright.config.ts",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:f679bf1e58e8dddfc6cff0fa"
+            ],
+            "inputs": [],
+            "normalized": "module playwright.config.ts",
+            "output": null,
+            "raw": "module playwright.config.ts",
+            "signatureId": "sig:00de3a3a8eae9ec91656344a",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "playwright.config.ts",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

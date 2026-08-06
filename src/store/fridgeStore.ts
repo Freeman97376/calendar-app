@@ -44,7 +44,10 @@ function requireFridgeService(): IFridgeService {
   return fridgeService
 }
 
-function toInventoryDraft(item: FridgeShelfLifePrediction, receiptId?: string): FridgeInventoryDraft {
+function toInventoryDraft(
+  item: FridgeShelfLifePrediction,
+  receiptId?: string,
+): FridgeInventoryDraft {
   return {
     ...item,
     receipt_id: receiptId,
@@ -132,4 +135,3 @@ export const useFridgeStore = create<FridgeStore>((set, get) => ({
     }
   },
 }))
-

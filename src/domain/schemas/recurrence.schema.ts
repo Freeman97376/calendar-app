@@ -17,7 +17,10 @@ export const RecurrenceRuleSchema = z
       .default({ type: 'never' }),
   })
   .superRefine((rule, ctx) => {
-    if ((rule.frequency === 'weekly' || rule.frequency === 'custom') && rule.daysOfWeek?.length === 0) {
+    if (
+      (rule.frequency === 'weekly' || rule.frequency === 'custom') &&
+      rule.daysOfWeek?.length === 0
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'At least one weekday is required',

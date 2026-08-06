@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DateRange, Event } from '../../../src/domain/types'
-import { FirestoreAdapter, type FirestoreEventClient } from '../../../src/services/storage/firestoreAdapter'
+import {
+  FirestoreAdapter,
+  type FirestoreEventClient,
+} from '../../../src/services/storage/firestoreAdapter'
 
 const baseEvent: Event = {
   id: 'event-1',

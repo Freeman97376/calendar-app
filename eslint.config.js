@@ -40,7 +40,17 @@ const restrictedZones = [
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'scratch'],
+    ignores: [
+      'dist',
+      'dist-desktop',
+      'build',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'scratch',
+      'src-tauri/target',
+      '.pytest_cache',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -77,6 +87,15 @@ export default tseslint.config(
           varsIgnorePattern: '^_',
         },
       ],
+    },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.es2022,
+      },
     },
   },
 )

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import type {
   ActionItemStatus,
@@ -9,6 +9,7 @@ import type {
 } from '../../../domain/types/longTermMemory'
 import { useGoalPlannerMemory } from '../../../hooks/useGoalPlannerMemory'
 import Button from '../../ui/Button'
+import ToolRoadmapPanel from '../ToolRoadmapPanel'
 
 const inputClass =
   'mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100'
@@ -17,9 +18,21 @@ const textareaClass =
 
 const goalStatuses: GoalStatus[] = ['active', 'paused', 'completed', 'archived']
 const projectStatuses: ProjectStatus[] = ['active', 'paused', 'completed']
-const milestoneStatuses: MilestoneStatus[] = ['not_started', 'in_progress', 'done', 'blocked', 'skipped']
+const milestoneStatuses: MilestoneStatus[] = [
+  'not_started',
+  'in_progress',
+  'done',
+  'blocked',
+  'skipped',
+]
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
-const progressLogTypes: ProgressLogType[] = ['update', 'decision', 'blocker', 'review', 'tool_result']
+const progressLogTypes: ProgressLogType[] = [
+  'update',
+  'decision',
+  'blocker',
+  'review',
+  'tool_result',
+]
 
 function label(value: string): string {
   return value.replace(/_/g, ' ')
@@ -43,7 +56,14 @@ export default function GoalPlannerPanel() {
     logType: ProgressLogType
     summary: string
   }>({ details: '', logType: 'update', summary: '' })
+  const [isEditingPath, setIsEditingPath] = useState(false)
+  const [pathDraft, setPathDraft] = useState('')
   const [status, setStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIsEditingPath(false)
+    setPathDraft(memory.selectedRoadmapPathText)
+  }, [memory.selectedProject?.project_id, memory.selectedRoadmapPathText])
 
   async function createGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -108,6 +128,20 @@ export default function GoalPlannerPanel() {
     })
     setProgressDraft({ details: '', logType: 'update', summary: '' })
     setStatus(`Logged ${label(progress.log_type)}`)
+  }
+
+  function startEditingPath() {
+    setPathDraft(memory.selectedRoadmapPathText)
+    setIsEditingPath(true)
+  }
+
+  async function saveImplementationPath(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!memory.selectedProject) return
+
+    await memory.saveSelectedImplementationPath(pathDraft)
+    setIsEditingPath(false)
+    setStatus(`Saved implementation path for ${memory.selectedProject.title}`)
   }
 
   return (
@@ -262,7 +296,9 @@ export default function GoalPlannerPanel() {
                 >
                   <p className="truncate text-sm font-semibold text-slate-950">{project.title}</p>
                   {project.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">{project.description}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                      {project.description}
+                    </p>
                   ) : null}
                 </button>
                 <select
@@ -300,11 +336,51 @@ export default function GoalPlannerPanel() {
             ) : null}
           </div>
 
+          {memory.selectedRoadmap ? <ToolRoadmapPanel roadmap={memory.selectedRoadmap} /> : null}
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h5 className="text-sm font-semibold text-slate-950">Implementation path</h5>
+              <Button onClick={startEditingPath} variant="ghost">
+                Edit implementation path
+              </Button>
+            </div>
+            {isEditingPath ? (
+              <form className="space-y-3" onSubmit={(event) => void saveImplementationPath(event)}>
+                <div>
+                  <label
+                    className="block text-sm font-medium text-slate-700"
+                    htmlFor="implementation-path"
+                  >
+                    One step per line. Use "Title | Details" for descriptions.
+                  </label>
+                  <textarea
+                    className={textareaClass}
+                    id="implementation-path"
+                    onChange={(event) => setPathDraft(event.target.value)}
+                    value={pathDraft}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={!pathDraft.trim()} type="submit" variant="primary">
+                    Save implementation path
+                  </Button>
+                  <Button onClick={() => setIsEditingPath(false)} variant="secondary">
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </section>
+
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Tool History</h5>
             <div className="space-y-2">
               {memory.toolRuns.map((toolRun) => (
-                <article className="rounded-md border border-slate-200 p-3" key={toolRun.tool_run_id}>
+                <article
+                  className="rounded-md border border-slate-200 p-3"
+                  key={toolRun.tool_run_id}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-950">
@@ -336,9 +412,15 @@ export default function GoalPlannerPanel() {
 
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Milestones</h5>
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void createMilestone(event)}>
+            <form
+              className="grid gap-3 sm:grid-cols-[1fr_auto]"
+              onSubmit={(event) => void createMilestone(event)}
+            >
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="milestone-title">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="milestone-title"
+                >
                   Milestone
                 </label>
                 <input
@@ -351,7 +433,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="milestone-due-date">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="milestone-due-date"
+                >
                   Due date
                 </label>
                 <input
@@ -364,16 +449,25 @@ export default function GoalPlannerPanel() {
                   value={milestoneDraft.dueDate}
                 />
               </div>
-              <Button className="sm:col-span-2" disabled={!milestoneDraft.title.trim()} type="submit">
+              <Button
+                className="sm:col-span-2"
+                disabled={!milestoneDraft.title.trim()}
+                type="submit"
+              >
                 Add milestone
               </Button>
             </form>
             <div className="space-y-2">
               {memory.milestones.map((milestone) => (
-                <div className="rounded-md border border-slate-200 p-3" key={milestone.milestone_id}>
+                <div
+                  className="rounded-md border border-slate-200 p-3"
+                  key={milestone.milestone_id}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-950">{milestone.title}</p>
+                      <p className="truncate text-sm font-semibold text-slate-950">
+                        {milestone.title}
+                      </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {milestone.due_date ? `Due ${milestone.due_date}` : 'No due date'}
                       </p>
@@ -406,7 +500,10 @@ export default function GoalPlannerPanel() {
 
           <section className="space-y-3">
             <h5 className="text-sm font-semibold text-slate-950">Action Items</h5>
-            <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void createAction(event)}>
+            <form
+              className="grid gap-3 sm:grid-cols-[1fr_auto]"
+              onSubmit={(event) => void createAction(event)}
+            >
               <div>
                 <label className="block text-sm font-medium text-slate-700" htmlFor="action-title">
                   Action item
@@ -421,7 +518,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="action-due-date">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="action-due-date"
+                >
                   Due date
                 </label>
                 <input
@@ -443,7 +543,9 @@ export default function GoalPlannerPanel() {
                 <div className="rounded-md border border-slate-200 p-3" key={action.action_id}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-950">{action.title}</p>
+                      <p className="truncate text-sm font-semibold text-slate-950">
+                        {action.title}
+                      </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {action.due_date ? `Due ${action.due_date}` : 'No due date'}
                       </p>
@@ -500,7 +602,10 @@ export default function GoalPlannerPanel() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="progress-summary">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="progress-summary"
+                >
                   Summary
                 </label>
                 <input
@@ -513,7 +618,10 @@ export default function GoalPlannerPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700" htmlFor="progress-details">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="progress-details"
+                >
                   Details
                 </label>
                 <textarea
@@ -535,7 +643,9 @@ export default function GoalPlannerPanel() {
                   <p className="text-sm font-semibold text-slate-950">{entry.summary}</p>
                   <p className="mt-1 text-xs uppercase text-slate-500">{label(entry.log_type)}</p>
                   {entry.details ? (
-                    <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{entry.details}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">
+                      {entry.details}
+                    </p>
                   ) : null}
                 </div>
               ))}

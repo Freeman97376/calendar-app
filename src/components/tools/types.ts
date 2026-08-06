@@ -1,10 +1,7 @@
 import type { ComponentType } from 'react'
 
-export type ToolDefinition = {
-  capabilityTags?: string[]
-  category?: 'system' | 'planning' | 'ai-demo'
-  description?: string
-  id: string
-  label: string
+import type { ToolTemplateMetadata } from '../../domain/types/toolTemplateMetadata'
+
+export type ToolDefinition = ToolTemplateMetadata & {
   Component: ComponentType
 }

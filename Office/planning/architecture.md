@@ -1,6 +1,6 @@
 # 🏗️ Architecture — Calendar App
 
-> Maintained by: Claude Code | Last updated: 2026-05-24
+> Maintained by: Claude Code / Codex | Last updated: 2026-07-15
 
 ---
 
@@ -29,6 +29,7 @@ The application uses a **5-layer architecture** inside `src/`. Each layer has a 
 **Rule:** May only import from `zod` and `date-fns`. No React, no Firebase, no Zustand.
 
 **Why:** This layer contains the business logic of the calendar app. By keeping it free of framework dependencies, it can be used in:
+
 - The React web app
 - A future React Native mobile app
 - A future Node.js backend or Cloud Functions
@@ -36,13 +37,14 @@ The application uses a **5-layer architecture** inside `src/`. Each layer has a 
 
 **Contents:**
 
-| Folder | Purpose |
-|--------|---------|
-| `schemas/` | Zod schemas — single source of truth for all data shapes |
-| `types/` | TypeScript types derived via `z.infer<>` — no duplication |
-| `logic/` | Pure functions — recurrence expansion, date helpers, event utilities |
+| Folder     | Purpose                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| `schemas/` | Zod schemas — single source of truth for all data shapes             |
+| `types/`   | TypeScript types derived via `z.infer<>` — no duplication            |
+| `logic/`   | Pure functions — recurrence expansion, date helpers, event utilities |
 
 **Key files:**
+
 - `schemas/event.schema.ts` — the `Event` Zod schema (all fields validated here)
 - `schemas/recurrence.schema.ts` — RRULE-inspired recurrence rule schema
 - `schemas/ai.schema.ts` — structured output schemas for AI goal breakdowns and action plans
@@ -55,14 +57,16 @@ The application uses a **5-layer architecture** inside `src/`. Each layer has a 
 
 ## Layer 2: `src/services/` — I/O Adapters
 
-**Rule:** May only import from `domain/schemas`, `domain/types`, and firebase config.
+**Rule:** May only import from `domain/schemas`, `domain/types`, and lower-level transport utilities.
 
-**Why:** All external I/O (network, storage, APIs) is isolated here. The rest of the app never touches Firebase or a concrete AI provider directly — it only calls interfaces. This means:
-- Swapping Firebase for Supabase = write a new adapter, change nothing else
+**Why:** All external I/O is isolated here. The production app uses the authenticated same-origin FastAPI API for personal data and AI proxying. Firebase is retained only in an operator-only legacy export tool and isolated adapter tests. This means:
+
+- Swapping a server repository or API transport does not change domain/components
 - Swapping the API provider = update `apiAIService` configuration or implement `IAIService`, change nothing else
 - Testing = pass a mock adapter, no real network calls
 
 **Key interfaces:**
+
 ```typescript
 // IStorageAdapter.ts — implemented by localStorageAdapter & firestoreAdapter
 interface IStorageAdapter {
@@ -82,13 +86,13 @@ interface IAIService {
 
 **Subfolders:**
 
-| Folder | Contents |
-|--------|---------|
-| `storage/` | `IStorageAdapter.ts`, `localStorageAdapter.ts`, `firestoreAdapter.ts` |
-| `sync/` | `syncManager.ts` — coordinates local-first sync between two adapters |
-| `ai/` | `IAIService.ts`, `apiAIService.ts`, `localAIService.ts`, `fallbackAIService.ts`, `aiServiceFactory.ts` |
-| `fridge/` | Frontend API adapter for the local Python fridge backend |
-| `firebase/` | `firebaseConfig.ts` — Firebase SDK init only |
+| Folder      | Contents                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| `storage/`  | Authenticated API storage plus legacy local/Firestore adapters excluded from production startup        |
+| `sync/`     | `syncManager.ts` — coordinates local-first sync between two adapters                                   |
+| `ai/`       | `IAIService.ts`, `apiAIService.ts`, `localAIService.ts`, `fallbackAIService.ts`, `aiServiceFactory.ts` |
+| `fridge/`   | Frontend API adapter for the local Python fridge backend                                               |
+| `firebase/` | Legacy migration-test configuration only; never imported by production startup                         |
 
 ---
 
@@ -98,12 +102,12 @@ interface IAIService {
 
 **Why:** Four separate stores prevent unnecessary re-renders. Mixing UI state (modal open/closed) with data state (event list) causes every component subscribed to events to re-render when a modal opens.
 
-| Store | Owns |
-|-------|------|
-| `calendarStore.ts` | Current view (month/week/day), focused date |
-| `eventStore.ts` | Event list, CRUD operations, optimistic updates |
-| `uiStore.ts` | Modal visibility, panel open/closed, loading states |
-| `aiStore.ts` | AI conversation history, pending suggestions |
+| Store              | Owns                                                |
+| ------------------ | --------------------------------------------------- |
+| `calendarStore.ts` | Current view (month/week/day), focused date         |
+| `eventStore.ts`    | Event list, CRUD operations, optimistic updates     |
+| `uiStore.ts`       | Modal visibility, panel open/closed, loading states |
+| `aiStore.ts`       | AI conversation history, pending suggestions        |
 
 ---
 
@@ -113,13 +117,13 @@ interface IAIService {
 
 **Why:** Hooks bridge Zustand state with React's lifecycle and handle async orchestration. Keeping this logic out of components keeps components thin and testable.
 
-| Hook | Responsibility |
-|------|---------------|
-| `useCalendar.ts` | View switching, date navigation |
-| `useEvents.ts` | CRUD operations with optimistic UI + sync |
-| `useRecurrence.ts` | Expanding recurrence rules into event instances |
-| `useDragDrop.ts` | dnd-kit drag state + drop handler logic |
-| `useAI.ts` | AI service calls, streaming state, suggestion acceptance |
+| Hook               | Responsibility                                           |
+| ------------------ | -------------------------------------------------------- |
+| `useCalendar.ts`   | View switching, date navigation                          |
+| `useEvents.ts`     | CRUD operations with optimistic UI + sync                |
+| `useRecurrence.ts` | Expanding recurrence rules into event instances          |
+| `useDragDrop.ts`   | dnd-kit drag state + drop handler logic                  |
+| `useAI.ts`         | AI service calls, streaming state, suggestion acceptance |
 
 ---
 
@@ -131,13 +135,13 @@ interface IAIService {
 
 **Subfolders:**
 
-| Folder | Contains |
-|--------|---------|
+| Folder      | Contains                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------- |
 | `calendar/` | `CalendarShell`, `MonthView`, `WeekView`, `DayView`, `CalendarHeader`, `ViewSwitcher`, `TimeGrid` |
-| `event/` | `EventCard`, `EventModal`, `EventForm`, `RecurrenceSelector`, `EventDragOverlay` |
-| `ai/` | `AIAssistantPanel`, `AIMessageBubble`, `AIScheduleSuggestion` |
-| `tools/` | Tools panel registry plus one folder per tool entry |
-| `ui/` | `Button`, `Modal`, `Spinner`, `ErrorBoundary` — generic, zero calendar logic |
+| `event/`    | `EventCard`, `EventModal`, `EventForm`, `RecurrenceSelector`, `EventDragOverlay`                  |
+| `ai/`       | `AIAssistantPanel`, `AIMessageBubble`, `AIScheduleSuggestion`                                     |
+| `tools/`    | Tools panel registry plus one folder per tool entry                                               |
+| `ui/`       | `Button`, `Modal`, `Spinner`, `ErrorBoundary` — generic, zero calendar logic                      |
 
 > `components/ui/` is the embryo of a future shared component library. These components must never import from calendar-specific layers.
 
@@ -161,10 +165,11 @@ Store (store/)
 Service (services/)
     │  validates with schema, reads/writes
     ▼
-Firebase Firestore  ←→  syncManager  ←→  localStorage
+FastAPI API  ←→  SQLAlchemy repositories  ←→  MySQL (server) / SQLite (desktop)
 ```
 
 For AI flow:
+
 ```
 User types goal
     │
@@ -185,6 +190,7 @@ Calendar updated
 ```
 
 For AI action plans:
+
 ```
 User command
     │
@@ -204,19 +210,20 @@ Apply Actions -> eventStore / todoStore
 ## Dependency List
 
 ### Runtime
+
 ```
 react @18                   # UI framework
 react-dom @18
 zustand @5                  # state management
 date-fns @4                 # date math
 @dnd-kit/core               # drag and drop
-@dnd-kit/sortable           # sortable lists  
+@dnd-kit/sortable           # sortable lists
 zod @3                      # schema validation
-firebase @11                # Firestore + Auth
 zod-to-json-schema @3       # schema helper retained for compatibility work
 ```
 
 ### Dev
+
 ```
 typescript @5
 vite @6
@@ -227,6 +234,7 @@ vitest @3
 @testing-library/user-event
 @testing-library/jest-dom
 msw @2                      # mock API in tests
+firebase @11                # dev-only legacy export tool and adapter tests
 eslint @9
 prettier @3
 tailwindcss @4

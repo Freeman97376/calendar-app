@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { useDebugInfo, useDebugPanel } from '../../hooks/useDebugPanel'
-import Button from '../ui/Button'
+import { useDebugInfo } from '../../hooks/useDebugPanel'
 
 function Field({ label, value }: { label: string; value: string | number | boolean }) {
   return (
@@ -22,19 +21,12 @@ function Section({ children, title }: { children: ReactNode; title: string }) {
 }
 
 export default function DebugPanel() {
-  const debugPanel = useDebugPanel()
   const debug = useDebugInfo()
 
   return (
-    <aside
-      aria-label="Debug panel"
-      className="flex w-full flex-col border-t border-slate-200 bg-slate-50 xl:max-w-xs xl:border-l xl:border-t-0"
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-slate-50">
+      <div className="border-b border-slate-200 bg-white px-4 py-4">
         <h2 className="text-base font-semibold text-slate-950">Debug</h2>
-        <Button onClick={debugPanel.close} variant="ghost">
-          Close
-        </Button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
@@ -70,9 +62,10 @@ export default function DebugPanel() {
         </Section>
 
         <Section title="Panels">
+          <Field label="Workspace" value={debug.ui.activeWorkspacePanel} />
           <Field label="AI" value={debug.ui.aiPanelOpen} />
           <Field label="Todos" value={debug.ui.todoPanelOpen} />
-          <Field label="Tools" value={debug.ui.toolsPanelOpen} />
+          <Field label="Tool Templates" value={debug.ui.toolsPanelOpen} />
           <Field label="Debug" value={debug.ui.debugPanelOpen} />
           <Field label="Tool" value={debug.ui.activeToolId} />
         </Section>
@@ -88,6 +81,6 @@ export default function DebugPanel() {
           </section>
         ) : null}
       </div>
-    </aside>
+    </div>
   )
 }

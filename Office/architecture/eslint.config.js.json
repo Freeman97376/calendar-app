@@ -1,0 +1,308 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [
+      "backend"
+    ],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 1,
+        "file": "eslint.config.js",
+        "id": "ev:1d0e6c10af4f2dacab6d2151",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 1,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 6,
+        "file": "eslint.config.js",
+        "id": "ev:33fce143309063452d06c903",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 6,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 2,
+        "file": "eslint.config.js",
+        "id": "ev:4aa06cdd60c716d723d7b428",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 2,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 101,
+        "file": "eslint.config.js",
+        "id": "ev:57ca9e74c1398e7a5e41462f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 41,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 3,
+        "file": "eslint.config.js",
+        "id": "ev:b89ed3cfb0b115d3c01df147",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 3,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 5,
+        "file": "eslint.config.js",
+        "id": "ev:d780362f1865873be8633e55",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 5,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 4,
+        "file": "eslint.config.js",
+        "id": "ev:dd9f61ccdd9f5f291b24133f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 4,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      },
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 101,
+        "file": "eslint.config.js",
+        "id": "ev:file:a32a0887ed9d1d707bbb3b84",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "startLine": 1,
+        "symbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d"
+      }
+    ],
+    "paths": [
+      "eslint.config.js"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:4aa06cdd60c716d723d7b428"
+        ],
+        "id": "edge:03eb89a717f2b21fc2600a13",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "globals"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:b89ed3cfb0b115d3c01df147"
+        ],
+        "id": "edge:0f142f3a571f163df67996ee",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "eslint-plugin-import"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:33fce143309063452d06c903"
+        ],
+        "id": "edge:330b0059ef35dcd6d3091930",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "typescript-eslint"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:d780362f1865873be8633e55"
+        ],
+        "id": "edge:48ed15c7210bf0b247427e09",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "eslint-plugin-react-refresh"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:57ca9e74c1398e7a5e41462f"
+        ],
+        "id": "edge:894694c9bd93d6de0a717657",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend/fridge/config.py:backend/fridge/config.py:dbf1b46b24f4d77d",
+          "unresolvedText": "tseslint.config"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:1d0e6c10af4f2dacab6d2151"
+        ],
+        "id": "edge:c01b777cf9bd34d6f45f1636",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "@eslint/js"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:dd9f61ccdd9f5f291b24133f"
+        ],
+        "id": "edge:e77a567d2f94d6764a115a87",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "eslint-plugin-react-hooks"
+        },
+        "type": "imports"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "150950e3184cdcaca90881b17750bf3fecb89d3771a4d47835a92fac65d956b4",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:a32a0887ed9d1d707bbb3b84"
+        ],
+        "generated": false,
+        "id": "sym:javascript:eslint.config.js:eslint.config.js:d2619e2b865f631d",
+        "inputs": [],
+        "kind": "module",
+        "language": "javascript",
+        "location": {
+          "endLine": 101,
+          "file": "eslint.config.js",
+          "startLine": 1
+        },
+        "name": "eslint.config",
+        "output": null,
+        "qualifiedName": "eslint.config.js",
+        "sideEffects": [],
+        "signature": "module eslint.config.js",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:a32a0887ed9d1d707bbb3b84"
+            ],
+            "inputs": [],
+            "normalized": "module eslint.config.js",
+            "output": null,
+            "raw": "module eslint.config.js",
+            "signatureId": "sig:d2619e2b865f631d0ece8a04",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "eslint.config.js",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

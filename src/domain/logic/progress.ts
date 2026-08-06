@@ -1,7 +1,4 @@
-import type {
-  LongTermActionItem,
-  LongTermMilestone,
-} from '../types/longTermMemory'
+import type { LongTermActionItem, LongTermMilestone } from '../types/longTermMemory'
 
 export type ProgressSummary = {
   completed: number

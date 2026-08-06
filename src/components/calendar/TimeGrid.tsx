@@ -31,7 +31,12 @@ function getEventsForHour(events: Event[], hour: number): Event[] {
   )
 }
 
-export default function TimeGrid({ days, eventsByDate, onSelectDate, onSelectEvent }: TimeGridProps) {
+export default function TimeGrid({
+  days,
+  eventsByDate,
+  onSelectDate,
+  onSelectEvent,
+}: TimeGridProps) {
   const gridColumns =
     days.length === 1
       ? 'grid-cols-[4rem_minmax(0,1fr)]'

@@ -48,10 +48,7 @@ describe('expandRecurrence', () => {
       endCondition: { type: 'count', occurrences: 4 },
     }
 
-    expect(dates(expandRecurrence(baseEvent, rule, mayRange))).toEqual([
-      '2026-05-25',
-      '2026-05-27',
-    ])
+    expect(dates(expandRecurrence(baseEvent, rule, mayRange))).toEqual(['2026-05-25', '2026-05-27'])
   })
 
   it('monthly rule on specific day of month', () => {
@@ -203,10 +200,9 @@ describe('expandRecurrence', () => {
       endCondition: { type: 'count', occurrences: 3 },
     }
 
-    expect(dates(expandRecurrence({ ...baseEvent, deletedOccurrences: ['2026-05-26'] }, rule, mayRange))).toEqual([
-      '2026-05-25',
-      '2026-05-27',
-    ])
+    expect(
+      dates(expandRecurrence({ ...baseEvent, deletedOccurrences: ['2026-05-26'] }, rule, mayRange)),
+    ).toEqual(['2026-05-25', '2026-05-27'])
   })
 
   it('weekly rule spanning DST transition keeps same clock time', () => {

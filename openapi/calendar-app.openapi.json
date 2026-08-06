@@ -1,0 +1,7205 @@
+{
+  "components": {
+    "schemas": {
+      "Body_analyze_receipt_api_fridge_receipt_analyze_post": {
+        "properties": {
+          "image": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Image",
+            "type": "string"
+          },
+          "purchase_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Date"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "title": "Body_analyze_receipt_api_fridge_receipt_analyze_post",
+        "type": "object"
+      },
+      "CheckInAnswerPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "answers": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Answers"
+          },
+          "effort_minutes": {
+            "default": 0,
+            "maximum": 10080.0,
+            "minimum": 0.0,
+            "title": "Effort Minutes",
+            "type": "integer"
+          },
+          "metric_values": {
+            "items": {
+              "$ref": "#/components/schemas/CheckInMetricValuePayload"
+            },
+            "maxItems": 10,
+            "title": "Metric Values",
+            "type": "array"
+          }
+        },
+        "title": "CheckInAnswerPayload",
+        "type": "object"
+      },
+      "CheckInMetricValuePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "anomaly_reason": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Anomaly Reason",
+            "type": "string"
+          },
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "is_anomaly": {
+            "default": false,
+            "title": "Is Anomaly",
+            "type": "boolean"
+          },
+          "metric_id": {
+            "title": "Metric Id",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "metric_id"
+        ],
+        "title": "CheckInMetricValuePayload",
+        "type": "object"
+      },
+      "EventCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "allDay": {
+            "default": false,
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "deletedOccurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedoccurrences"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "displayDetails": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displaydetails"
+          },
+          "endAt": {
+            "format": "date-time",
+            "title": "Endat",
+            "type": "string"
+          },
+          "eventTypeId": {
+            "default": "general",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventtypeid",
+            "type": "string"
+          },
+          "exceptionDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptiondate"
+          },
+          "exceptionFor": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptionfor"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "linkedTodoId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedtodoid"
+          },
+          "masterId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Masterid"
+          },
+          "recurrenceRule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecurrenceRulePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startAt": {
+            "format": "date-time",
+            "title": "Startat",
+            "type": "string"
+          },
+          "syncStatus": {
+            "default": "pending",
+            "enum": [
+              "synced",
+              "pending",
+              "conflict"
+            ],
+            "title": "Syncstatus",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "title",
+          "startAt",
+          "endAt"
+        ],
+        "title": "EventCreatePayload",
+        "type": "object"
+      },
+      "EventUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "allDay": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allday"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "deletedOccurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedoccurrences"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "displayDetails": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displaydetails"
+          },
+          "endAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endat"
+          },
+          "eventTypeId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eventtypeid"
+          },
+          "exceptionDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptiondate"
+          },
+          "exceptionFor": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptionfor"
+          },
+          "linkedTodoId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedtodoid"
+          },
+          "masterId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Masterid"
+          },
+          "recurrenceRule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecurrenceRulePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startat"
+          },
+          "syncStatus": {
+            "anyOf": [
+              {
+                "enum": [
+                  "synced",
+                  "pending",
+                  "conflict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Syncstatus"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "title": "EventUpdatePayload",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImportPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "backup": {
+            "additionalProperties": true,
+            "title": "Backup",
+            "type": "object"
+          },
+          "conflictChoices": {
+            "additionalProperties": {
+              "enum": [
+                "local",
+                "backup"
+              ],
+              "type": "string"
+            },
+            "title": "Conflictchoices",
+            "type": "object"
+          },
+          "currentDataChecksum": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentdatachecksum"
+          },
+          "expectedBackupChecksum": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedbackupchecksum"
+          },
+          "mode": {
+            "default": "merge",
+            "enum": [
+              "merge",
+              "replace"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "replaceConfirmed": {
+            "default": false,
+            "title": "Replaceconfirmed",
+            "type": "boolean"
+          },
+          "source": {
+            "default": "api-backup",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup"
+        ],
+        "title": "ImportPayload",
+        "type": "object"
+      },
+      "ImportPreviewPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "backup": {
+            "additionalProperties": true,
+            "title": "Backup",
+            "type": "object"
+          },
+          "mode": {
+            "default": "merge",
+            "enum": [
+              "merge",
+              "replace"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backup"
+        ],
+        "title": "ImportPreviewPayload",
+        "type": "object"
+      },
+      "LoginPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginPayload",
+        "type": "object"
+      },
+      "PreUpdateBackupPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "fromVersion": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Fromversion",
+            "type": "string"
+          },
+          "toVersion": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Toversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromVersion",
+          "toVersion"
+        ],
+        "title": "PreUpdateBackupPayload",
+        "type": "object"
+      },
+      "RecurrenceEndCount": {
+        "additionalProperties": false,
+        "properties": {
+          "occurrences": {
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Occurrences",
+            "type": "integer"
+          },
+          "type": {
+            "const": "count",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "occurrences"
+        ],
+        "title": "RecurrenceEndCount",
+        "type": "object"
+      },
+      "RecurrenceEndDate": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "date",
+            "title": "Type",
+            "type": "string"
+          },
+          "until": {
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "until"
+        ],
+        "title": "RecurrenceEndDate",
+        "type": "object"
+      },
+      "RecurrenceEndNever": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "never",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "RecurrenceEndNever",
+        "type": "object"
+      },
+      "RecurrenceRulePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "dayOfMonth": {
+            "anyOf": [
+              {
+                "maximum": 31.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dayofmonth"
+          },
+          "daysOfWeek": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "mon",
+                    "tue",
+                    "wed",
+                    "thu",
+                    "fri",
+                    "sat",
+                    "sun"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 7,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daysofweek"
+          },
+          "endCondition": {
+            "discriminator": {
+              "mapping": {
+                "count": "#/components/schemas/RecurrenceEndCount",
+                "date": "#/components/schemas/RecurrenceEndDate",
+                "never": "#/components/schemas/RecurrenceEndNever"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RecurrenceEndNever"
+              },
+              {
+                "$ref": "#/components/schemas/RecurrenceEndDate"
+              },
+              {
+                "$ref": "#/components/schemas/RecurrenceEndCount"
+              }
+            ],
+            "title": "Endcondition"
+          },
+          "frequency": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly",
+              "custom"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "interval": {
+            "default": 1,
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Interval",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frequency"
+        ],
+        "title": "RecurrenceRulePayload",
+        "type": "object"
+      },
+      "TodoCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "dueDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duedate"
+          },
+          "energyNeeded": {
+            "default": "medium",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Energyneeded",
+            "type": "string"
+          },
+          "etaMinutes": {
+            "default": 30,
+            "maximum": 480.0,
+            "minimum": 5.0,
+            "title": "Etaminutes",
+            "type": "integer"
+          },
+          "eventTypeId": {
+            "default": "general",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventtypeid",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "linkedEventId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedeventid"
+          },
+          "longProject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodoLongProjectPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "priority": {
+            "default": "medium",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "status": {
+            "default": "todo",
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "TodoCreatePayload",
+        "type": "object"
+      },
+      "TodoLongProjectPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "memoryGoalId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Memorygoalid",
+            "type": "string"
+          },
+          "memoryProjectId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Memoryprojectid",
+            "type": "string"
+          },
+          "sourceToolId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetoolid"
+          }
+        },
+        "required": [
+          "memoryGoalId",
+          "memoryProjectId"
+        ],
+        "title": "TodoLongProjectPayload",
+        "type": "object"
+      },
+      "TodoUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "dueDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duedate"
+          },
+          "energyNeeded": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energyneeded"
+          },
+          "etaMinutes": {
+            "anyOf": [
+              {
+                "maximum": 480.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etaminutes"
+          },
+          "eventTypeId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eventtypeid"
+          },
+          "linkedEventId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedeventid"
+          },
+          "longProject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodoLongProjectPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "todo",
+                  "doing",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "title": "TodoUpdatePayload",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Calendar App API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/ai/chat/completions": {
+      "post": {
+        "operationId": "proxy_ai_api_ai_chat_completions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Proxy Ai"
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Login Api Auth Login Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login"
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout_api_auth_logout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Logout Api Auth Logout Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout"
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me_api_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Api Auth Me Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me"
+      }
+    },
+    "/api/bootstrap": {
+      "get": {
+        "operationId": "bootstrap_api_bootstrap_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bootstrap Api Bootstrap Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bootstrap"
+      }
+    },
+    "/api/calendar/event-types": {
+      "get": {
+        "operationId": "list_event_types_api_calendar_event_types_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Event Types Api Calendar Event Types Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Event Types"
+      },
+      "post": {
+        "operationId": "create_event_type_api_calendar_event_types_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Event Type Api Calendar Event Types Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Event Type"
+      }
+    },
+    "/api/calendar/event-types/{event_type_id}": {
+      "patch": {
+        "operationId": "update_event_type_api_calendar_event_types__event_type_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_type_id",
+            "required": true,
+            "schema": {
+              "title": "Event Type Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Event Type Api Calendar Event Types  Event Type Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Event Type"
+      }
+    },
+    "/api/calendar/events": {
+      "get": {
+        "operationId": "list_events_api_calendar_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Events Api Calendar Events Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events"
+      },
+      "post": {
+        "operationId": "create_event_api_calendar_events_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Event Api Calendar Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Event"
+      }
+    },
+    "/api/calendar/events/{event_id}": {
+      "delete": {
+        "operationId": "delete_event_api_calendar_events__event_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Event Api Calendar Events  Event Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Event"
+      },
+      "patch": {
+        "operationId": "update_event_api_calendar_events__event_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUpdatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Event Api Calendar Events  Event Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Event"
+      }
+    },
+    "/api/calendar/import/local-snapshot": {
+      "post": {
+        "operationId": "import_calendar_api_calendar_import_local_snapshot_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Calendar Api Calendar Import Local Snapshot Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Calendar"
+      }
+    },
+    "/api/calendar/todos": {
+      "get": {
+        "operationId": "list_todos_api_calendar_todos_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Todos Api Calendar Todos Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Todos"
+      },
+      "post": {
+        "operationId": "create_todo_api_calendar_todos_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Todo Api Calendar Todos Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Todo"
+      }
+    },
+    "/api/calendar/todos/{todo_id}": {
+      "delete": {
+        "operationId": "delete_todo_api_calendar_todos__todo_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todo_id",
+            "required": true,
+            "schema": {
+              "title": "Todo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Todo Api Calendar Todos  Todo Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Todo"
+      },
+      "patch": {
+        "operationId": "update_todo_api_calendar_todos__todo_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "todo_id",
+            "required": true,
+            "schema": {
+              "title": "Todo Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Todo Api Calendar Todos  Todo Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Todo"
+      }
+    },
+    "/api/check-ins/ensure": {
+      "post": {
+        "operationId": "ensure_check_ins_api_check_ins_ensure_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ensure Check Ins Api Check Ins Ensure Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ensure Check Ins"
+      }
+    },
+    "/api/check-ins/pending": {
+      "get": {
+        "operationId": "pending_check_ins_api_check_ins_pending_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pending Check Ins Api Check Ins Pending Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pending Check Ins"
+      }
+    },
+    "/api/check-ins/{check_in_id}/answer": {
+      "post": {
+        "operationId": "answer_check_in_api_check_ins__check_in_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "check_in_id",
+            "required": true,
+            "schema": {
+              "title": "Check In Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInAnswerPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Answer Check In Api Check Ins  Check In Id  Answer Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Answer Check In"
+      }
+    },
+    "/api/check-ins/{check_in_id}/skip": {
+      "post": {
+        "operationId": "skip_check_in_api_check_ins__check_in_id__skip_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "check_in_id",
+            "required": true,
+            "schema": {
+              "title": "Check In Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Skip Check In Api Check Ins  Check In Id  Skip Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skip Check In"
+      }
+    },
+    "/api/config": {
+      "get": {
+        "operationId": "config_status_api_config_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Config Status Api Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Config Status"
+      },
+      "patch": {
+        "operationId": "config_update_api_config_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Config Update Api Config Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Config Update"
+      }
+    },
+    "/api/data/export": {
+      "get": {
+        "operationId": "export_data_api_data_export_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Data Api Data Export Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Data"
+      }
+    },
+    "/api/data/import": {
+      "post": {
+        "operationId": "import_data_api_data_import_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Data Api Data Import Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Data"
+      }
+    },
+    "/api/data/import/preview": {
+      "post": {
+        "operationId": "preview_import_data_api_data_import_preview_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPreviewPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Import Data Api Data Import Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Import Data"
+      }
+    },
+    "/api/data/pre-update-backup": {
+      "post": {
+        "operationId": "pre_update_backup_api_data_pre_update_backup_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreUpdateBackupPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pre Update Backup Api Data Pre Update Backup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pre Update Backup"
+      }
+    },
+    "/api/dependencies/{dependency_id}": {
+      "delete": {
+        "operationId": "delete_dependency_api_dependencies__dependency_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dependency_id",
+            "required": true,
+            "schema": {
+              "title": "Dependency Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Dependency Api Dependencies  Dependency Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Dependency"
+      }
+    },
+    "/api/fridge/items": {
+      "get": {
+        "operationId": "list_fridge_items_api_fridge_items_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Fridge Items Api Fridge Items Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Fridge Items"
+      },
+      "post": {
+        "operationId": "create_fridge_item_api_fridge_items_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Fridge Item Api Fridge Items Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Fridge Item"
+      }
+    },
+    "/api/fridge/items/{item_id}": {
+      "delete": {
+        "operationId": "delete_fridge_item_api_fridge_items__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Fridge Item Api Fridge Items  Item Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Fridge Item"
+      },
+      "patch": {
+        "operationId": "update_fridge_item_api_fridge_items__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Fridge Item Api Fridge Items  Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Fridge Item"
+      }
+    },
+    "/api/fridge/receipt/analyze": {
+      "post": {
+        "operationId": "analyze_receipt_api_fridge_receipt_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analyze_receipt_api_fridge_receipt_analyze_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Analyze Receipt Api Fridge Receipt Analyze Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze Receipt"
+      }
+    },
+    "/api/goal-conversations": {
+      "get": {
+        "operationId": "list_goal_conversations_api_goal_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Goal Conversations Api Goal Conversations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Goal Conversations"
+      },
+      "post": {
+        "operationId": "create_goal_conversation_api_goal_conversations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Goal Conversation Api Goal Conversations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Goal Conversation"
+      }
+    },
+    "/api/goal-conversations/{thread_id}": {
+      "get": {
+        "operationId": "get_goal_conversation_api_goal_conversations__thread_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Goal Conversation Api Goal Conversations  Thread Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Goal Conversation"
+      },
+      "patch": {
+        "operationId": "update_goal_conversation_api_goal_conversations__thread_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Goal Conversation Api Goal Conversations  Thread Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Goal Conversation"
+      }
+    },
+    "/api/goal-conversations/{thread_id}/activate": {
+      "post": {
+        "operationId": "activate_goal_conversation_api_goal_conversations__thread_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Activate Goal Conversation Api Goal Conversations  Thread Id  Activate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Goal Conversation"
+      }
+    },
+    "/api/goal-conversations/{thread_id}/messages": {
+      "post": {
+        "operationId": "add_goal_message_api_goal_conversations__thread_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Goal Message Api Goal Conversations  Thread Id  Messages Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Goal Message"
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Api Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/me/ai-usage": {
+      "get": {
+        "operationId": "ai_usage_api_me_ai_usage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ai Usage Api Me Ai Usage Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Usage"
+      }
+    },
+    "/api/me/preferences": {
+      "get": {
+        "operationId": "get_preferences_api_me_preferences_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Preferences Api Me Preferences Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Preferences"
+      },
+      "patch": {
+        "operationId": "update_preferences_api_me_preferences_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Preferences Api Me Preferences Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Preferences"
+      }
+    },
+    "/api/memory/actions": {
+      "post": {
+        "operationId": "create_action_api_memory_actions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Action Api Memory Actions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Action"
+      }
+    },
+    "/api/memory/actions/{action_id}": {
+      "patch": {
+        "operationId": "update_action_api_memory_actions__action_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Action Api Memory Actions  Action Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Action"
+      }
+    },
+    "/api/memory/goals": {
+      "get": {
+        "operationId": "list_goals_api_memory_goals_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Goals Api Memory Goals Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Goals"
+      },
+      "post": {
+        "operationId": "create_goal_api_memory_goals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Goal Api Memory Goals Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Goal"
+      }
+    },
+    "/api/memory/goals/{goal_id}": {
+      "patch": {
+        "operationId": "update_goal_api_memory_goals__goal_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "goal_id",
+            "required": true,
+            "schema": {
+              "title": "Goal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Goal Api Memory Goals  Goal Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Goal"
+      }
+    },
+    "/api/memory/milestones": {
+      "post": {
+        "operationId": "create_milestone_api_memory_milestones_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Milestone Api Memory Milestones Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Milestone"
+      }
+    },
+    "/api/memory/milestones/{milestone_id}": {
+      "patch": {
+        "operationId": "update_milestone_api_memory_milestones__milestone_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "milestone_id",
+            "required": true,
+            "schema": {
+              "title": "Milestone Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Milestone Api Memory Milestones  Milestone Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Milestone"
+      }
+    },
+    "/api/memory/progress": {
+      "post": {
+        "operationId": "create_progress_api_memory_progress_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Progress Api Memory Progress Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Progress"
+      }
+    },
+    "/api/memory/projects": {
+      "get": {
+        "operationId": "list_projects_api_memory_projects_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Projects Api Memory Projects Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Projects"
+      },
+      "post": {
+        "operationId": "create_project_api_memory_projects_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Project Api Memory Projects Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Project"
+      }
+    },
+    "/api/memory/projects/{project_id}": {
+      "get": {
+        "operationId": "get_project_api_memory_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Project Api Memory Projects  Project Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Project"
+      },
+      "patch": {
+        "operationId": "update_project_api_memory_projects__project_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Project Api Memory Projects  Project Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Project"
+      }
+    },
+    "/api/memory/projects/{project_id}/actions": {
+      "get": {
+        "operationId": "list_actions_api_memory_projects__project_id__actions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Actions Api Memory Projects  Project Id  Actions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Actions"
+      }
+    },
+    "/api/memory/projects/{project_id}/control-policy": {
+      "get": {
+        "operationId": "get_control_policy_api_memory_projects__project_id__control_policy_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Control Policy Api Memory Projects  Project Id  Control Policy Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Control Policy"
+      },
+      "patch": {
+        "operationId": "update_control_policy_api_memory_projects__project_id__control_policy_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Control Policy Api Memory Projects  Project Id  Control Policy Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Control Policy"
+      }
+    },
+    "/api/memory/projects/{project_id}/dashboard": {
+      "get": {
+        "operationId": "goal_dashboard_api_memory_projects__project_id__dashboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Goal Dashboard Api Memory Projects  Project Id  Dashboard Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Goal Dashboard"
+      }
+    },
+    "/api/memory/projects/{project_id}/dependencies": {
+      "get": {
+        "operationId": "list_dependencies_api_memory_projects__project_id__dependencies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Dependencies Api Memory Projects  Project Id  Dependencies Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dependencies"
+      },
+      "post": {
+        "operationId": "add_dependency_api_memory_projects__project_id__dependencies_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Dependency Api Memory Projects  Project Id  Dependencies Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Dependency"
+      }
+    },
+    "/api/memory/projects/{project_id}/effort": {
+      "get": {
+        "operationId": "list_effort_api_memory_projects__project_id__effort_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Effort Api Memory Projects  Project Id  Effort Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Effort"
+      },
+      "post": {
+        "operationId": "add_effort_api_memory_projects__project_id__effort_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Effort Api Memory Projects  Project Id  Effort Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Effort"
+      }
+    },
+    "/api/memory/projects/{project_id}/metrics": {
+      "get": {
+        "operationId": "list_metrics_api_memory_projects__project_id__metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Metrics Api Memory Projects  Project Id  Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Metrics"
+      },
+      "post": {
+        "operationId": "create_metric_api_memory_projects__project_id__metrics_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Metric Api Memory Projects  Project Id  Metrics Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Metric"
+      }
+    },
+    "/api/memory/projects/{project_id}/milestones": {
+      "get": {
+        "operationId": "list_milestones_api_memory_projects__project_id__milestones_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Milestones Api Memory Projects  Project Id  Milestones Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Milestones"
+      }
+    },
+    "/api/memory/projects/{project_id}/plan-versions": {
+      "get": {
+        "operationId": "list_versions_api_memory_projects__project_id__plan_versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Versions Api Memory Projects  Project Id  Plan Versions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Versions"
+      },
+      "post": {
+        "operationId": "create_version_api_memory_projects__project_id__plan_versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Version Api Memory Projects  Project Id  Plan Versions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Version"
+      }
+    },
+    "/api/memory/projects/{project_id}/progress": {
+      "get": {
+        "operationId": "list_progress_api_memory_projects__project_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Progress Api Memory Projects  Project Id  Progress Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Progress"
+      }
+    },
+    "/api/memory/projects/{project_id}/tool-runs": {
+      "get": {
+        "operationId": "list_project_tool_runs_api_memory_projects__project_id__tool_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Project Tool Runs Api Memory Projects  Project Id  Tool Runs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Project Tool Runs"
+      }
+    },
+    "/api/memory/search": {
+      "get": {
+        "operationId": "search_memory_api_memory_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Search Memory Api Memory Search Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Memory"
+      }
+    },
+    "/api/memory/tool-runs": {
+      "get": {
+        "operationId": "list_tool_runs_api_memory_tool_runs_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Tool Runs Api Memory Tool Runs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tool Runs"
+      },
+      "post": {
+        "operationId": "create_tool_run_api_memory_tool_runs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Tool Run Api Memory Tool Runs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Tool Run"
+      }
+    },
+    "/api/metrics/{metric_id}": {
+      "patch": {
+        "operationId": "update_metric_api_metrics__metric_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "title": "Metric Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Metric Api Metrics  Metric Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Metric"
+      }
+    },
+    "/api/metrics/{metric_id}/entries": {
+      "post": {
+        "operationId": "add_metric_entry_api_metrics__metric_id__entries_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "title": "Metric Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Metric Entry Api Metrics  Metric Id  Entries Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Metric Entry"
+      }
+    },
+    "/api/plan-change-proposals": {
+      "post": {
+        "operationId": "create_proposal_api_plan_change_proposals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Proposal Api Plan Change Proposals Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Proposal"
+      }
+    },
+    "/api/plan-change-proposals/{proposal_id}/resolve": {
+      "post": {
+        "operationId": "resolve_proposal_api_plan_change_proposals__proposal_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Proposal Api Plan Change Proposals  Proposal Id  Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Proposal"
+      }
+    },
+    "/api/plan-versions/{version_id}": {
+      "patch": {
+        "operationId": "pin_version_api_plan_versions__version_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pin Version Api Plan Versions  Version Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pin Version"
+      }
+    },
+    "/api/plan-versions/{version_id}/rollback": {
+      "post": {
+        "operationId": "rollback_version_api_plan_versions__version_id__rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rollback Version Api Plan Versions  Version Id  Rollback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rollback Version"
+      }
+    },
+    "/api/tool-presets": {
+      "get": {
+        "operationId": "list_presets_api_tool_presets_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Presets Api Tool Presets Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Presets"
+      },
+      "post": {
+        "operationId": "save_preset_api_tool_presets_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Save Preset Api Tool Presets Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Preset"
+      }
+    },
+    "/api/tool-presets/{preset_id}": {
+      "delete": {
+        "operationId": "delete_preset_api_tool_presets__preset_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "preset_id",
+            "required": true,
+            "schema": {
+              "title": "Preset Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Preset Api Tool Presets  Preset Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Preset"
+      },
+      "patch": {
+        "operationId": "update_preset_api_tool_presets__preset_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "preset_id",
+            "required": true,
+            "schema": {
+              "title": "Preset Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Preset Api Tool Presets  Preset Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Preset"
+      }
+    }
+  }
+}

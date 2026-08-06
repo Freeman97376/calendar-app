@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import uuid
+import os
 from pathlib import Path
 
 from .models import OCRResult
@@ -11,8 +12,8 @@ OCR_SCRATCH_DIR = Path(__file__).resolve().parents[2] / "scratch" / "fridge-ocr"
 
 
 class TesseractOCR:
-    def __init__(self, executable: str = "tesseract", timeout_seconds: float = 20.0) -> None:
-        self.executable = executable
+    def __init__(self, executable: str | None = None, timeout_seconds: float = 20.0) -> None:
+        self.executable = executable or os.getenv("CALENDAR_TESSERACT_EXE", "tesseract")
         self.timeout_seconds = timeout_seconds
 
     def extract_text(self, image_bytes: bytes, extension: str) -> OCRResult:

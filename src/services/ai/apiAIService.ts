@@ -4,7 +4,9 @@ import {
   AIBreakdownResultSchema,
   AICalendarActionPlanSchema,
   AIConversationResultSchema,
+  AIEnabledToolRouteResultSchema,
   AIProgressToolResultSchema,
+  AIToolActivationResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
 import type {
@@ -12,23 +14,28 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
 import type { AIConversationContext, AIConversationMessage, IAIService } from './IAIService'
+import { authenticatedFetch } from '../appApiClient'
 
 export const DEFAULT_AI_API_BASE_URL = 'https://api.deepseek.com'
 export const DEFAULT_AI_API_MODEL = 'deepseek-chat'
 
-const defaultFetcher: typeof fetch = (input, init) => globalThis.fetch(input, init)
+const defaultFetcher: typeof fetch = authenticatedFetch
 
 const breakdownSystemPrompt = `You are a productivity assistant helping users schedule their goals.
 Return only a JSON object matching the requested schema.
 Break each goal into 2-8 concrete, actionable steps that can be scheduled as calendar events.
 Use only the documented keys. Omit optional fields instead of returning null.
-Use lowercase priority values: high, medium, or low.`
+Use lowercase priority and energyNeeded values: high, medium, or low.`
 
 const actionSystemPrompt = `You are a calendar and task assistant.
 Return only a JSON object matching the requested schema.
@@ -42,6 +49,8 @@ Use ISO date strings for todo dueDate or schedule dates, for example 2026-06-18.
 If an event starts within the next 48 hours, add a warning beginning with "Confirm time:" that repeats the interpreted local time.
 When the user asks for a new project/task, create a todo unless they clearly ask for a calendar event.
 When the user asks for dinner, meetings, appointments, or time-bound commitments, create a calendar event.
+For task work, include etaMinutes and energyNeeded when the user supplies enough detail; otherwise use defaults.
+For schedule_todo, include startAt and endAt when an exact time slot is requested or inferred.
 Do not invent event type ids; use an id from context.eventTypes or omit it.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
@@ -69,14 +78,34 @@ Use only the documented keys. Omit optional fields instead of returning null.`
 
 const progressToolSystemPrompt = `You are a memory-backed AI demo tool inside a calendar app.
 Return only a JSON object matching the requested schema.
+Use promptFramework as the stable description of the active tool's long-term goal, characteristics, and execution plan.
 Use the compact project memory, calendar events, and search results to adjust the plan.
 Do not assume unseen calendar availability. Prefer suggesting practical next blocks that avoid supplied calendar event conflicts.
 When userInstruction contains dialogue, treat the latest user message as the active request. Confirm requirements in assistantReply, update the plan, and write progressLog entries for decisions, blockers, or completed work.
 If a critical detail is missing, ask one concise question in assistantReply, set needsUserConfirmation to true, and keep existing plan data instead of inventing a full replacement.
 When the user asks for multiple sessions, a full-week plan, or a next-week plan, return one calendarEvents draft per session up to the schema limit. Keep all events in preview only; never imply they are already applied.
 For fitness planning, keep advice general, conservative, and non-medical; add a warning when constraints or injury notes need professional review.
-For agent-learning planning, produce a clear learning route with measurable milestones and practice actions.
+For action entries, include estimatedMinutes, priority, and energyNeeded whenever the action represents schedulable work.
+For learning assistant planning, route by sourceToolId, formInput.learningTrack, goal, outcome, and the latest user message. Agent-learning aliases should produce agent/tool-use routes; SEO aliases should produce SEO, keyword, content, technical SEO, and analytics routes.
 For dueDate, output only YYYY-MM-DD strings. If the date is relative, vague, or not known, omit dueDate.
+Use only the documented keys. Omit optional fields instead of returning null.`
+
+const toolActivationSystemPrompt = `You help users register a reusable parent tool template as one independent active tool.
+Return only a JSON object matching the requested schema.
+Use the conversation to confirm the instance's goal, constraints, cadence, and target outcome.
+Use activationFields and activationFormDraft as the editable form contract. Preserve supplied user values, keep intentionally blank optional or recommended fields blank, and do not invent body metrics or preferences.
+Missing recommended fields must not block activation; add concise warnings that plan accuracy may be lower.
+If critical details are missing, ask one concise follow-up question in assistantReply and set needsMoreInfo to true.
+When enough details are present, suggest a short editable instance alias, summarize the activation requirements, and return compact routeTags.
+Do not create projects, actions, or calendar events. Use only the documented keys. Omit optional fields instead of returning null.`
+
+const enabledToolRoutingSystemPrompt = `You route an AI Assistant message to one existing active tool.
+Return only a JSON object matching the requested schema.
+Choose only from enabledTools supplied in the request. Never invent or create a new active tool.
+Set matchedProjectId to null and confidence to 0 when no active tool clearly matches.
+Use alias, toolName, longTermGoalLabel, toolFeatures, implementationPlan, routeTags, sourceToolId, and activationSummary to decide.
+Preserve the user's request in rewrittenInstruction, only tightening it for the matched tool when helpful.
+Always include rewrittenInstruction, even when matchedProjectId is null. If no rewrite is needed, copy userMessage exactly.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
 const breakdownJsonShape = `{
@@ -86,6 +115,7 @@ const breakdownJsonShape = `{
       "title": "string",
       "description": "optional string",
       "durationMinutes": 30,
+      "energyNeeded": "high | medium | low",
       "suggestedDayOffset": 0,
       "suggestedHour": 9,
       "priority": "high | medium | low"
@@ -125,6 +155,8 @@ const actionJsonShape = `{
       "title": "string",
       "notes": "optional string",
       "dueDate": "optional ISO date",
+      "etaMinutes": 30,
+      "energyNeeded": "high | medium | low",
       "priority": "high | medium | low",
       "eventTypeId": "optional existing event type id",
       "reason": "optional string"
@@ -132,7 +164,7 @@ const actionJsonShape = `{
     {
       "type": "update_todo",
       "todoId": "existing todo id",
-      "changes": { "title": "optional string", "dueDate": "optional ISO date", "priority": "optional high | medium | low", "status": "optional todo | doing | done" },
+      "changes": { "title": "optional string", "dueDate": "optional ISO date", "etaMinutes": "optional minutes", "energyNeeded": "optional high | medium | low", "priority": "optional high | medium | low", "status": "optional todo | doing | done" },
       "reason": "optional string"
     },
     {
@@ -144,6 +176,8 @@ const actionJsonShape = `{
       "type": "schedule_todo",
       "todoId": "existing todo id",
       "date": "optional ISO date",
+      "startAt": "optional ISO datetime",
+      "endAt": "optional ISO datetime",
       "reason": "optional string"
     }
   ],
@@ -208,6 +242,9 @@ const progressToolJsonShape = `{
       "title": "string",
       "description": "optional string",
       "dueDate": "optional ISO date in YYYY-MM-DD format; omit if unsure",
+      "estimatedMinutes": 45,
+      "priority": "high | medium | low",
+      "energyNeeded": "high | medium | low",
       "status": "todo | scheduled | done | blocked | skipped",
       "milestoneTitle": "optional title of the milestone this belongs to",
       "existingActionId": "optional existing action id"
@@ -233,6 +270,26 @@ const progressToolJsonShape = `{
   "warnings": []
 }`
 
+const toolActivationJsonShape = `{
+  "assistantReply": "string",
+  "needsMoreInfo": false,
+  "suggestedInstanceAlias": "short editable alias",
+  "activationSummary": "compact requirements summary",
+  "activationForm": {
+    "fieldId": "string field value; preserve blanks for omitted recommended fields"
+  },
+  "routeTags": ["compact routing tags"],
+  "warnings": ["optional accuracy warning when recommended fields are blank"]
+}`
+
+const enabledToolRouteJsonShape = `{
+  "matchedProjectId": "project id string or null",
+  "confidence": 0.85,
+  "reason": "short explanation",
+  "rewrittenInstruction": "compact instruction for the matched active tool",
+  "needsConfirmation": true
+}`
+
 type ApiAIServiceOptions = {
   apiKey?: string
   baseUrl?: string
@@ -256,7 +313,7 @@ export class ApiAIService implements IAIService {
   readonly model: string
 
   constructor(options: ApiAIServiceOptions = {}) {
-    this.apiKey = options.apiKey ?? import.meta.env.VITE_AI_API_KEY ?? import.meta.env.VITE_DEEPSEEK_API_KEY ?? ''
+    this.apiKey = options.apiKey ?? ''
     this.endpoint = chatCompletionsEndpoint(
       options.baseUrl ??
         import.meta.env.VITE_AI_API_BASE_URL ??
@@ -265,7 +322,10 @@ export class ApiAIService implements IAIService {
     )
     this.fetcher = options.fetcher ?? defaultFetcher
     this.model =
-      options.model ?? import.meta.env.VITE_AI_API_MODEL ?? import.meta.env.VITE_DEEPSEEK_MODEL ?? DEFAULT_AI_API_MODEL
+      options.model ??
+      import.meta.env.VITE_AI_API_MODEL ??
+      import.meta.env.VITE_DEEPSEEK_MODEL ??
+      DEFAULT_AI_API_MODEL
   }
 
   isAvailable(): boolean {
@@ -274,12 +334,13 @@ export class ApiAIService implements IAIService {
 
   async breakdownGoal(goal: string): Promise<AIBreakdownResult> {
     return this.callJson(
-      AIBreakdownResultSchema,
+      AIBreakdownResultSchema as z.ZodType<AIBreakdownResult>,
       breakdownSystemPrompt,
       ['Return JSON matching this shape:', breakdownJsonShape, '', `Goal: ${goal}`].join('\n'),
       1024,
       undefined,
       normalizeBreakdownOutput,
+      'goal_plan',
     )
   }
 
@@ -303,6 +364,7 @@ export class ApiAIService implements IAIService {
       2048,
       undefined,
       normalizeActionPlanOutput,
+      'calendar_plan',
     )
   }
 
@@ -322,6 +384,7 @@ export class ApiAIService implements IAIService {
       2048,
       request.llmOptions.model,
       normalizeToolSessionOutput,
+      'calendar_plan',
     )
   }
 
@@ -341,6 +404,41 @@ export class ApiAIService implements IAIService {
       3072,
       undefined,
       normalizeProgressToolOutput,
+      'replan',
+    )
+  }
+
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    return this.callJson(
+      AIToolActivationResultSchema as z.ZodType<AIToolActivationResult>,
+      toolActivationSystemPrompt,
+      [
+        'Return JSON matching this shape:',
+        toolActivationJsonShape,
+        '',
+        JSON.stringify(request, null, 2),
+      ].join('\n'),
+      1536,
+      undefined,
+      (value) => normalizeToolActivationOutput(value, request),
+      'activation',
+    )
+  }
+
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return this.callJson(
+      AIEnabledToolRouteResultSchema as z.ZodType<AIEnabledToolRouteResult>,
+      enabledToolRoutingSystemPrompt,
+      [
+        'Return JSON matching this shape:',
+        enabledToolRouteJsonShape,
+        '',
+        JSON.stringify(request, null, 2),
+      ].join('\n'),
+      1024,
+      undefined,
+      (value) => normalizeEnabledToolRouteOutput(value, request),
+      'route',
     )
   }
 
@@ -373,6 +471,7 @@ export class ApiAIService implements IAIService {
       2048,
       undefined,
       normalizeConversationOutput,
+      'routine',
     )
   }
 
@@ -383,9 +482,10 @@ export class ApiAIService implements IAIService {
     maxTokens = 1024,
     modelOverride?: string,
     normalize?: (value: unknown) => unknown,
+    operation: CalendarAIOperation = 'routine',
   ): Promise<T> {
     if (!this.isAvailable()) {
-      throw new Error('AI API key is not configured. Add VITE_AI_API_KEY or VITE_DEEPSEEK_API_KEY to .env.local or Settings.')
+      throw new Error('The AI service is not configured for this runtime.')
     }
 
     const response = await this.fetcher(this.endpoint, {
@@ -395,6 +495,7 @@ export class ApiAIService implements IAIService {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
+        _calendarOperation: operation,
         model: modelOverride?.trim() || this.model,
         messages: [
           { role: 'system', content: system },
@@ -407,7 +508,9 @@ export class ApiAIService implements IAIService {
 
     if (!response.ok) {
       const message = await readResponseMessage(response)
-      throw new Error(`AI API request failed with status ${response.status}${message ? `: ${message}` : ''}`)
+      throw new Error(
+        `AI API request failed with status ${response.status}${message ? `: ${message}` : ''}`,
+      )
     }
 
     const body = await parseResponseJson<ChatCompletionResponse>(
@@ -423,6 +526,16 @@ export class ApiAIService implements IAIService {
     return parseStructuredOutput(schema, text, normalize)
   }
 }
+
+type CalendarAIOperation =
+  | 'activation'
+  | 'calendar_plan'
+  | 'goal_plan'
+  | 'replan'
+  | 'review'
+  | 'route'
+  | 'routine'
+  | 'weekly_review'
 
 export function chatCompletionsEndpoint(baseUrl: string): string {
   const normalized = baseUrl.trim().replace(/\/$/, '')
@@ -544,6 +657,7 @@ function normalizeBreakdownOutput(value: unknown): unknown {
             ...step,
             description: optionalString(step.description),
             durationMinutes: numberFromUnknown(step.durationMinutes),
+            energyNeeded: enumLowercase(step.energyNeeded),
             priority: enumLowercase(step.priority),
             suggestedDayOffset: numberFromUnknown(step.suggestedDayOffset),
             suggestedHour: numberFromUnknown(step.suggestedHour),
@@ -601,8 +715,11 @@ function normalizeProgressToolOutput(value: unknown): unknown {
             ...action,
             description: optionalString(action.description),
             dueDate: optionalStrictDate(action.dueDate),
+            energyNeeded: enumLowercase(action.energyNeeded),
+            estimatedMinutes: numberFromUnknown(action.estimatedMinutes),
             existingActionId: optionalString(action.existingActionId),
             milestoneTitle: optionalString(action.milestoneTitle),
+            priority: enumLowercase(action.priority),
             status: enumLowercase(action.status),
           })
         })
@@ -636,6 +753,188 @@ function normalizeProgressToolOutput(value: unknown): unknown {
   })
 }
 
+function latestActivationUserMessage(request: AIToolActivationRequest): string {
+  return (
+    [...request.messages]
+      .reverse()
+      .find((message) => message.role === 'user')
+      ?.content.trim() ?? ''
+  )
+}
+
+function fallbackActivationAlias(request: AIToolActivationRequest, latestMessage: string): string {
+  const fromRequirement = latestMessage
+    .match(/\b(?:for|about|learn|build|manage)\s+([^,.!?]{3,40})/i)?.[1]
+    ?.trim()
+  const base =
+    (fromRequirement || request.templateLabel).replace(/\s+/g, ' ').trim() || request.templateLabel
+  const candidate = base.length > 48 ? base.slice(0, 48).trimEnd() : base
+  const existing = new Set(
+    request.existingInstanceAliases.map((alias) => alias.trim().toLowerCase()),
+  )
+
+  if (!existing.has(candidate.toLowerCase())) return candidate
+
+  for (let suffix = 2; suffix < 20; suffix += 1) {
+    const next = `${candidate} ${suffix}`
+    if (!existing.has(next.toLowerCase())) return next
+  }
+
+  return `${candidate} ${Date.now()}`
+}
+
+function fallbackActivationSummary(
+  request: AIToolActivationRequest,
+  latestMessage: string,
+): string {
+  return latestMessage
+    ? `Prepared ${request.templateLabel} active tool for: ${latestMessage}`
+    : `Configure ${request.templateLabel} by describing the goal, constraints, cadence, and target outcome.`
+}
+
+function fallbackActivationReply(
+  request: AIToolActivationRequest,
+  latestMessage: string,
+  alias: string,
+): string {
+  return latestMessage
+    ? `I can register "${alias}" from ${request.templateLabel}. Review the name, then register the active tool.`
+    : `Tell me the goal, constraints, cadence, and target outcome for this ${request.templateLabel} instance.`
+}
+
+function uniqueStringArray(values: unknown[]): string[] {
+  const seen = new Set<string>()
+  const output: string[] = []
+
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const trimmed = value.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || seen.has(key)) continue
+    seen.add(key)
+    output.push(trimmed)
+  }
+
+  return output.slice(0, 16)
+}
+
+function hasOwnValue(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function trimRecord(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {}
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      typeof entry === 'string' ? entry.trim() : String(entry ?? '').trim(),
+    ]),
+  )
+}
+
+function normalizeActivationForm(
+  value: unknown,
+  request?: AIToolActivationRequest,
+): Record<string, string> | undefined {
+  const modelForm = trimRecord(value)
+  const activationFields = request?.activationFields ?? []
+  if (!activationFields.length) {
+    return Object.fromEntries(Object.entries(modelForm).filter(([, entry]) => Boolean(entry)))
+  }
+
+  const draft = request?.activationFormDraft ?? {}
+  const form = Object.fromEntries(
+    activationFields.map((field) => {
+      const draftValue = hasOwnValue(draft, field.id) ? (draft[field.id]?.trim() ?? '') : undefined
+      const modelValue = hasOwnValue(modelForm, field.id) ? (modelForm[field.id]?.trim() ?? '') : ''
+      const value =
+        draftValue || modelValue || (draftValue === '' ? '' : (field.defaultValue ?? ''))
+      return [field.id, value]
+    }),
+  )
+
+  return { ...modelForm, ...form }
+}
+
+function activationFieldWarnings(
+  request: AIToolActivationRequest | undefined,
+  form: Record<string, string> | undefined,
+): string[] {
+  const activationFields = request?.activationFields ?? []
+  if (!activationFields.length || !form) return []
+
+  return activationFields
+    .filter((field) => field.recommended && !form[field.id]?.trim())
+    .map(
+      (field) =>
+        `Missing recommended ${field.label}; plan accuracy may be lower${
+          field.accuracyImpact ? ` because ${field.accuracyImpact}` : '.'
+        }`,
+    )
+}
+
+function normalizeToolActivationOutput(value: unknown, request?: AIToolActivationRequest): unknown {
+  const output = unwrapStructuredOutput(value)
+  if (!isRecord(output)) return output
+
+  const latestMessage = request ? latestActivationUserMessage(request) : ''
+  const fallbackAlias = request ? fallbackActivationAlias(request, latestMessage) : undefined
+  const fallbackSummary = request ? fallbackActivationSummary(request, latestMessage) : undefined
+  const fallbackReply =
+    request && fallbackAlias
+      ? fallbackActivationReply(request, latestMessage, fallbackAlias)
+      : undefined
+  const normalizedRouteTags = normalizeStringArray(output.routeTags)
+  const routeTags =
+    Array.isArray(normalizedRouteTags) && normalizedRouteTags.length
+      ? normalizedRouteTags
+      : request
+        ? uniqueStringArray([
+            ...request.routeTags,
+            ...request.capabilityTags,
+            request.templateLabel,
+            request.toolName,
+            fallbackAlias,
+          ])
+        : normalizedRouteTags
+  const activationForm = normalizeActivationForm(output.activationForm, request)
+  const normalizedWarnings = normalizeWarnings(output.warnings)
+  const warnings = uniqueStringArray([
+    ...(Array.isArray(normalizedWarnings) ? normalizedWarnings : []),
+    ...activationFieldWarnings(request, activationForm),
+  ])
+
+  return compactUndefined({
+    ...output,
+    activationForm,
+    activationSummary: nonEmptyString(output.activationSummary) ?? fallbackSummary,
+    assistantReply: nonEmptyString(output.assistantReply) ?? fallbackReply,
+    needsMoreInfo:
+      booleanFromUnknown(output.needsMoreInfo) ?? (request ? !latestMessage : undefined),
+    routeTags,
+    suggestedInstanceAlias: nonEmptyString(output.suggestedInstanceAlias) ?? fallbackAlias,
+    warnings,
+  })
+}
+
+function normalizeEnabledToolRouteOutput(
+  value: unknown,
+  request: AIEnabledToolRouteRequest,
+): unknown {
+  const output = unwrapStructuredOutput(value)
+  if (!isRecord(output)) return output
+
+  return compactUndefined({
+    ...output,
+    confidence: numberFromUnknown(output.confidence),
+    matchedProjectId: output.matchedProjectId === '' ? null : output.matchedProjectId,
+    needsConfirmation: booleanFromUnknown(output.needsConfirmation),
+    reason: optionalString(output.reason),
+    rewrittenInstruction: optionalString(output.rewrittenInstruction) ?? request.userMessage,
+  })
+}
+
 function normalizeAction(value: unknown): unknown {
   if (!isRecord(value)) return value
 
@@ -644,6 +943,8 @@ function normalizeAction(value: unknown): unknown {
     description: optionalString(value.description),
     displayDetails: optionalString(value.displayDetails),
     dueDate: optionalDate(value.dueDate),
+    energyNeeded: enumLowercase(value.energyNeeded),
+    etaMinutes: numberFromUnknown(value.etaMinutes),
     eventTypeId: optionalString(value.eventTypeId),
     notes: optionalString(value.notes),
     priority: enumLowercase(value.priority),
@@ -652,7 +953,14 @@ function normalizeAction(value: unknown): unknown {
 
   if (value.type === 'create_event') return normalizeEventLike(base)
   if (value.type === 'create_todo') return compactUndefined(base)
-  if (value.type === 'schedule_todo') return compactUndefined({ ...base, date: optionalDate(value.date) })
+  if (value.type === 'schedule_todo') {
+    return compactUndefined({
+      ...base,
+      date: optionalDate(value.date),
+      endAt: optionalDateTime(value.endAt),
+      startAt: optionalDateTime(value.startAt),
+    })
+  }
 
   if ((value.type === 'update_event' || value.type === 'update_todo') && isRecord(value.changes)) {
     return compactUndefined({
@@ -670,7 +978,9 @@ function normalizeChanges(changes: Record<string, unknown>): Record<string, unkn
     description: optionalString(changes.description),
     displayDetails: optionalString(changes.displayDetails),
     dueDate: optionalDate(changes.dueDate),
+    energyNeeded: enumLowercase(changes.energyNeeded),
     endAt: optionalDateTime(changes.endAt),
+    etaMinutes: numberFromUnknown(changes.etaMinutes),
     eventTypeId: optionalString(changes.eventTypeId),
     notes: optionalString(changes.notes),
     priority: enumLowercase(changes.priority),
@@ -722,6 +1032,11 @@ function normalizeStringArray(value: unknown): unknown {
   if (typeof value === 'string' && value.trim()) return [value.trim()]
   if (value === null || value === undefined || value === '') return undefined
   return value
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  const normalized = optionalString(value)
+  return typeof normalized === 'string' ? normalized : undefined
 }
 
 function optionalString(value: unknown): unknown {

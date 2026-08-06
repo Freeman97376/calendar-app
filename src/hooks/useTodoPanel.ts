@@ -1,7 +1,7 @@
 import { useUIStore } from '../store/uiStore'
 
 export function useTodoPanel() {
-  const isOpen = useUIStore((state) => state.todoPanelOpen)
+  const isOpen = useUIStore((state) => state.activeWorkspacePanel === 'todos')
   const close = useUIStore((state) => state.closeTodoPanel)
   const toggle = useUIStore((state) => state.toggleTodoPanel)
 

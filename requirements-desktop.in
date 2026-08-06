@@ -1,0 +1,2 @@
+-r requirements.in
+PyInstaller>=6.14,<7

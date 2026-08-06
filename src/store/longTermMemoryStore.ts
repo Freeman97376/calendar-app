@@ -88,6 +88,10 @@ export type LongTermMemoryStore = {
     milestoneId: string,
     changes: Partial<CreateMilestoneInput> & { status?: MilestoneStatus },
   ) => Promise<LongTermMilestone>
+  updateProject: (
+    projectId: string,
+    changes: Partial<CreateProjectInput> & { status?: ProjectStatus },
+  ) => Promise<LongTermProject>
   updateActionStatus: (actionId: string, status: ActionItemStatus) => Promise<LongTermActionItem>
   updateGoalStatus: (goalId: string, status: GoalStatus) => Promise<LongTermGoal>
   updateMilestoneStatus: (
@@ -218,10 +222,13 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   loadOverview: async () => {
     set({ error: null, isLoading: true })
     try {
-      const [goals, projects] = await Promise.all([getClient().listGoals(), getClient().listProjects()])
+      const [goals, projects] = await Promise.all([
+        getClient().listGoals(),
+        getClient().listProjects(),
+      ])
       set((state) => {
         const selectedGoalExists = goals.some((goal) => goal.goal_id === state.selectedGoalId)
-        const selectedGoalId = selectedGoalExists ? state.selectedGoalId : goals[0]?.goal_id ?? ''
+        const selectedGoalId = selectedGoalExists ? state.selectedGoalId : (goals[0]?.goal_id ?? '')
         const goalProjects = projects.filter((project) => project.goal_id === selectedGoalId)
         const selectedProjectExists = goalProjects.some(
           (project) => project.project_id === state.selectedProjectId,
@@ -235,7 +242,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
           selectedGoalId,
           selectedProjectId: selectedProjectExists
             ? state.selectedProjectId
-            : goalProjects[0]?.project_id ?? '',
+            : (goalProjects[0]?.project_id ?? ''),
         }
       })
     } catch (error) {
@@ -338,6 +345,19 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
     }
   },
   updateMilestoneStatus: (milestoneId, status) => get().updateMilestone(milestoneId, { status }),
+  updateProject: async (projectId, changes) => {
+    try {
+      const project = await getClient().updateProject(projectId, changes)
+      set((state) => ({
+        error: null,
+        projects: replaceById(state.projects, 'project_id', project),
+      }))
+      return project
+    } catch (error) {
+      set({ error: errorMessage(error, 'Unable to update project') })
+      throw error
+    }
+  },
   updateProjectStatus: async (projectId, status) => {
     try {
       const project = await getClient().updateProject(projectId, { status })
@@ -353,7 +373,9 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   },
 }))
 
-export async function recordLongTermToolRun(input: CreateToolRunInput): Promise<LongTermToolRun | null> {
+export async function recordLongTermToolRun(
+  input: CreateToolRunInput,
+): Promise<LongTermToolRun | null> {
   try {
     const toolRun = await getClient().createToolRun(input)
     useLongTermMemoryStore.setState((state) => ({

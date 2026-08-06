@@ -5,6 +5,7 @@ import type { Todo } from '../domain/types'
 import { useEventStore } from '../store/eventStore'
 import { useTodoStore } from '../store/todoStore'
 import { useEventTypes } from './useEventTypes'
+import { useRuntimeConfig } from './useRuntimeConfig'
 
 function todayISODate(): string {
   const date = new Date()
@@ -13,16 +14,30 @@ function todayISODate(): string {
   ).padStart(2, '0')}`
 }
 
-function toAllDayEventDraft(todo: Todo): EventDraft {
+function priorityColor(priority: Todo['priority']): string {
+  if (priority === 'high') return '#b91c1c'
+  if (priority === 'medium') return '#047857'
+  return '#2563eb'
+}
+
+function toScheduledEventDraft(todo: Todo, defaultStartTime: string): EventDraft {
   const dueDate = todo.dueDate ?? todayISODate()
+  const startAt = new Date(`${dueDate}T${defaultStartTime}:00`).toISOString()
+  const endAt = new Date(new Date(startAt).getTime() + todo.etaMinutes * 60_000).toISOString()
 
   return {
     title: todo.title,
     description: todo.notes,
-    startAt: new Date(`${dueDate}T00:00:00`).toISOString(),
-    endAt: new Date(`${dueDate}T23:59:00`).toISOString(),
-    allDay: true,
-    color: '#2563eb',
+    displayDetails: [
+      todo.notes,
+      `Task metadata: ${todo.etaMinutes} min, ${todo.priority} priority, ${todo.energyNeeded} energy`,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    startAt,
+    endAt,
+    allDay: false,
+    color: priorityColor(todo.priority),
     eventTypeId: todo.eventTypeId,
     linkedTodoId: todo.id,
   }
@@ -40,16 +55,14 @@ export function useTodos() {
   const updateTodo = useTodoStore((state) => state.updateTodo)
   const createEvent = useEventStore((state) => state.createEvent)
   const eventTypes = useEventTypes()
+  const runtimeConfig = useRuntimeConfig()
   const [scheduledCount, setScheduledCount] = useState(0)
 
   useEffect(() => {
     loadTodos().catch(() => undefined)
   }, [loadTodos])
 
-  const openTodos = useMemo(
-    () => todos.filter((todo) => todo.status !== 'done'),
-    [todos],
-  )
+  const openTodos = useMemo(() => todos.filter((todo) => todo.status !== 'done'), [todos])
   const doneTodos = useMemo(() => todos.filter((todo) => todo.status === 'done'), [todos])
 
   async function addTodo(draft: Parameters<typeof createTodo>[0]) {
@@ -64,7 +77,9 @@ export function useTodos() {
   }
 
   async function scheduleTodo(todo: Todo) {
-    const event = await createEvent(toAllDayEventDraft(todo))
+    const event = await createEvent(
+      toScheduledEventDraft(todo, runtimeConfig.defaultEventStartTime),
+    )
     await updateTodo(todo.id, { linkedEventId: event.id })
     setScheduledCount((count) => count + 1)
     return event

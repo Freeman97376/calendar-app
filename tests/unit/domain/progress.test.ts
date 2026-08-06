@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { calculateProjectProgress } from '../../../src/domain/logic/progress'
-import type { LongTermActionItem, LongTermMilestone } from '../../../src/domain/types/longTermMemory'
+import type {
+  LongTermActionItem,
+  LongTermMilestone,
+} from '../../../src/domain/types/longTermMemory'
 
 function action(status: LongTermActionItem['status']): LongTermActionItem {
   return {

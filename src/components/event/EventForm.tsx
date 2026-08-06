@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import type { Event } from '../../domain/types'
 import { useEventTypes } from '../../hooks/useEventTypes'
 import type { EventFormValues, RecurrenceEditScope } from '../../hooks/useEvents'
+import { useI18n } from '../../hooks/useI18n'
 import { useRuntimeConfig } from '../../hooks/useRuntimeConfig'
 import Button from '../ui/Button'
 import RecurrenceSelector from './RecurrenceSelector'
@@ -36,6 +37,7 @@ export default function EventForm({
   onDelete,
   onSubmit,
 }: EventFormProps) {
+  const { t } = useI18n()
   const runtimeConfig = useRuntimeConfig()
   const { calendarEventTypes, eventTypesById } = useEventTypes()
   const defaultEventTypeId = useMemo(() => {
@@ -53,7 +55,9 @@ export default function EventForm({
       (eventType) => eventType.id === event.eventTypeId,
     )
 
-    return selectedType && !selectedIsListed ? [selectedType, ...calendarEventTypes] : calendarEventTypes
+    return selectedType && !selectedIsListed
+      ? [selectedType, ...calendarEventTypes]
+      : calendarEventTypes
   }, [calendarEventTypes, event?.eventTypeId, eventTypesById])
   const initialValues = useMemo<EventFormValues>(
     () => ({
@@ -82,12 +86,12 @@ export default function EventForm({
     setError(null)
 
     if (!values.title.trim()) {
-      setError('Title is required')
+      setError(t('event.titleRequired'))
       return
     }
 
     if (!values.allDay && values.endTime <= values.startTime) {
-      setError('End time must be after start time')
+      setError(t('event.endAfterStart'))
       return
     }
 
@@ -95,7 +99,7 @@ export default function EventForm({
       setIsSubmitting(true)
       await onSubmit({ ...values, title: values.title.trim() })
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to save event')
+      setError(submitError instanceof Error ? submitError.message : t('event.unableToSave'))
     } finally {
       setIsSubmitting(false)
     }
@@ -105,7 +109,7 @@ export default function EventForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
         <label className="block text-sm font-medium text-slate-700" htmlFor="event-title">
-          Title
+          {t('event.title')}
         </label>
         <input
           autoFocus
@@ -121,7 +125,7 @@ export default function EventForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700" htmlFor="event-description">
-          Description
+          {t('event.description')}
         </label>
         <textarea
           className="mt-1 min-h-20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -135,7 +139,7 @@ export default function EventForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700" htmlFor="event-display-details">
-          Display details
+          {t('event.displayDetails')}
         </label>
         <textarea
           className="mt-1 min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -149,7 +153,7 @@ export default function EventForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700" htmlFor="event-type">
-          Type
+          {t('event.type')}
         </label>
         <select
           className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -166,7 +170,7 @@ export default function EventForm({
               </option>
             ))
           ) : (
-            <option value="general">General</option>
+            <option value="general">{t('event.general')}</option>
           )}
         </select>
       </div>
@@ -174,7 +178,7 @@ export default function EventForm({
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="event-date">
-            Date
+            {t('event.date')}
           </label>
           <input
             className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -189,7 +193,7 @@ export default function EventForm({
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="event-start-time">
-            Start time
+            {t('event.startTime')}
           </label>
           <input
             className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -205,7 +209,7 @@ export default function EventForm({
 
         <div>
           <label className="block text-sm font-medium text-slate-700" htmlFor="event-end-time">
-            End time
+            {t('event.endTime')}
           </label>
           <input
             className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
@@ -229,7 +233,7 @@ export default function EventForm({
           }
           type="checkbox"
         />
-        All day
+        {t('event.allDay')}
       </label>
 
       <RecurrenceSelector
@@ -240,11 +244,13 @@ export default function EventForm({
 
       {isRecurringEdit ? (
         <fieldset className="space-y-2 rounded-md border border-slate-200 p-3">
-          <legend className="px-1 text-sm font-medium text-slate-700">Apply changes to</legend>
+          <legend className="px-1 text-sm font-medium text-slate-700">
+            {t('event.applyChangesTo')}
+          </legend>
           {[
-            { value: 'this', label: 'This event' },
-            { value: 'following', label: 'This and following' },
-            { value: 'all', label: 'All events' },
+            { value: 'this', label: t('event.thisEvent') },
+            { value: 'following', label: t('event.thisAndFollowing') },
+            { value: 'all', label: t('event.allEvents') },
           ].map((option) => (
             <label className="flex items-center gap-2 text-sm text-slate-700" key={option.value}>
               <input
@@ -264,21 +270,23 @@ export default function EventForm({
         </fieldset>
       ) : null}
 
-      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
 
       <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-between">
         <div>
           {event && onDelete ? (
             <Button onClick={() => onDelete(values.recurrenceScope ?? 'this')} variant="danger">
-              Delete
+              {t('event.delete')}
             </Button>
           ) : null}
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onCancel}>{t('event.cancel')}</Button>
           <Button disabled={isSubmitting} type="submit" variant="primary">
-            Save event
+            {t('event.save')}
           </Button>
         </div>
       </div>

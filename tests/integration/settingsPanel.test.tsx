@@ -6,10 +6,7 @@ import App from '../../src/App'
 import { LocalEventTypeService } from '../../src/services/eventTypes/localEventTypeService'
 import { RuntimeConfigService } from '../../src/services/config/runtimeConfigService'
 import { configureConfigServices, useConfigStore } from '../../src/store/configStore'
-import {
-  configureEventTypeService,
-  useEventTypeStore,
-} from '../../src/store/eventTypeStore'
+import { configureEventTypeService, useEventTypeStore } from '../../src/store/eventTypeStore'
 import { useUIStore } from '../../src/store/uiStore'
 
 async function openSettings() {
@@ -43,13 +40,15 @@ describe('Settings panel', () => {
     await user.type(screen.getByLabelText('AI API model'), 'deepseek-chat-test')
     await user.clear(screen.getByLabelText('Timezone override'))
     await user.type(screen.getByLabelText('Timezone override'), 'America/Los_Angeles')
-    await user.clear(screen.getByLabelText('Firebase project ID'))
-    await user.type(screen.getByLabelText('Firebase project ID'), 'calendar-test')
     await user.clear(screen.getByLabelText('Default event start'))
     await user.type(screen.getByLabelText('Default event start'), '13:30')
     await user.clear(screen.getByLabelText('Default event end'))
     await user.type(screen.getByLabelText('Default event end'), '14:45')
     await user.selectOptions(screen.getByLabelText('Default task priority'), 'high')
+    await user.selectOptions(screen.getByLabelText('Panel position'), 'right')
+    await user.clear(screen.getByLabelText('Panel size percent'))
+    await user.type(screen.getByLabelText('Panel size percent'), '30')
+    await user.selectOptions(screen.getByLabelText('Language'), 'zh')
     await user.click(screen.getByRole('button', { name: 'Save frontend config' }))
 
     expect(useConfigStore.getState().config).toMatchObject({
@@ -62,10 +61,13 @@ describe('Settings panel', () => {
       defaultEventEndTime: '14:45',
       defaultEventStartTime: '13:30',
       defaultTodoPriority: 'high',
-      firebaseProjectId: 'calendar-test',
+      language: 'zh',
+      layoutPanelPosition: 'right',
+      layoutPanelSizePercent: 30,
       timezoneOverride: 'America/Los_Angeles',
     })
-    expect(screen.getByText('Saved frontend runtime config.')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('zh-CN')
+    expect(screen.getByText('已保存前端运行配置。')).toBeInTheDocument()
   }, 10_000)
 
   it('resets API URL and model when the DeepSeek profile is selected', async () => {

@@ -1,9 +1,6 @@
 import { create } from 'zustand'
 
-import {
-  shiftCalendarDate,
-  todayISODate,
-} from '../domain/logic/dateHelpers'
+import { shiftCalendarDate, todayISODate } from '../domain/logic/dateHelpers'
 import type { CalendarView } from '../domain/types'
 
 export type CalendarStoreState = {

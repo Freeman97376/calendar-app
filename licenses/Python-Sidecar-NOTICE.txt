@@ -1,0 +1,9 @@
+Python sidecar runtime
+
+Calendar App's desktop API is packaged from Python and the dependencies pinned
+in requirements-desktop.lock. The build copies the complete LICENSE.txt from
+the exact Python interpreter into the packaged licenses directory as
+Python-PSF-LICENSE.txt. Individual Python package licenses remain available in
+their distributions and package metadata.
+
+Python license information: https://docs.python.org/3/license.html

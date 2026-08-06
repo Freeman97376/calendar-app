@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { calculateProjectProgress } from '../domain/logic/progress'
+import { splitUniqueEventDrafts } from '../domain/logic/eventDeduplication'
 import { getLocalTimeContext } from '../domain/logic/timeContext'
 import { AIProgressToolRequestSchema } from '../domain/schemas/ai.schema'
-import type {
-  AIProgressToolKind,
-  AIProgressToolResult,
-  Event,
-} from '../domain/types'
+import type { AIProgressToolKind, AIProgressToolResult, Event } from '../domain/types'
 import type {
   ActionItemStatus,
   LongTermActionItem,
@@ -59,7 +56,11 @@ function metadataMatches(
   toolKind: AIProgressToolKind,
   sourceToolId: string,
 ): boolean {
-  return metadata.toolCategory === 'ai-demo' && metadata.toolKind === toolKind && metadata.sourceToolId === sourceToolId
+  return (
+    metadata.toolCategory === 'ai-demo' &&
+    metadata.toolKind === toolKind &&
+    metadata.sourceToolId === sourceToolId
+  )
 }
 
 function titleMatches(left: string, right: string): boolean {
@@ -144,11 +145,17 @@ function compactToolRuns(toolRuns: LongTermToolRun[]) {
   }))
 }
 
-function milestoneByTitle(milestones: LongTermMilestone[], title: string): LongTermMilestone | undefined {
+function milestoneByTitle(
+  milestones: LongTermMilestone[],
+  title: string,
+): LongTermMilestone | undefined {
   return milestones.find((milestone) => titleMatches(milestone.title, title))
 }
 
-function actionByTitle(actions: LongTermActionItem[], title: string): LongTermActionItem | undefined {
+function actionByTitle(
+  actions: LongTermActionItem[],
+  title: string,
+): LongTermActionItem | undefined {
   return actions.find((action) => titleMatches(action.title, title))
 }
 
@@ -192,9 +199,10 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
       ),
     [options.sourceToolId, options.toolKind, projects],
   )
-  const selectedProject = toolProjects.find((project) => project.project_id === selectedProjectId) ?? null
+  const selectedProject =
+    toolProjects.find((project) => project.project_id === selectedProjectId) ?? null
   const selectedGoal = selectedProject
-    ? goals.find((goal) => goal.goal_id === selectedProject.goal_id) ?? null
+    ? (goals.find((goal) => goal.goal_id === selectedProject.goal_id) ?? null)
     : null
   const progressSummary = useMemo(
     () => calculateProjectProgress(actions, milestones),
@@ -206,8 +214,18 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
   }, [loadOverview])
 
   useEffect(() => {
-    if (selectedProjectId || !toolProjects.length) return
-    setSelectedProjectId(toolProjects[0].project_id)
+    setLocalError(null)
+    setResult(null)
+    setSelectedProjectId('')
+  }, [options.sourceToolId, options.toolKind])
+
+  useEffect(() => {
+    if (
+      selectedProjectId &&
+      toolProjects.some((project) => project.project_id === selectedProjectId)
+    )
+      return
+    setSelectedProjectId(toolProjects[0]?.project_id ?? '')
   }, [selectedProjectId, toolProjects])
 
   useEffect(() => {
@@ -257,7 +275,9 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
         status: milestone.status,
         title: milestone.title,
       }
-      const saved = existing ? await updateMilestone(existing.milestone_id, changes) : await createMilestone(changes)
+      const saved = existing
+        ? await updateMilestone(existing.milestone_id, changes)
+        : await createMilestone(changes)
 
       const finalMilestone = saved
       nextMilestones.push(finalMilestone)
@@ -270,14 +290,17 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
           ? actions.find((candidate) => candidate.action_id === action.existingActionId)
           : undefined) ?? actionByTitle(actions, action.title)
       const matchedMilestone = action.milestoneTitle
-        ? milestonesByTitle.get(action.milestoneTitle.trim().toLowerCase()) ??
-          milestoneByTitle(milestones, action.milestoneTitle)
+        ? (milestonesByTitle.get(action.milestoneTitle.trim().toLowerCase()) ??
+          milestoneByTitle(milestones, action.milestoneTitle))
         : undefined
       const changes = {
         description: action.description,
         due_date: action.dueDate,
+        energy_needed: action.energyNeeded,
+        estimated_minutes: action.estimatedMinutes,
         metadata: baseMetadata,
         milestone_id: matchedMilestone?.milestone_id,
+        priority: action.priority,
         project_id: projectId,
         status: action.status,
         title: action.title,
@@ -310,7 +333,9 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
       input_summary: userInstruction
         ? `${options.toolName} conversation update for ${selectedProject?.title ?? options.defaultProjectTitle}`
         : `${options.toolName} generated progress for ${selectedProject?.title ?? options.defaultProjectTitle}`,
-      intent: userInstruction ? `Conversation update in ${options.toolName}` : `Run ${options.toolName}`,
+      intent: userInstruction
+        ? `Conversation update in ${options.toolName}`
+        : `Run ${options.toolName}`,
       output: {
         actionCount: output.actions.length,
         calendarEventCount: output.calendarEvents.length,
@@ -321,7 +346,10 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
       output_summary: output.summary,
       related_goal_id: goalId,
       related_project_id: projectId,
-      status: output.needsUserConfirmation || output.warnings.length ? 'needs_user_confirmation' : 'success',
+      status:
+        output.needsUserConfirmation || output.warnings.length
+          ? 'needs_user_confirmation'
+          : 'success',
       tool_name: options.toolName,
     })
     await loadProjectDetails(projectId)
@@ -342,7 +370,9 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
     setLocalError(null)
     try {
       const memorySearchResults = await searchMemory(
-        [formInput.goal, formInput.outcome, project.title, options.toolName].filter(Boolean).join(' '),
+        [formInput.goal, formInput.outcome, project.title, options.toolName]
+          .filter(Boolean)
+          .join(' '),
       )
       const request = AIProgressToolRequestSchema.parse({
         ...timeContext,
@@ -385,7 +415,8 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
 
     try {
       const output = await run(formInput, userInstruction)
-      const assistantText = output?.assistantReply ?? output?.currentRecommendation ?? output?.summary
+      const assistantText =
+        output?.assistantReply ?? output?.currentRecommendation ?? output?.summary
       if (assistantText) {
         setConversation((current) => [
           ...current,
@@ -394,38 +425,57 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
       }
       return output
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Unable to update ${options.toolName}`
-      setConversation((current) => [
-        ...current,
-        createConversationMessage('assistant', message),
-      ])
+      const message =
+        error instanceof Error ? error.message : `Unable to update ${options.toolName}`
+      setConversation((current) => [...current, createConversationMessage('assistant', message)])
       throw error
     }
   }
 
   async function applyCalendarEvents() {
-    if (!result || !selectedProject) return []
+    if (!result || !selectedProject) return { created: [], skippedDuplicateCount: 0 }
 
     setIsApplyingEvents(true)
     setLocalError(null)
     try {
+      const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(
+        result.calendarEvents,
+        events,
+      )
       const created = []
-      for (const event of result.calendarEvents) {
+      for (const event of uniqueDrafts) {
         created.push(await createEvent(event))
       }
       await createToolRun({
-        input: { eventCount: result.calendarEvents.length, toolKind: options.toolKind },
+        input: {
+          eventCount: result.calendarEvents.length,
+          skippedDuplicateCount: duplicateDrafts.length,
+          toolKind: options.toolKind,
+        },
         input_summary: `Apply ${result.calendarEvents.length} ${options.toolName} calendar event(s).`,
         intent: `Apply ${options.toolName} calendar preview`,
-        output: { createdEventIds: created.map((event) => event.id) },
-        output_summary: `Applied ${created.length} calendar event(s).`,
+        output: {
+          createdEventIds: created.map((event) => event.id),
+          skippedDuplicateCount: duplicateDrafts.length,
+          skippedDuplicates: duplicateDrafts.map((duplicate) => ({
+            existingEventId: duplicate.existingEventId,
+            reason: duplicate.reason,
+            title: duplicate.draft.title,
+          })),
+        },
+        output_summary: `Applied ${created.length} calendar event(s).${
+          duplicateDrafts.length ? ` Skipped ${duplicateDrafts.length} duplicate event(s).` : ''
+        }`,
         related_goal_id: selectedProject.goal_id,
         related_project_id: selectedProject.project_id,
         status: 'success',
         tool_name: options.toolName,
       })
       await loadProjectDetails(selectedProject.project_id)
-      return created
+      return {
+        created,
+        skippedDuplicateCount: duplicateDrafts.length,
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to apply calendar events'
       setLocalError(message)

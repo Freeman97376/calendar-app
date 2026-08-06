@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RuntimeConfigService } from '../../../src/services/config/runtimeConfigService'
+import {
+  BackendConfigApiService,
+  RuntimeConfigService,
+} from '../../../src/services/config/runtimeConfigService'
 
 describe('RuntimeConfigService', () => {
   beforeEach(() => {
@@ -33,6 +36,9 @@ describe('RuntimeConfigService', () => {
       aiApiBaseUrl: 'https://api.deepseek.com',
       aiApiModel: 'deepseek-chat',
       aiApiProfile: 'deepseek',
+      language: 'en',
+      layoutPanelPosition: 'left',
+      layoutPanelSizePercent: 20,
     })
   })
 
@@ -45,6 +51,16 @@ describe('RuntimeConfigService', () => {
 
     expect(saved.timezoneOverride).toBe('America/Los_Angeles')
     expect(service.getConfig().timezoneOverride).toBe('America/Los_Angeles')
+  })
+
+  it('persists the selected app language', () => {
+    const service = new RuntimeConfigService(localStorage, 'test_runtime_config')
+    service.saveConfig({
+      ...service.getConfig(),
+      language: 'zh',
+    })
+
+    expect(service.getConfig().language).toBe('zh')
   })
 
   it('infers a custom API profile for non-default API URL or model', () => {
@@ -63,5 +79,43 @@ describe('RuntimeConfigService', () => {
       aiApiModel: 'example-model',
       aiApiProfile: 'custom',
     })
+  })
+
+  it('persists workspace layout preferences and coerces saved size values', () => {
+    const service = new RuntimeConfigService(localStorage, 'test_runtime_config')
+    service.saveConfig({
+      ...service.getConfig(),
+      layoutPanelPosition: 'right',
+      layoutPanelSizePercent: 30,
+    })
+
+    expect(service.getConfig()).toMatchObject({
+      layoutPanelPosition: 'right',
+      layoutPanelSizePercent: 30,
+    })
+
+    localStorage.setItem(
+      'test_runtime_config',
+      JSON.stringify({
+        layoutPanelPosition: 'bottom',
+        layoutPanelSizePercent: '25',
+      }),
+    )
+
+    expect(service.getConfig()).toMatchObject({
+      layoutPanelPosition: 'bottom',
+      layoutPanelSizePercent: 25,
+    })
+  })
+
+  it('reports an actionable error when a config request receives the app HTML shell', async () => {
+    const service = new BackendConfigApiService(
+      () => '',
+      async () => new Response('<!DOCTYPE html><html><body>Calendar App</body></html>'),
+    )
+
+    await expect(service.getStatus()).rejects.toThrow(
+      'The configuration request reached the app page instead of the Calendar backend.',
+    )
   })
 })

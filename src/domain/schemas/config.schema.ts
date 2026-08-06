@@ -1,9 +1,12 @@
 import { z } from 'zod'
 
-export const AIProviderSchema = z.preprocess((value) => {
-  if (value === 'anthropic' || value === 'deepseek' || value === 'ollama') return 'api'
-  return value
-}, z.enum(['api', 'local']))
+export const AIProviderSchema = z.preprocess(
+  (value) => {
+    if (value === 'anthropic' || value === 'deepseek' || value === 'ollama') return 'api'
+    return value
+  },
+  z.enum(['api', 'local']),
+)
 
 export const RuntimeConfigSchema = z.object({
   aiProvider: AIProviderSchema.default('api'),
@@ -11,22 +14,26 @@ export const RuntimeConfigSchema = z.object({
   aiApiKey: z.string().default(''),
   aiApiBaseUrl: z.string().trim().min(1).default('https://api.deepseek.com'),
   aiApiModel: z.string().trim().min(1).default('deepseek-chat'),
+  confirmEnabledToolRouting: z.boolean().default(true),
+  language: z.enum(['en', 'zh']).default('en'),
+  layoutPanelPosition: z.enum(['left', 'right', 'top', 'bottom']).default('left'),
+  layoutPanelSizePercent: z.coerce.number().min(15).max(40).default(20),
   // Legacy frontend AI fields are retained only so saved runtime config can migrate safely.
   anthropicApiKey: z.string().default(''),
   anthropicModel: z.string().trim().min(1).default('claude-sonnet-4-6'),
   defaultEventColor: z.string().trim().min(1).default('#047857'),
-  defaultEventEndTime: z.string().regex(/^\d{2}:\d{2}$/).default('10:00'),
-  defaultEventStartTime: z.string().regex(/^\d{2}:\d{2}$/).default('09:00'),
+  defaultEventEndTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default('10:00'),
+  defaultEventStartTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default('09:00'),
   defaultEventTypeId: z.string().trim().min(1).default('general'),
   defaultTodoEventTypeId: z.string().trim().min(1).default('general'),
   defaultTodoPriority: z.enum(['high', 'medium', 'low']).default('medium'),
-  firebaseApiKey: z.string().default(''),
-  firebaseAppId: z.string().default(''),
-  firebaseAuthDomain: z.string().default(''),
-  firebaseMessagingSenderId: z.string().default(''),
-  firebaseProjectId: z.string().default(''),
-  firebaseStorageBucket: z.string().default(''),
-  fridgeApiBaseUrl: z.string().trim().min(1).default('http://127.0.0.1:8787'),
+  fridgeApiBaseUrl: z.string().trim().default(''),
   timezoneOverride: z.string().trim().default(''),
   deepseekApiKey: z.string().default(''),
   deepseekModel: z.string().trim().min(1).default('deepseek-chat'),

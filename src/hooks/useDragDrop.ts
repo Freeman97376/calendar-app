@@ -172,7 +172,9 @@ export function useDragDrop(events: Event[]) {
     if (!draggedEvent || !target) return
 
     const changes = getRescheduledEventUpdate(draggedEvent, target)
-    const recurrenceScope = isRecurringDragEvent(draggedEvent) ? promptForRecurrenceEditScope() : null
+    const recurrenceScope = isRecurringDragEvent(draggedEvent)
+      ? promptForRecurrenceEditScope()
+      : null
 
     if (isRecurringDragEvent(draggedEvent) && !recurrenceScope) return
 

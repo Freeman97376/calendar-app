@@ -1,0 +1,1832 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:3045db7ef15053a116af7c0a"
+        ],
+        "id": "flow:static:86deb6e75a6a7cfc6cdf053b",
+        "name": "environment read",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:environment",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "backend-sidecar.py",
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:3045db7ef15053a116af7c0a"
+            ],
+            "inputShape": null,
+            "operation": "read",
+            "outputShape": {
+              "fields": [],
+              "items": null,
+              "lengthMax": null,
+              "lengthMin": null,
+              "truncated": false,
+              "type": "object",
+              "variants": []
+            },
+            "sideEffectIds": [
+              "effect:89e2038b92a768c9abd74be2"
+            ],
+            "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+          }
+        ]
+      },
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:9164f3af8d37367288dfb431"
+        ],
+        "id": "flow:static:ba363b111cb1981dad18d348",
+        "name": "filesystem write",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:filesystem",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "backend-sidecar.py",
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:9164f3af8d37367288dfb431"
+            ],
+            "inputShape": {
+              "fields": [
+                {
+                  "name": "error",
+                  "nullable": true,
+                  "optional": true,
+                  "shape": {
+                    "fields": [],
+                    "items": null,
+                    "lengthMax": null,
+                    "lengthMin": null,
+                    "truncated": false,
+                    "type": "object",
+                    "variants": []
+                  }
+                }
+              ],
+              "items": null,
+              "lengthMax": null,
+              "lengthMin": null,
+              "truncated": false,
+              "type": "object",
+              "variants": []
+            },
+            "operation": "write",
+            "outputShape": {
+              "fields": [],
+              "items": null,
+              "lengthMax": null,
+              "lengthMin": null,
+              "truncated": false,
+              "type": "void",
+              "variants": []
+            },
+            "sideEffectIds": [
+              "effect:e2187a7b8f46c7a1d75d0c73"
+            ],
+            "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+          }
+        ]
+      },
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:81992b235c8ad1b889d190b3"
+        ],
+        "id": "flow:static:c0c1fb3889e41fb5a14f1394",
+        "name": "filesystem read",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:filesystem",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "backend-sidecar.py",
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:81992b235c8ad1b889d190b3"
+            ],
+            "inputShape": null,
+            "operation": "read",
+            "outputShape": {
+              "fields": [],
+              "items": null,
+              "lengthMax": null,
+              "lengthMin": null,
+              "truncated": false,
+              "type": "void",
+              "variants": []
+            },
+            "sideEffectIds": [
+              "effect:1b57cbe43c2d7104b907ab62"
+            ],
+            "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+          }
+        ]
+      },
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:34fa12c164b62e2cf176cca4"
+        ],
+        "id": "flow:static:d080f65b9f686473b6b75303",
+        "name": "environment read",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:environment",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "backend-sidecar.py",
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:34fa12c164b62e2cf176cca4"
+            ],
+            "inputShape": null,
+            "operation": "read",
+            "outputShape": {
+              "fields": [],
+              "items": null,
+              "lengthMax": null,
+              "lengthMin": null,
+              "truncated": false,
+              "type": "object",
+              "variants": []
+            },
+            "sideEffectIds": [
+              "effect:b6716fac087df297941c7420"
+            ],
+            "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      "tests"
+    ],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 58,
+        "file": "backend_sidecar.py",
+        "id": "ev:00cad6f1a695e36ee82bc84e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 58,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 5,
+        "file": "backend_sidecar.py",
+        "id": "ev:058d0e5723eaa3c6354e23a3",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 5,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 28,
+        "file": "backend_sidecar.py",
+        "id": "ev:09227bb2712f0b8b05934876",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 28,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 71,
+        "file": "backend_sidecar.py",
+        "id": "ev:10a1b0d8ed7e8ad20cec50d0",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 71,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 46,
+        "file": "backend_sidecar.py",
+        "id": "ev:12ea6f8fc2145b88a19f1e83",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 46,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 50,
+        "file": "backend_sidecar.py",
+        "id": "ev:182aecfd4878e6659b728220",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 50,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 30,
+        "file": "backend_sidecar.py",
+        "id": "ev:1b16a375018732dd8ee6239e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 30,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 51,
+        "file": "backend_sidecar.py",
+        "id": "ev:2e94302aef1524d21b938482",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 51,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 20,
+        "file": "backend_sidecar.py",
+        "id": "ev:3045db7ef15053a116af7c0a",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 20,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 20,
+        "file": "backend_sidecar.py",
+        "id": "ev:34fa12c164b62e2cf176cca4",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 20,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 21,
+        "file": "backend_sidecar.py",
+        "id": "ev:369340ae5acc7c1f93fa5e19",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 21,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 27,
+        "file": "backend_sidecar.py",
+        "id": "ev:4dce46caa806a87956120dff",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 27,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 73,
+        "file": "backend_sidecar.py",
+        "id": "ev:5203986432beddc91be9e1be",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 73,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 14,
+        "file": "backend_sidecar.py",
+        "id": "ev:553f6ad4588431c98c48e957",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 14,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 76,
+        "file": "backend_sidecar.py",
+        "id": "ev:5659dbb37a340e3f98eeb529",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 76,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 61,
+        "file": "backend_sidecar.py",
+        "id": "ev:5f38f9fbab89d0fcc559dbad",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 57,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 35,
+        "file": "backend_sidecar.py",
+        "id": "ev:6001f31582361b650d5557c6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 35,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 30,
+        "file": "backend_sidecar.py",
+        "id": "ev:61797b73feff0a83302ce7ec",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 30,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 45,
+        "file": "backend_sidecar.py",
+        "id": "ev:626b8add7da84245685f2476",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 45,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 67,
+        "file": "backend_sidecar.py",
+        "id": "ev:6f4f68f280c3d6fe6f32f745",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 67,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 69,
+        "file": "backend_sidecar.py",
+        "id": "ev:71dd7c5e183526ac54685d7e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 69,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 52,
+        "file": "backend_sidecar.py",
+        "id": "ev:81992b235c8ad1b889d190b3",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 52,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 48,
+        "file": "backend_sidecar.py",
+        "id": "ev:83d1ff6889e0fbed663a3a37",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 48,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 63,
+        "file": "backend_sidecar.py",
+        "id": "ev:8796475b12c82f186131b937",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 42,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 22,
+        "file": "backend_sidecar.py",
+        "id": "ev:8ef14924b95dae813bbd203f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 12,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 37,
+        "file": "backend_sidecar.py",
+        "id": "ev:9164f3af8d37367288dfb431",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 34,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 58,
+        "file": "backend_sidecar.py",
+        "id": "ev:985053b8ce2444d5d459b364",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 58,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 17,
+        "file": "backend_sidecar.py",
+        "id": "ev:99c6037032c97d5f03b7fe99",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 17,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 39,
+        "file": "backend_sidecar.py",
+        "id": "ev:9a57a77fc43b55d81da11ee6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 25,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 21,
+        "file": "backend_sidecar.py",
+        "id": "ev:a42e0b92e25420d79e2cf008",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 21,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 7,
+        "file": "backend_sidecar.py",
+        "id": "ev:ab112cf034ee8e7ba2e925d1",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 7,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 48,
+        "file": "backend_sidecar.py",
+        "id": "ev:b24a78fc93f64518dda819d9",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 48,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 4,
+        "file": "backend_sidecar.py",
+        "id": "ev:bcaca9184aa1cec2d4d0e0d2",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 4,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 6,
+        "file": "backend_sidecar.py",
+        "id": "ev:c22a59d3201041b3dffb5fa6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 6,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 3,
+        "file": "backend_sidecar.py",
+        "id": "ev:c7b2048a47784615b1fbd58a",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 3,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 15,
+        "file": "backend_sidecar.py",
+        "id": "ev:d79538970cefeecc7ce9597e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 15,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 35,
+        "file": "backend_sidecar.py",
+        "id": "ev:ee77f36a191da114cbfca784",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 35,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "tree-sitter-python",
+        "endLine": 76,
+        "file": "backend_sidecar.py",
+        "id": "ev:file:653f7fac464cca6ada0137c0",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 1,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb"
+      },
+      {
+        "analyzer": "python-ast-symtable-no-import",
+        "endLine": 45,
+        "file": "backend_sidecar.py",
+        "id": "evidence:native:15e66dfff44185d4a72d4b5f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 45,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "python-ast-symtable-no-import",
+        "endLine": 12,
+        "file": "backend_sidecar.py",
+        "id": "evidence:native:4c20b461e1f85844e9143145",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 12,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b"
+      },
+      {
+        "analyzer": "python-ast-symtable-no-import",
+        "endLine": 25,
+        "file": "backend_sidecar.py",
+        "id": "evidence:native:518f923cc0b458029e79d456",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 25,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      },
+      {
+        "analyzer": "python-ast-symtable-no-import",
+        "endLine": 42,
+        "file": "backend_sidecar.py",
+        "id": "evidence:native:d82fcfdb9303450530d9f98c",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 42,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014"
+      },
+      {
+        "analyzer": "python-ast-symtable-no-import",
+        "endLine": 27,
+        "file": "backend_sidecar.py",
+        "id": "evidence:native:f1060d5f80176292ffdd284f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "startLine": 27,
+        "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315"
+      }
+    ],
+    "paths": [
+      "backend_sidecar.py"
+    ],
+    "sideEffects": [
+      {
+        "evidenceIds": [
+          "ev:81992b235c8ad1b889d190b3"
+        ],
+        "id": "effect:1b57cbe43c2d7104b907ab62",
+        "kind": "filesystem",
+        "operation": "read",
+        "target": "external:filesystem"
+      },
+      {
+        "evidenceIds": [
+          "ev:3045db7ef15053a116af7c0a"
+        ],
+        "id": "effect:89e2038b92a768c9abd74be2",
+        "kind": "environment",
+        "operation": "read",
+        "target": "external:environment"
+      },
+      {
+        "evidenceIds": [
+          "ev:34fa12c164b62e2cf176cca4"
+        ],
+        "id": "effect:b6716fac087df297941c7420",
+        "kind": "environment",
+        "operation": "read",
+        "target": "external:environment"
+      },
+      {
+        "evidenceIds": [
+          "ev:9164f3af8d37367288dfb431"
+        ],
+        "id": "effect:e2187a7b8f46c7a1d75d0c73",
+        "kind": "filesystem",
+        "operation": "write",
+        "target": "external:filesystem"
+      }
+    ],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:5203986432beddc91be9e1be"
+        ],
+        "id": "edge:0d0dd83c807f2816f27788d6",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+          "unresolvedText": "_record_unexpected_exit"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:10a1b0d8ed7e8ad20cec50d0"
+        ],
+        "id": "edge:0d373bd920cb0cf432f069be",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:python:backend/audit_integrity.py:audit_integrity::main:3759fd2adcb099cb",
+            "sym:python:backend/manage_users.py:manage_users::main:006faa322092ebb4",
+            "sym:python:backend/migrate_legacy.py:migrate_legacy::main:cab05371d926aea1",
+            "sym:python:backend/server.py:server::main:02cf58f316683c3a",
+            "sym:javascript:scripts/export-legacy-firebase.mjs:export-legacy-firebase::main:3305f43d58a2388f",
+            "sym:python:scripts/export-openapi.py:export-openapi::main:cab05371d926aea1",
+            "sym:python:scripts/seed-e2e-users.py:seed-e2e-users::main:3759fd2adcb099cb",
+            "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+            "sym:rust:src-tauri/build.rs:build::main:635eb842b652ef1a",
+            "sym:rust:src-tauri/src/main.rs:src-tauri/src/main.rs:e0a195169ad15c87",
+            "sym:rust:src-tauri/src/main.rs:main::main:635eb842b652ef1a"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "main"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:626b8add7da84245685f2476",
+          "evidence:native:15e66dfff44185d4a72d4b5f"
+        ],
+        "id": "edge:0ff220a149c4f614134eb1d0",
+        "matchedSignatureId": "sig:f87305649980dac227afa66b",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+          "unresolvedText": "_data_directory_from_argv"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:5f38f9fbab89d0fcc559dbad"
+        ],
+        "id": "edge:11c88ef83cd2400927590280",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "print"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:9164f3af8d37367288dfb431"
+        ],
+        "id": "edge:12c6a7453ae8c996075a5d88",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:filesystem",
+          "symbolId": null,
+          "unresolvedText": "(data_directory / \"calendar-backend-error.log\").write_text"
+        },
+        "type": "writes"
+      },
+      {
+        "evidenceIds": [
+          "ev:6f4f68f280c3d6fe6f32f745"
+        ],
+        "id": "edge:1a6fde3dc17e2f937ae3e641",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+          "unresolvedText": "_configure_file_logging"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:182aecfd4878e6659b728220"
+        ],
+        "id": "edge:1bd77e3b525fbf5355fccb6a",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "previous.unlink"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:985053b8ce2444d5d459b364"
+        ],
+        "id": "edge:2b524a40197414d9494ba7fe",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "datetime.now(UTC).isoformat"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:34fa12c164b62e2cf176cca4"
+        ],
+        "id": "edge:3b3063b94090a9c9653b7a27",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:environment",
+          "symbolId": null,
+          "unresolvedText": "os.getenv(\"LOCALAPPDATA\", \"\").strip"
+        },
+        "type": "reads"
+      },
+      {
+        "evidenceIds": [
+          "ev:ab112cf034ee8e7ba2e925d1"
+        ],
+        "id": "edge:44b424b78d6f12fc2c8ab69a",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "Path"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:6001f31582361b650d5557c6"
+        ],
+        "id": "edge:460bcd7927e512a5eeb0ee44",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "datetime.now(UTC).isoformat"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:9a57a77fc43b55d81da11ee6"
+        ],
+        "id": "edge:48902397d2bdc0c4e198ac56",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+          "unresolvedText": "_record_unexpected_exit"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:3045db7ef15053a116af7c0a"
+        ],
+        "id": "edge:59301938cdb20e333fe43525",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:environment",
+          "symbolId": null,
+          "unresolvedText": "os.getenv"
+        },
+        "type": "reads"
+      },
+      {
+        "evidenceIds": [
+          "ev:bcaca9184aa1cec2d4d0e0d2"
+        ],
+        "id": "edge:61816fe9e9ad5e355a8ce9aa",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "sys"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:4dce46caa806a87956120dff",
+          "evidence:native:f1060d5f80176292ffdd284f"
+        ],
+        "id": "edge:63a2c15c214b75797cc463a0",
+        "matchedSignatureId": "sig:f87305649980dac227afa66b",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+          "unresolvedText": "_data_directory_from_argv"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:99c6037032c97d5f03b7fe99"
+        ],
+        "id": "edge:63a8fe68d27d7d7162372912",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "Path"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:1b16a375018732dd8ee6239e"
+        ],
+        "id": "edge:6a41ce5880073ec6796a6a07",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "\"\".join"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:8796475b12c82f186131b937"
+        ],
+        "id": "edge:73a687055305df1f5784bb20",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+          "unresolvedText": "_configure_file_logging"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:2e94302aef1524d21b938482"
+        ],
+        "id": "edge:772657f35a5a6cec6112a086",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "log_path.replace"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:c22a59d3201041b3dffb5fa6"
+        ],
+        "id": "edge:7780df911f788610585dcefc",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "datetime"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:61797b73feff0a83302ce7ec"
+        ],
+        "id": "edge:80c7208084732fadf9c95922",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "traceback.format_exception"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:553f6ad4588431c98c48e957"
+        ],
+        "id": "edge:8156ae2c4bb8e8652a4ceb81",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/tools/ai-demo/index.tsx:src/components/tools/ai-demo/index.tsx:a76d095586baa4f1",
+            "sym:typescript:src/components/tools/fridge/index.tsx:src/components/tools/fridge/index.tsx:b206fb85d40cbf32",
+            "sym:typescript:src/components/tools/goal-planner/index.tsx:src/components/tools/goal-planner/index.tsx:fffd5f7f4c9a80de",
+            "sym:typescript:src/components/tools/settings/index.tsx:src/components/tools/settings/index.tsx:17b814bc7a448e26",
+            "sym:typescript:src/components/tools/toolSessions/index.tsx:src/components/tools/toolSessions/index.tsx:ed9551042af0980a",
+            "sym:typescript:src/domain/logic/toolSessionPresets/diningPlanner/index.ts:src/domain/logic/toolSessionPresets/diningPlanner/index.ts:ffab9fadad4ca0ef",
+            "sym:typescript:src/domain/logic/toolSessionPresets/workoutPlanner/index.ts:src/domain/logic/toolSessionPresets/workoutPlanner/index.ts:9a59799dafd4bd41",
+            "sym:typescript:src/domain/types/index.ts:src/domain/types/index.ts:282f6b2189f19d6e"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "sys.argv.index"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:71dd7c5e183526ac54685d7e"
+        ],
+        "id": "edge:8b20f32667237ee3a7724465",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:python:backend/audit_integrity.py:audit_integrity::main:3759fd2adcb099cb",
+            "sym:python:backend/manage_users.py:manage_users::main:006faa322092ebb4",
+            "sym:python:backend/migrate_legacy.py:migrate_legacy::main:cab05371d926aea1",
+            "sym:python:backend/server.py:server::main:02cf58f316683c3a",
+            "sym:javascript:scripts/export-legacy-firebase.mjs:export-legacy-firebase::main:3305f43d58a2388f",
+            "sym:python:scripts/export-openapi.py:export-openapi::main:cab05371d926aea1",
+            "sym:python:scripts/seed-e2e-users.py:seed-e2e-users::main:3759fd2adcb099cb",
+            "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+            "sym:rust:src-tauri/build.rs:build::main:635eb842b652ef1a",
+            "sym:rust:src-tauri/src/main.rs:src-tauri/src/main.rs:e0a195169ad15c87",
+            "sym:rust:src-tauri/src/main.rs:main::main:635eb842b652ef1a"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "main"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:09227bb2712f0b8b05934876"
+        ],
+        "id": "edge:91d51011d33585ef054072f0",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "data_directory.mkdir"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:81992b235c8ad1b889d190b3"
+        ],
+        "id": "edge:9437c355ab49852fb58e12ac",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:filesystem",
+          "symbolId": null,
+          "unresolvedText": "log_path.open"
+        },
+        "type": "reads"
+      },
+      {
+        "evidenceIds": [
+          "ev:d79538970cefeecc7ce9597e"
+        ],
+        "id": "edge:96925d7a7a293e961a0a664a",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "sys.argv[index + 1].strip"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:058d0e5723eaa3c6354e23a3"
+        ],
+        "id": "edge:a9fc4d69cc1348ad220bd3b0",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "traceback"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:83d1ff6889e0fbed663a3a37"
+        ],
+        "id": "edge:aea225b082d8cb5b39d0757c",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "log_path.exists"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:c7b2048a47784615b1fbd58a"
+        ],
+        "id": "edge:c4831ef51802c2d55b2a5f9f",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "os"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:b24a78fc93f64518dda819d9"
+        ],
+        "id": "edge:c7c0bfe93335d15371e7c4db",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "log_path.stat"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:ee77f36a191da114cbfca784"
+        ],
+        "id": "edge:ce1748a5a35cc45bbd9a08ee",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:tests/backend/test_goal_control.py:test_goal_control::GoalControlTests::test_user_timezone_precedence_controls_ai_month_boundary::FrozenDateTime::now:b33cbad494bb0e7a",
+          "unresolvedText": "datetime.now"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:00cad6f1a695e36ee82bc84e"
+        ],
+        "id": "edge:ec499e6ac716cb13c3a282e6",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:tests/backend/test_goal_control.py:test_goal_control::GoalControlTests::test_user_timezone_precedence_controls_ai_month_boundary::FrozenDateTime::now:b33cbad494bb0e7a",
+          "unresolvedText": "datetime.now"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:8ef14924b95dae813bbd203f"
+        ],
+        "id": "edge:f2246365afb8456bf4e87231",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+          "unresolvedText": "_data_directory_from_argv"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:369340ae5acc7c1f93fa5e19"
+        ],
+        "id": "edge:f89f7e5188b8671058ec0445",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "Path.home"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:12ea6f8fc2145b88a19f1e83"
+        ],
+        "id": "edge:fdb0b93f29504bafb28f67fc",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "data_directory.mkdir"
+        },
+        "type": "calls"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "f587a20dd9c21c2a6de43f7239e14eabee37b4b98607253e8f015b04819f4622",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:653f7fac464cca6ada0137c0"
+        ],
+        "generated": false,
+        "id": "sym:python:backend_sidecar.py:backend_sidecar.py:19df8ed82d917cfb",
+        "inputs": [],
+        "kind": "module",
+        "language": "python",
+        "location": {
+          "endLine": 76,
+          "file": "backend_sidecar.py",
+          "startLine": 1
+        },
+        "name": "backend_sidecar",
+        "output": null,
+        "qualifiedName": "backend_sidecar.py",
+        "sideEffects": [],
+        "signature": "module backend_sidecar.py",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:653f7fac464cca6ada0137c0"
+            ],
+            "inputs": [],
+            "normalized": "module backend_sidecar.py",
+            "output": null,
+            "raw": "module backend_sidecar.py",
+            "signatureId": "sig:19df8ed82d917cfb42ce6c9b",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "246ff266d9cde5088f0e5b76db1011102fb5c4101de43b207fe9d2f301e53e09",
+        "errors": [],
+        "evidenceIds": [
+          "ev:8796475b12c82f186131b937",
+          "evidence:native:d82fcfdb9303450530d9f98c"
+        ],
+        "generated": false,
+        "id": "sym:python:backend_sidecar.py:backend_sidecar::_configure_file_logging:4730e636ba0d0014",
+        "inputs": [],
+        "kind": "function",
+        "language": "python",
+        "location": {
+          "endLine": 63,
+          "file": "backend_sidecar.py",
+          "startLine": 42
+        },
+        "name": "_configure_file_logging",
+        "output": {
+          "genericArgs": [],
+          "native": "None",
+          "normalized": "void",
+          "nullable": true,
+          "optional": false,
+          "resolvedSymbolId": null
+        },
+        "qualifiedName": "backend_sidecar::_configure_file_logging",
+        "sideEffects": [
+          {
+            "evidenceIds": [
+              "ev:81992b235c8ad1b889d190b3"
+            ],
+            "id": "effect:1b57cbe43c2d7104b907ab62",
+            "kind": "filesystem",
+            "operation": "read",
+            "target": "external:filesystem"
+          }
+        ],
+        "signature": "def _configure_file_logging() -> None:",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:8796475b12c82f186131b937"
+            ],
+            "inputs": [],
+            "normalized": "def _configure_file_logging() -> None:",
+            "output": {
+              "genericArgs": [],
+              "native": "None",
+              "normalized": "void",
+              "nullable": true,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "def _configure_file_logging() -> None:",
+            "signatureId": "sig:4730e636ba0d0014b6f69a42",
+            "typeParameters": []
+          },
+          {
+            "errors": [],
+            "evidenceIds": [
+              "evidence:native:d82fcfdb9303450530d9f98c"
+            ],
+            "inputs": [],
+            "normalized": "_configure_file_logging() -> None",
+            "output": {
+              "genericArgs": [],
+              "native": "None",
+              "normalized": "void",
+              "nullable": true,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "_configure_file_logging() -> None",
+            "signatureId": "sig:8e043bcea82f9e380feae412",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "fbf3fe78e3b107a3fd5f693de8c273f3ade263825cbd906f399f9f5f624c969c",
+        "errors": [],
+        "evidenceIds": [
+          "ev:8ef14924b95dae813bbd203f",
+          "evidence:native:4c20b461e1f85844e9143145"
+        ],
+        "generated": false,
+        "id": "sym:python:backend_sidecar.py:backend_sidecar::_data_directory_from_argv:812de592eb1d778b",
+        "inputs": [],
+        "kind": "function",
+        "language": "python",
+        "location": {
+          "endLine": 22,
+          "file": "backend_sidecar.py",
+          "startLine": 12
+        },
+        "name": "_data_directory_from_argv",
+        "output": {
+          "genericArgs": [],
+          "native": "Path",
+          "normalized": "object",
+          "nullable": false,
+          "optional": false,
+          "resolvedSymbolId": null
+        },
+        "qualifiedName": "backend_sidecar::_data_directory_from_argv",
+        "sideEffects": [
+          {
+            "evidenceIds": [
+              "ev:3045db7ef15053a116af7c0a"
+            ],
+            "id": "effect:89e2038b92a768c9abd74be2",
+            "kind": "environment",
+            "operation": "read",
+            "target": "external:environment"
+          },
+          {
+            "evidenceIds": [
+              "ev:34fa12c164b62e2cf176cca4"
+            ],
+            "id": "effect:b6716fac087df297941c7420",
+            "kind": "environment",
+            "operation": "read",
+            "target": "external:environment"
+          }
+        ],
+        "signature": "def _data_directory_from_argv() -> Path:",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:8ef14924b95dae813bbd203f"
+            ],
+            "inputs": [],
+            "normalized": "def _data_directory_from_argv() -> Path:",
+            "output": {
+              "genericArgs": [],
+              "native": "Path",
+              "normalized": "object",
+              "nullable": false,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "def _data_directory_from_argv() -> Path:",
+            "signatureId": "sig:812de592eb1d778b404ff827",
+            "typeParameters": []
+          },
+          {
+            "errors": [],
+            "evidenceIds": [
+              "evidence:native:4c20b461e1f85844e9143145"
+            ],
+            "inputs": [],
+            "normalized": "_data_directory_from_argv() -> Path",
+            "output": {
+              "genericArgs": [],
+              "native": "Path",
+              "normalized": "object",
+              "nullable": false,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "_data_directory_from_argv() -> Path",
+            "signatureId": "sig:f87305649980dac227afa66b",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "6800018d1f1441e3eeebf761845877b99e7ea9226428f68dc43d357a08edfb23",
+        "errors": [],
+        "evidenceIds": [
+          "ev:9a57a77fc43b55d81da11ee6",
+          "evidence:native:518f923cc0b458029e79d456"
+        ],
+        "generated": false,
+        "id": "sym:python:backend_sidecar.py:backend_sidecar::_record_unexpected_exit:c0cde8d112ef4315",
+        "inputs": [
+          {
+            "hasDefault": true,
+            "name": "error",
+            "type": {
+              "genericArgs": [],
+              "native": "BaseException | None",
+              "normalized": "object",
+              "nullable": true,
+              "optional": true,
+              "resolvedSymbolId": null
+            }
+          }
+        ],
+        "kind": "function",
+        "language": "python",
+        "location": {
+          "endLine": 39,
+          "file": "backend_sidecar.py",
+          "startLine": 25
+        },
+        "name": "_record_unexpected_exit",
+        "output": {
+          "genericArgs": [],
+          "native": "None",
+          "normalized": "void",
+          "nullable": true,
+          "optional": false,
+          "resolvedSymbolId": null
+        },
+        "qualifiedName": "backend_sidecar::_record_unexpected_exit",
+        "sideEffects": [
+          {
+            "evidenceIds": [
+              "ev:9164f3af8d37367288dfb431"
+            ],
+            "id": "effect:e2187a7b8f46c7a1d75d0c73",
+            "kind": "filesystem",
+            "operation": "write",
+            "target": "external:filesystem"
+          }
+        ],
+        "signature": "def _record_unexpected_exit(error: BaseException | None = None) -> None:",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "evidence:native:518f923cc0b458029e79d456"
+            ],
+            "inputs": [
+              {
+                "hasDefault": true,
+                "name": "error",
+                "type": {
+                  "genericArgs": [],
+                  "native": "BaseException | None",
+                  "normalized": "object",
+                  "nullable": true,
+                  "optional": true,
+                  "resolvedSymbolId": null
+                }
+              }
+            ],
+            "normalized": "_record_unexpected_exit(error: BaseException | None) -> None",
+            "output": {
+              "genericArgs": [],
+              "native": "None",
+              "normalized": "void",
+              "nullable": true,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "_record_unexpected_exit(error: BaseException | None) -> None",
+            "signatureId": "sig:62b3a527f65e2ad4f7f0ee9f",
+            "typeParameters": []
+          },
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:9a57a77fc43b55d81da11ee6"
+            ],
+            "inputs": [
+              {
+                "hasDefault": true,
+                "name": "error",
+                "type": {
+                  "genericArgs": [],
+                  "native": "BaseException | None",
+                  "normalized": "object",
+                  "nullable": true,
+                  "optional": true,
+                  "resolvedSymbolId": null
+                }
+              }
+            ],
+            "normalized": "def _record_unexpected_exit(error: BaseException | None = None) -> None:",
+            "output": {
+              "genericArgs": [],
+              "native": "None",
+              "normalized": "void",
+              "nullable": true,
+              "optional": false,
+              "resolvedSymbolId": null
+            },
+            "raw": "def _record_unexpected_exit(error: BaseException | None = None) -> None:",
+            "signatureId": "sig:c0cde8d112ef4315fbaee97f",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "backend-sidecar.py",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

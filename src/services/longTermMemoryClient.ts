@@ -17,20 +17,17 @@ import type {
   MilestoneStatus,
   ProjectStatus,
 } from '../domain/types/longTermMemory'
+import { authenticatedFetch } from './appApiClient'
 
 type ClientOptions = {
   baseUrl?: string
   fetcher?: typeof fetch
 }
 
-const defaultFetcher: typeof fetch = (input, init) => globalThis.fetch(input, init)
+const defaultFetcher: typeof fetch = authenticatedFetch
 
 function defaultBaseUrl(): string {
-  return (
-    import.meta.env.VITE_MEMORY_API_BASE_URL ??
-    import.meta.env.VITE_FRIDGE_API_BASE_URL ??
-    'http://127.0.0.1:8787'
-  )
+  return import.meta.env.VITE_MEMORY_API_BASE_URL ?? import.meta.env.VITE_FRIDGE_API_BASE_URL ?? ''
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
@@ -76,7 +73,10 @@ export class LongTermMemoryClient {
   }
 
   async updateGoal(goalId: string, changes: Partial<CreateGoalInput> & { status?: GoalStatus }) {
-    const payload = (await this.patch(`/api/memory/goals/${encodePathSegment(goalId)}`, changes)) as {
+    const payload = (await this.patch(
+      `/api/memory/goals/${encodePathSegment(goalId)}`,
+      changes,
+    )) as {
       goal: LongTermGoal
     }
     return payload.goal

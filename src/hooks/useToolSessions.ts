@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { splitUniqueEventDrafts } from '../domain/logic/eventDeduplication'
 import type { EventDraft } from '../domain/logic/eventUtils'
 import { getLocalTimeContext } from '../domain/logic/timeContext'
 import { TOOL_SESSION_OUTPUT_SCHEMA_PREVIEW } from '../domain/logic/toolPresets'
@@ -33,6 +34,7 @@ export function useToolSessions() {
   const config = useConfigStore((state) => state.config)
   const focusedDate = useCalendarStore((state) => state.focusedDate)
   const createEvent = useEventStore((state) => state.createEvent)
+  const events = useEventStore((state) => state.events)
 
   useEffect(() => {
     loadPresets().catch(() => undefined)
@@ -59,14 +61,21 @@ export function useToolSessions() {
   }
 
   async function applyResult() {
-    if (!result) return []
+    if (!result) return { created: [], skippedDuplicateCount: 0 }
 
+    const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(
+      result.events as EventDraft[],
+      events,
+    )
     const created = []
-    for (const draft of result.events) {
+    for (const draft of uniqueDrafts) {
       created.push(await createEvent(draft as EventDraft))
     }
     clearResult()
-    return created
+    return {
+      created,
+      skippedDuplicateCount: duplicateDrafts.length,
+    }
   }
 
   return {

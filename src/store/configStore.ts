@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 
+import { RuntimeConfigSchema } from '../domain/schemas/config.schema'
 import type { BackendConfigStatus, BackendConfigUpdate, RuntimeConfig } from '../domain/types'
+import { apiBaseUrl, authenticatedFetch, savePreferences } from '../services/appApiClient'
 import { createAIService, modelForProvider } from '../services/ai/aiServiceFactory'
 import {
   BackendConfigApiService,
@@ -24,20 +26,68 @@ export type ConfigStore = {
 let runtimeConfigService = new RuntimeConfigService()
 const initialConfig = runtimeConfigService.getConfig()
 let currentConfig = initialConfig
-let backendConfigApi: BackendConfigApiService = new BackendConfigApiService(
-  (): string => currentConfig.fridgeApiBaseUrl,
-)
+// Both server and desktop builds route model requests through the Calendar API.
+// Starting in proxy mode also prevents a stale browser config from briefly
+// sending chat requests directly to DeepSeek before bootstrap completes.
+let serverManagedAI = true
+let persistPreferences = false
+let authoritativePreferences = false
+// Configuration is served by the Calendar backend, whose address is injected at
+// runtime by the Tauri sidecar. It must not follow the separately editable
+// fridge URL or a packaged app will send /api/config to its own HTML origin.
+let backendConfigApi: BackendConfigApiService = new BackendConfigApiService(apiBaseUrl)
 
-function applyRuntimeConfig(config: RuntimeConfig) {
-  configureAIService(createAIService(config), {
-    model: modelForProvider(config.aiProvider, config),
-    provider: config.aiProvider,
-  })
-  configureFridgeService(createDefaultFridgeService(config))
+function applyDocumentLanguage(config: RuntimeConfig) {
+  if (typeof document === 'undefined') return
+
+  document.documentElement.lang = config.language === 'zh' ? 'zh-CN' : 'en'
 }
 
-export function initializeRuntimeConfig() {
-  const config = runtimeConfigService.getConfig()
+function applyRuntimeConfig(config: RuntimeConfig) {
+  applyDocumentLanguage(config)
+  const aiConfig = serverManagedAI
+    ? {
+        ...config,
+        aiApiBaseUrl: `${apiBaseUrl()}/api/ai`,
+        aiApiKey: 'server-managed',
+        aiProvider: 'api' as const,
+      }
+    : config
+  configureAIService(createAIService(aiConfig, { fetcher: authenticatedFetch }), {
+    model: modelForProvider(aiConfig.aiProvider, aiConfig),
+    provider: aiConfig.aiProvider,
+  })
+  configureFridgeService(
+    authoritativePreferences
+      ? createDefaultFridgeService({ ...config, fridgeApiBaseUrl: apiBaseUrl() })
+      : createDefaultFridgeService(config),
+  )
+}
+
+export function configureRuntimeEnvironment(options: {
+  authoritativePreferences?: boolean
+  persistPreferences?: boolean
+  serverManagedAI?: boolean
+}) {
+  authoritativePreferences = options.authoritativePreferences ?? authoritativePreferences
+  persistPreferences = options.persistPreferences ?? persistPreferences
+  serverManagedAI = options.serverManagedAI ?? serverManagedAI
+  applyRuntimeConfig(currentConfig)
+}
+
+export function initializeRuntimeConfig(preferences: Partial<RuntimeConfig> = {}) {
+  const base = authoritativePreferences
+    ? runtimeConfigService.getDefaults()
+    : runtimeConfigService.getConfig()
+  const config = RuntimeConfigSchema.parse({ ...base, ...preferences })
+  currentConfig = config
+  useConfigStore.setState({ config, error: null })
+  applyRuntimeConfig(config)
+  return config
+}
+
+export function setPreAuthLanguage(language: RuntimeConfig['language']) {
+  const config = runtimeConfigService.saveConfig({ ...currentConfig, language })
   currentConfig = config
   useConfigStore.setState({ config, error: null })
   applyRuntimeConfig(config)
@@ -49,8 +99,7 @@ export function configureConfigServices(
   backendService?: BackendConfigApiService,
 ) {
   runtimeConfigService = runtimeService
-  backendConfigApi =
-    backendService ?? new BackendConfigApiService((): string => currentConfig.fridgeApiBaseUrl)
+  backendConfigApi = backendService ?? new BackendConfigApiService(apiBaseUrl)
 }
 
 export const useConfigStore = create<ConfigStore>((set) => ({
@@ -94,10 +143,18 @@ export const useConfigStore = create<ConfigStore>((set) => ({
     }
   },
   saveRuntimeConfig: (config) => {
-    const saved = runtimeConfigService.saveConfig(config)
+    const saved = persistPreferences
+      ? RuntimeConfigSchema.parse(config)
+      : runtimeConfigService.saveConfig(config)
     currentConfig = saved
     set({ config: saved, error: null })
     applyRuntimeConfig(saved)
+    if (persistPreferences) {
+      void savePreferences(saved).catch((error) => {
+        const message = error instanceof Error ? error.message : 'Unable to save preferences'
+        useConfigStore.setState({ error: message })
+      })
+    }
     return saved
   },
 }))

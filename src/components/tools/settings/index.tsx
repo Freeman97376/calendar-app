@@ -7,5 +7,7 @@ export const settingsTool: ToolDefinition = {
   category: 'system',
   description: 'Runtime provider and app configuration.',
   capabilityTags: ['config'],
+  instantiable: false,
+  toolName: 'Settings',
   Component: SettingsPanel,
 }

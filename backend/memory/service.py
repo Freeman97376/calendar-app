@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.engine import Engine
+
 from .repository import MemoryRepository, MemoryRowNotFoundError
 
 GOAL_STATUSES = {"active", "paused", "completed", "archived"}
@@ -24,8 +26,15 @@ class MemoryNotFoundError(KeyError):
 
 
 class LongTermMemoryService:
-    def __init__(self, db_path: Path | str | None = None, repository: MemoryRepository | None = None) -> None:
-        self.repository = repository if repository else MemoryRepository(db_path)
+    def __init__(
+        self,
+        db_path: Path | str | None = None,
+        repository: MemoryRepository | None = None,
+        *,
+        engine: Engine | None = None,
+        user_id: str = "local",
+    ) -> None:
+        self.repository = repository if repository else MemoryRepository(db_path, engine=engine, user_id=user_id)
 
     def list_goals(self) -> list[dict[str, Any]]:
         return self.repository.list_goals()
@@ -134,11 +143,16 @@ class LongTermMemoryService:
     def create_action(self, payload: dict[str, Any]) -> dict[str, Any]:
         project_id = required_text(payload, "project_id")
         self.get_project(project_id)
+        milestone_id = optional_text(payload.get("milestone_id")) or None
+        if milestone_id:
+            milestone = self._map_not_found(lambda: self.repository.get_milestone(milestone_id))
+            if milestone["project_id"] != project_id:
+                raise MemoryValidationError("milestone_id must belong to the selected project")
         now = utc_now_iso()
         action = {
             "action_id": stable_id("action"),
             "project_id": project_id,
-            "milestone_id": optional_text(payload.get("milestone_id")) or None,
+            "milestone_id": milestone_id,
             "title": required_text(payload, "title"),
             "description": optional_text(payload.get("description")),
             "due_date": optional_text(payload.get("due_date")) or None,
@@ -150,6 +164,7 @@ class LongTermMemoryService:
         return self.repository.create_action(action)
 
     def update_action(self, action_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        action = self._map_not_found(lambda: self.repository.get_action(action_id))
         patch = update_patch(
             payload,
             {"title", "description", "due_date", "milestone_id", "status", "metadata"},
@@ -164,6 +179,10 @@ class LongTermMemoryService:
             patch["due_date"] = optional_text(patch["due_date"]) or None
         if "milestone_id" in patch:
             patch["milestone_id"] = optional_text(patch["milestone_id"]) or None
+            if patch["milestone_id"]:
+                milestone = self._map_not_found(lambda: self.repository.get_milestone(patch["milestone_id"]))
+                if milestone["project_id"] != action["project_id"]:
+                    raise MemoryValidationError("milestone_id must belong to the action project")
         if "metadata" in patch:
             patch["metadata"] = optional_dict(patch["metadata"])
         patch["updated_at"] = utc_now_iso()
@@ -177,11 +196,19 @@ class LongTermMemoryService:
         project_id = required_text(payload, "project_id")
         project = self.get_project(project_id)
         now = utc_now_iso()
+        goal_id = optional_text(payload.get("goal_id")) or project["goal_id"]
+        if goal_id != project["goal_id"]:
+            raise MemoryValidationError("goal_id must match the selected project")
+        action_id = optional_text(payload.get("action_id")) or None
+        if action_id:
+            action = self._map_not_found(lambda: self.repository.get_action(action_id))
+            if action["project_id"] != project_id:
+                raise MemoryValidationError("action_id must belong to the selected project")
         progress = {
             "progress_id": stable_id("progress"),
             "project_id": project_id,
-            "goal_id": optional_text(payload.get("goal_id")) or project["goal_id"],
-            "action_id": optional_text(payload.get("action_id")) or None,
+            "goal_id": goal_id,
+            "action_id": action_id,
             "log_type": normalized_status(payload, "log_type", PROGRESS_LOG_TYPES, "update"),
             "summary": required_text(payload, "summary"),
             "details": optional_text(payload.get("details")),
@@ -196,7 +223,9 @@ class LongTermMemoryService:
         goal_id = optional_text(payload.get("related_goal_id") or payload.get("goal_id")) or None
         if project_id:
             project = self.get_project(project_id)
-            goal_id = goal_id or project["goal_id"]
+            if goal_id and goal_id != project["goal_id"]:
+                raise MemoryValidationError("goal_id must match the selected project")
+            goal_id = project["goal_id"]
         elif goal_id:
             self._map_not_found(lambda: self.repository.get_goal(goal_id))
 

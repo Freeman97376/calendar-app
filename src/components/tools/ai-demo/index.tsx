@@ -1,21 +1,23 @@
-import AgentLearningTool from './AgentLearningTool'
+import {
+  agentLearningToolMetadata,
+  fitnessAIToolMetadata,
+  seoLearningToolMetadata,
+} from '../../../domain/types/toolTemplateMetadata'
 import FitnessAITool from './FitnessAITool'
+import { AgentLearningTool, SeoLearningTool } from './LearningAssistantTool'
 import type { ToolDefinition } from '../types'
 
 export const fitnessAITool: ToolDefinition = {
-  id: 'fitness-ai',
-  label: 'Fitness AI',
-  category: 'ai-demo',
-  description: 'Memory-backed fitness planner with progress and calendar previews.',
-  capabilityTags: ['memory', 'calendar', 'progress'],
+  ...fitnessAIToolMetadata,
   Component: FitnessAITool,
 }
 
 export const agentLearningTool: ToolDefinition = {
-  id: 'agent-learning',
-  label: 'Agent Learning',
-  category: 'ai-demo',
-  description: 'Memory-backed AI agent learning route with milestones.',
-  capabilityTags: ['memory', 'learning', 'progress'],
+  ...agentLearningToolMetadata,
   Component: AgentLearningTool,
+}
+
+export const seoLearningTool: ToolDefinition = {
+  ...seoLearningToolMetadata,
+  Component: SeoLearningTool,
 }

@@ -1,0 +1,393 @@
+{
+  "$defs": {
+    "AnalysisDiagnosticV2": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "componentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "componentId",
+        "file",
+        "message",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "AnalyzerDescriptorV2": {
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "language",
+        "name",
+        "status",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ArchitectureAnalysisMetadataV2": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzers": {
+          "items": {
+            "$ref": "#/$defs/AnalyzerDescriptorV2"
+          },
+          "type": "array"
+        },
+        "completeness": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/AnalysisDiagnosticV2"
+          },
+          "type": "array"
+        },
+        "engineVersion": {
+          "type": "string"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "rulesetHash": {
+          "default": "",
+          "type": "string"
+        },
+        "schemaHash": {
+          "default": "",
+          "type": "string"
+        },
+        "sourceCoverage": {
+          "items": {
+            "$ref": "#/$defs/SourceLanguageCoverageV2"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "analyzers",
+        "completeness",
+        "diagnostics",
+        "engineVersion",
+        "languages",
+        "mode",
+        "rulesetHash",
+        "schemaHash"
+      ],
+      "type": "object"
+    },
+    "ArchitectureComponentRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "detailsFile": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "jsonFile": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "system",
+            "application",
+            "service",
+            "adapter",
+            "library",
+            "datastore",
+            "infrastructure",
+            "test",
+            "external",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "detailsFile",
+        "id",
+        "jsonFile",
+        "name",
+        "status",
+        "tags",
+        "type"
+      ],
+      "type": "object"
+    },
+    "ComponentRelationV2": {
+      "additionalProperties": false,
+      "properties": {
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "resolved",
+            "probable",
+            "unresolved"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "contains",
+            "depends_on",
+            "data_flow"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidenceIds",
+        "id",
+        "label",
+        "provenance",
+        "resolution",
+        "source",
+        "target",
+        "type"
+      ],
+      "type": "object"
+    },
+    "ExternalNodeV2": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "name",
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "SourceLanguageCoverageV2": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzedFiles": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "analyzerNames": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "diagnosticCodes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "discoveredFiles": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "language": {
+          "type": "string"
+        },
+        "skippedFiles": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "supportLevel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "analyzedFiles",
+        "analyzerNames",
+        "diagnosticCodes",
+        "discoveredFiles",
+        "extensions",
+        "language",
+        "skippedFiles",
+        "status",
+        "supportLevel"
+      ],
+      "type": "object"
+    },
+    "SourceSnapshotV2": {
+      "additionalProperties": false,
+      "properties": {
+        "headCommit": {
+          "type": "string"
+        },
+        "worktreeHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "headCommit",
+        "worktreeHash"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "architecture-v2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "schemas/architecture-v2.schema.json",
+      "type": "string"
+    },
+    "analysis": {
+      "$ref": "#/$defs/ArchitectureAnalysisMetadataV2"
+    },
+    "components": {
+      "items": {
+        "$ref": "#/$defs/ArchitectureComponentRefV2"
+      },
+      "type": "array"
+    },
+    "externals": {
+      "items": {
+        "$ref": "#/$defs/ExternalNodeV2"
+      },
+      "type": "array"
+    },
+    "relations": {
+      "items": {
+        "$ref": "#/$defs/ComponentRelationV2"
+      },
+      "type": "array"
+    },
+    "retiredComponents": {
+      "items": {
+        "$ref": "#/$defs/ArchitectureComponentRefV2"
+      },
+      "type": "array"
+    },
+    "schemaVersion": {
+      "const": 2,
+      "format": "uint8",
+      "maximum": 255,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "sourceSnapshot": {
+      "$ref": "#/$defs/SourceSnapshotV2"
+    }
+  },
+  "required": [
+    "$schema",
+    "analysis",
+    "components",
+    "externals",
+    "relations",
+    "retiredComponents",
+    "schemaVersion",
+    "sourceSnapshot"
+  ],
+  "title": "Golden Goose Egg architecture index v2",
+  "type": "object"
+}

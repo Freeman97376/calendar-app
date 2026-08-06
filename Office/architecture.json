@@ -1,0 +1,1619 @@
+{
+  "$schema": "schemas/architecture-v2.schema.json",
+  "analysis": {
+    "analyzers": [
+      {
+        "language": "python",
+        "name": "python-ast-symtable-no-import",
+        "status": "complete",
+        "version": "Python 3.14.5"
+      },
+      {
+        "language": "python",
+        "name": "tree-sitter-python",
+        "status": "complete",
+        "version": "0.25.0"
+      },
+      {
+        "language": "rust",
+        "name": "cargo-metadata-no-deps",
+        "status": "complete",
+        "version": "cargo 1.97.0 (c980f4866 2026-06-30)"
+      },
+      {
+        "language": "rust",
+        "name": "rust-analyzer-call-hierarchy",
+        "status": "complete",
+        "version": "rust-analyzer 1.97.0 (2d8144b7 2026-07-07)"
+      },
+      {
+        "language": "rust",
+        "name": "tree-sitter-rust",
+        "status": "complete",
+        "version": "0.24.2"
+      },
+      {
+        "language": "typescript/javascript",
+        "name": "tree-sitter-typescript",
+        "status": "complete",
+        "version": "0.23.2"
+      },
+      {
+        "language": "typescript/javascript",
+        "name": "typescript-compiler-api-no-emit",
+        "status": "complete",
+        "version": "Node v24.16.0; TypeScript 5.9.3"
+      }
+    ],
+    "completeness": "partial",
+    "diagnostics": [],
+    "engineVersion": "2.3.1",
+    "languages": [
+      "javascript",
+      "python",
+      "rust",
+      "typescript"
+    ],
+    "mode": "incremental",
+    "rulesetHash": "adeb1241be2e667e35047b6eda969093d3938aa1ee295021b80ae9d474b6ce76",
+    "schemaHash": "e1397b1eaa3cc4269c8f28bf502e0464d5145068efb8cae65f6c69e34902d428",
+    "sourceCoverage": [
+      {
+        "analyzedFiles": 7,
+        "analyzerNames": [
+          "tree-sitter-typescript",
+          "typescript-compiler-api-no-emit"
+        ],
+        "diagnosticCodes": [],
+        "discoveredFiles": 7,
+        "extensions": [
+          "cjs",
+          "js",
+          "jsx",
+          "mjs"
+        ],
+        "language": "javascript",
+        "skippedFiles": 0,
+        "status": "complete",
+        "supportLevel": "semantic"
+      },
+      {
+        "analyzedFiles": 58,
+        "analyzerNames": [
+          "python-ast-symtable-no-import",
+          "tree-sitter-python"
+        ],
+        "diagnosticCodes": [
+          "decorator-not-executed"
+        ],
+        "discoveredFiles": 58,
+        "extensions": [
+          "py"
+        ],
+        "language": "python",
+        "skippedFiles": 0,
+        "status": "partial",
+        "supportLevel": "semantic"
+      },
+      {
+        "analyzedFiles": 3,
+        "analyzerNames": [
+          "cargo-metadata-no-deps",
+          "rust-analyzer-call-hierarchy",
+          "tree-sitter-rust"
+        ],
+        "diagnosticCodes": [
+          "macro-not-expanded"
+        ],
+        "discoveredFiles": 3,
+        "extensions": [
+          "rs"
+        ],
+        "language": "rust",
+        "skippedFiles": 0,
+        "status": "partial",
+        "supportLevel": "semantic"
+      },
+      {
+        "analyzedFiles": 247,
+        "analyzerNames": [
+          "tree-sitter-typescript",
+          "typescript-compiler-api-no-emit"
+        ],
+        "diagnosticCodes": [
+          "dynamic-import"
+        ],
+        "discoveredFiles": 247,
+        "extensions": [
+          "ts",
+          "tsx"
+        ],
+        "language": "typescript",
+        "skippedFiles": 0,
+        "status": "partial",
+        "supportLevel": "semantic"
+      }
+    ]
+  },
+  "components": [
+    {
+      "detailsFile": "architecture/backend.md",
+      "id": "backend",
+      "jsonFile": "architecture/backend.json",
+      "name": "Backend",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "Python"
+      ],
+      "type": "service"
+    },
+    {
+      "detailsFile": "architecture/backend-sidecar.py.md",
+      "id": "backend-sidecar.py",
+      "jsonFile": "architecture/backend-sidecar.py.json",
+      "name": "backend sidecar.py",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/eslint.config.js.md",
+      "id": "eslint.config.js",
+      "jsonFile": "architecture/eslint.config.js.json",
+      "name": "eslint.config.js",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/playwright.config.ts.md",
+      "id": "playwright.config.ts",
+      "jsonFile": "architecture/playwright.config.ts.json",
+      "name": "playwright.config.ts",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/postcss.config.js.md",
+      "id": "postcss.config.js",
+      "jsonFile": "architecture/postcss.config.js.json",
+      "name": "postcss.config.js",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/scripts.md",
+      "id": "scripts",
+      "jsonFile": "architecture/scripts.json",
+      "name": "Scripts",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "Python"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src.md",
+      "id": "src",
+      "jsonFile": "architecture/src.json",
+      "name": "src",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-components.md",
+      "id": "src-components",
+      "jsonFile": "architecture/src-components.json",
+      "name": "Components",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-domain.md",
+      "id": "src-domain",
+      "jsonFile": "architecture/src-domain.json",
+      "name": "Domain",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-hooks.md",
+      "id": "src-hooks",
+      "jsonFile": "architecture/src-hooks.json",
+      "name": "Hooks",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-services.md",
+      "id": "src-services",
+      "jsonFile": "architecture/src-services.json",
+      "name": "Services",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "service"
+    },
+    {
+      "detailsFile": "architecture/src-store.md",
+      "id": "src-store",
+      "jsonFile": "architecture/src-store.json",
+      "name": "Store",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-tauri.md",
+      "id": "src-tauri",
+      "jsonFile": "architecture/src-tauri.json",
+      "name": "Src Tauri",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "Rust"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/src-types.md",
+      "id": "src-types",
+      "jsonFile": "architecture/src-types.json",
+      "name": "Types",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript"
+      ],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/tailwind.config.ts.md",
+      "id": "tailwind.config.ts",
+      "jsonFile": "architecture/tailwind.config.ts.json",
+      "name": "tailwind.config.ts",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/tests.md",
+      "id": "tests",
+      "jsonFile": "architecture/tests.json",
+      "name": "Tests",
+      "status": "active",
+      "tags": [
+        "scan-draft",
+        "JavaScript/TypeScript",
+        "Python"
+      ],
+      "type": "test"
+    },
+    {
+      "detailsFile": "architecture/vite.config.ts.md",
+      "id": "vite.config.ts",
+      "jsonFile": "architecture/vite.config.ts.json",
+      "name": "vite.config.ts",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    },
+    {
+      "detailsFile": "architecture/vitest.config.ts.md",
+      "id": "vitest.config.ts",
+      "jsonFile": "architecture/vitest.config.ts.json",
+      "name": "vitest.config.ts",
+      "status": "active",
+      "tags": [],
+      "type": "other"
+    }
+  ],
+  "externals": [
+    {
+      "id": "external:cache",
+      "locator": null,
+      "name": "cache",
+      "status": "active",
+      "type": "cache"
+    },
+    {
+      "id": "external:cli-subprocess",
+      "locator": null,
+      "name": "cli subprocess",
+      "status": "active",
+      "type": "cli_subprocess"
+    },
+    {
+      "id": "external:database",
+      "locator": null,
+      "name": "database",
+      "status": "active",
+      "type": "database"
+    },
+    {
+      "id": "external:database:sqlite",
+      "locator": "sqlite",
+      "name": "database sqlite",
+      "status": "active",
+      "type": "database"
+    },
+    {
+      "id": "external:environment",
+      "locator": null,
+      "name": "environment",
+      "status": "active",
+      "type": "environment"
+    },
+    {
+      "id": "external:ffi",
+      "locator": null,
+      "name": "ffi",
+      "status": "active",
+      "type": "ffi"
+    },
+    {
+      "id": "external:filesystem",
+      "locator": null,
+      "name": "filesystem",
+      "status": "active",
+      "type": "filesystem"
+    },
+    {
+      "id": "external:http-api",
+      "locator": null,
+      "name": "http api",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:127.0.0.1:49152",
+      "locator": "127.0.0.1:49152",
+      "name": "http api 127.0.0.1:49152",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:127.0.0.1:56227",
+      "locator": "127.0.0.1:56227",
+      "name": "http api 127.0.0.1:56227",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:127.0.0.1:8787",
+      "locator": "127.0.0.1:8787",
+      "name": "http api 127.0.0.1:8787",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:calendar.local",
+      "locator": "calendar.local",
+      "name": "http api calendar.local",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:calendar.test",
+      "locator": "calendar.test",
+      "name": "http api calendar.test",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:local-service",
+      "locator": "local-service",
+      "name": "http api local-service",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:http-api:test.local",
+      "locator": "test.local",
+      "name": "http api test.local",
+      "status": "active",
+      "type": "http_api"
+    },
+    {
+      "id": "external:message-system",
+      "locator": null,
+      "name": "message system",
+      "status": "active",
+      "type": "message_system"
+    }
+  ],
+  "relations": [
+    {
+      "evidenceIds": [
+        "ev:34fa12c164b62e2cf176cca4"
+      ],
+      "id": "rel:backend-sidecar.py:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend-sidecar.py",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:9164f3af8d37367288dfb431"
+      ],
+      "id": "rel:backend-sidecar.py:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend-sidecar.py",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:ee77f36a191da114cbfca784"
+      ],
+      "id": "rel:backend-sidecar.py:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend-sidecar.py",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:db821e402b8210a2d903834a"
+      ],
+      "id": "rel:backend:data-flow:external:cache",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:cache",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:e7f2ba634cd3851998e4bbbb"
+      ],
+      "id": "rel:backend:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:727b7fbcdedebf85ed9cbe88"
+      ],
+      "id": "rel:backend:data-flow:external:database",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:database",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:c4ef1072c98ae460e068567c"
+      ],
+      "id": "rel:backend:data-flow:external:database:sqlite",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:database:sqlite",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:801a6532e08fe27467d8093f"
+      ],
+      "id": "rel:backend:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:0923a2e80f38442cd500ea6a"
+      ],
+      "id": "rel:backend:data-flow:external:ffi",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:ffi",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:65bca126e00513ebe1ec565a"
+      ],
+      "id": "rel:backend:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:26f8bb3d54be1052af81d9c3"
+      ],
+      "id": "rel:backend:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:e5cbbe3066136f979579bcfc"
+      ],
+      "id": "rel:backend:data-flow:external:http-api:local-service",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "external:http-api:local-service",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:f89f843410cc1ad7483723eb"
+      ],
+      "id": "rel:backend:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:55495747261bee55df6fcaa3"
+      ],
+      "id": "rel:backend:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:28330c45ee4964d2463bd1bf"
+      ],
+      "id": "rel:backend:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "backend",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:57ca9e74c1398e7a5e41462f"
+      ],
+      "id": "rel:eslint.config.js:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "eslint.config.js",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:77630090de00085298344282"
+      ],
+      "id": "rel:scripts:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:04a9dc4f34d84aa73b6a2e7f"
+      ],
+      "id": "rel:scripts:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:a87ea8fc2bc99f13fb1ea3a2"
+      ],
+      "id": "rel:scripts:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:00f833d116a4638e93acbb53"
+      ],
+      "id": "rel:scripts:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:16bb5151f84fc4a421247006"
+      ],
+      "id": "rel:scripts:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:e0b2d69ae6d91303602007d5"
+      ],
+      "id": "rel:scripts:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:add92e244bb85ccd1e9c31e9"
+      ],
+      "id": "rel:scripts:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "scripts",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:a9b99ece2f2338fab0c80fd5"
+      ],
+      "id": "rel:src-components:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:fde7d7a23af57254513f5972"
+      ],
+      "id": "rel:src-components:data-flow:external:database",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "external:database",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:81fb41da19668c5ae4d1df68"
+      ],
+      "id": "rel:src-components:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:ee939b8472653d6701b4b43c"
+      ],
+      "id": "rel:src-components:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:13bec9b40e4d7aa73e992fef"
+      ],
+      "id": "rel:src-components:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:93d779be4b924e53f862a35f"
+      ],
+      "id": "rel:src-components:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:d0a32c7bd9a4d816972e20a8"
+      ],
+      "id": "rel:src-components:depends-on:src-hooks",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "src-hooks",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:a0c7d955f3274b3205109a65"
+      ],
+      "id": "rel:src-components:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-components",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:abd1f68b438e8de2b2663eeb"
+      ],
+      "id": "rel:src-domain:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-domain",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:efff44d46fb0c00110d2e781"
+      ],
+      "id": "rel:src-domain:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-domain",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:97035d8f8b8a21dfebd9a6bb"
+      ],
+      "id": "rel:src-domain:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-domain",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:0e9908324069cfa3bb496da8"
+      ],
+      "id": "rel:src-hooks:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:c96d1b3a73e37a42670283f5"
+      ],
+      "id": "rel:src-hooks:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:f2d00819d239f03cd92671ba"
+      ],
+      "id": "rel:src-hooks:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:84fcb39a4c225496c4e20caa"
+      ],
+      "id": "rel:src-hooks:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:21824a5079ecb4098e175819"
+      ],
+      "id": "rel:src-hooks:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:583b8de17837a1ebdcfbf75b"
+      ],
+      "id": "rel:src-hooks:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:99a7b993b016dd5859d10240"
+      ],
+      "id": "rel:src-hooks:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:87cb5ac0bd330872b375d219"
+      ],
+      "id": "rel:src-hooks:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:c544ce162704dc8edefce678"
+      ],
+      "id": "rel:src-hooks:depends-on:src-store",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "src-store",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:706ffb5ead99b4e6d2b258af"
+      ],
+      "id": "rel:src-hooks:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-hooks",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:67fa12b9764e3aff432c3777"
+      ],
+      "id": "rel:src-services:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:939bb16dd9c94e8432c69884"
+      ],
+      "id": "rel:src-services:data-flow:external:database",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:database",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:57e6e79e1c0f1f277c3636c4"
+      ],
+      "id": "rel:src-services:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:d41244df85973ed39c668c62"
+      ],
+      "id": "rel:src-services:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:cfee7f44647c41c3ae836d2f"
+      ],
+      "id": "rel:src-services:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:b2030bdb41c349a9fac25299"
+      ],
+      "id": "rel:src-services:data-flow:external:http-api:local-service",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:http-api:local-service",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:ece214700a4d45782ed01d1c"
+      ],
+      "id": "rel:src-services:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "evidence:adapter:f2c4e66a5a87bfbd0fcfff82"
+      ],
+      "id": "rel:src-services:data-flow:src-tauri:tauri",
+      "label": "Tauri invoke: open_release_page",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "src-tauri",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:8af44059d512c88385713b43"
+      ],
+      "id": "rel:src-services:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:d45b8a65f3db8a684a3e6f83"
+      ],
+      "id": "rel:src-services:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:9f8ea4784523d1ba1e2228c8"
+      ],
+      "id": "rel:src-services:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-services",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:74f3bd64b2207fd397b55cc2"
+      ],
+      "id": "rel:src-store:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:fa41a90f487e96688f74a672"
+      ],
+      "id": "rel:src-store:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:483e841225b7e0ca7146cfbc"
+      ],
+      "id": "rel:src-store:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:88c682c67855a18607e3a9ab"
+      ],
+      "id": "rel:src-store:data-flow:external:http-api:local-service",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "external:http-api:local-service",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:53a2180955eab41d2f222237"
+      ],
+      "id": "rel:src-store:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:30e9c887a3430ea9360ac2b3"
+      ],
+      "id": "rel:src-store:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:f358569310a998c085377e68"
+      ],
+      "id": "rel:src-store:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:1d0b6a3afbc4597b89b69fb6"
+      ],
+      "id": "rel:src-store:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:ab59c32d0a7760788f950269"
+      ],
+      "id": "rel:src-store:depends-on:tests",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-store",
+      "target": "tests",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:909f6e8297488f4518da9da9"
+      ],
+      "id": "rel:src-tauri:data-flow:external:cli-subprocess",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-tauri",
+      "target": "external:cli-subprocess",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:a0a34360f981293be1b4a1d2"
+      ],
+      "id": "rel:src-tauri:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-tauri",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:afe32c83e372b294c1fc29b7"
+      ],
+      "id": "rel:src-tauri:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-tauri",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:fde37e54d18442e0ed59ff39"
+      ],
+      "id": "rel:src-tauri:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src-tauri",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:04e60276a5a09f434a304b79"
+      ],
+      "id": "rel:src:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:f979d0e0cd1525e188411fcb"
+      ],
+      "id": "rel:src:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:b6bf497acabd9204219b0427"
+      ],
+      "id": "rel:src:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:6d0617140765274ff8096e7a"
+      ],
+      "id": "rel:src:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:78650a1b9da79da005419cb2"
+      ],
+      "id": "rel:src:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:c314ea51f4d5d6a1abb52aba"
+      ],
+      "id": "rel:src:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:efb762fa80306365c42cafd2"
+      ],
+      "id": "rel:src:depends-on:src-store",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "src",
+      "target": "src-store",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:93032254572d30bb4a609735"
+      ],
+      "id": "rel:tests:data-flow:external:cache",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:cache",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:b3fbc6bef07ae2bd97a07712"
+      ],
+      "id": "rel:tests:data-flow:external:database",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:database",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:eeb9d8eff82679b046a0eefd"
+      ],
+      "id": "rel:tests:data-flow:external:database:sqlite",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:database:sqlite",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:315a234e8656c34ebd9dbfa9"
+      ],
+      "id": "rel:tests:data-flow:external:environment",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:environment",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:a89b1bab8811112cc659f1e7"
+      ],
+      "id": "rel:tests:data-flow:external:filesystem",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:filesystem",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:87a395d2a91e96071592ac49"
+      ],
+      "id": "rel:tests:data-flow:external:http-api",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:170d3970d7306495c46f4e75"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:127.0.0.1:56227",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:127.0.0.1:56227",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:ac6a2f66f5603fe05261a846"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:127.0.0.1:8787",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:127.0.0.1:8787",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:c0588680551affc4c6c8b58b"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:calendar.local",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:calendar.local",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:3a5f8972cc24775196e4597b"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:calendar.test",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:calendar.test",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:799c1efe3d822ba58e6f4ba2"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:local-service",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:local-service",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:a67c64d436fbea134f4a9ff7"
+      ],
+      "id": "rel:tests:data-flow:external:http-api:test.local",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:http-api:test.local",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:1b6a8ba27291e16423e41841"
+      ],
+      "id": "rel:tests:data-flow:external:message-system",
+      "label": "external I/O",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "external:message-system",
+      "type": "data_flow"
+    },
+    {
+      "evidenceIds": [
+        "ev:405e343bbef7f78cb36c8e6e"
+      ],
+      "id": "rel:tests:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "backend",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:44064fe36d278057f5f7dbe2"
+      ],
+      "id": "rel:tests:depends-on:backend-sidecar.py",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "backend-sidecar.py",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:2941f232648f4f4636c4ce33"
+      ],
+      "id": "rel:tests:depends-on:scripts",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "scripts",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:abb87389d0ccf91ea27a92ce"
+      ],
+      "id": "rel:tests:depends-on:src-components",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "src-components",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:e711b813a2ade34174c3892c"
+      ],
+      "id": "rel:tests:depends-on:src-domain",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "src-domain",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:77556f55a36cc6f1a9103d9f"
+      ],
+      "id": "rel:tests:depends-on:src-hooks",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "src-hooks",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:2062defdeadb29590403232c"
+      ],
+      "id": "rel:tests:depends-on:src-services",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "src-services",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:f32deba42f0d9a7c12b7ad14"
+      ],
+      "id": "rel:tests:depends-on:src-store",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "tests",
+      "target": "src-store",
+      "type": "depends_on"
+    },
+    {
+      "evidenceIds": [
+        "ev:0b883b8cb856612215589f16"
+      ],
+      "id": "rel:vitest.config.ts:depends-on:backend",
+      "label": "resolved symbol call",
+      "provenance": "static",
+      "resolution": "resolved",
+      "source": "vitest.config.ts",
+      "target": "backend",
+      "type": "depends_on"
+    }
+  ],
+  "retiredComponents": [],
+  "schemaVersion": 2,
+  "sourceSnapshot": {
+    "headCommit": "0122bc61764c",
+    "worktreeHash": "04e3a7d6b1081ab5d8a718ebec42bc3a04cb51097f259cb37cfc436aa4bfc9ce"
+  }
+}

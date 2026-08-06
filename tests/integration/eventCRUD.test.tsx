@@ -21,13 +21,13 @@ describe('Event CRUD - integration', () => {
     useUIStore.getState().reset()
   })
 
-  it('clicking an empty date slot opens the EventModal in create mode', async () => {
+  it('clicking an empty date slot opens event details in create mode', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /Mon, 2026-05-25/i }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Create event' })).toBeInTheDocument()
   })
 
@@ -42,7 +42,7 @@ describe('Event CRUD - integration', () => {
     expect(screen.getByRole('button', { name: /Edit event Planning session/i })).toBeInTheDocument()
   })
 
-  it('clicking an event card opens the EventModal in edit mode', async () => {
+  it('clicking an event card opens event details in edit mode', async () => {
     await useEventStore.getState().createEvent(eventDraft)
     const user = userEvent.setup()
     render(<App />)

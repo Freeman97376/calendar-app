@@ -4,8 +4,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -57,6 +61,18 @@ export class FallbackAIService implements IAIService {
 
   async runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult> {
     return this.runWithProvider(this.defaultProvider, (service) => service.runProgressTool(request))
+  }
+
+  async runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult> {
+    return this.runWithProvider(this.defaultProvider, (service) =>
+      service.runToolActivation(request),
+    )
+  }
+
+  async routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult> {
+    return this.runWithProvider(this.defaultProvider, (service) =>
+      service.routeEnabledTool(request),
+    )
   }
 
   async continueConversation(

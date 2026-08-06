@@ -9,13 +9,21 @@ describe('tools registry', () => {
       'tool-sessions',
       'fitness-ai',
       'agent-learning',
+      'seo-learning',
       'fridge',
       'goal-planner',
     ])
     expect(TOOL_DEFINITIONS.every((tool) => tool.label && tool.Component)).toBe(true)
-    expect(TOOL_DEFINITIONS.filter((tool) => tool.category === 'ai-demo').map((tool) => tool.id)).toEqual([
-      'fitness-ai',
-      'agent-learning',
-    ])
+    expect(
+      TOOL_DEFINITIONS.filter((tool) => tool.category === 'ai-demo').map((tool) => tool.id),
+    ).toEqual(['fitness-ai', 'agent-learning', 'seo-learning'])
+    expect(
+      TOOL_DEFINITIONS.filter((tool) => tool.category !== 'system').every(
+        (tool) => tool.instantiable === true && Boolean(tool.adapterId),
+      ),
+    ).toBe(true)
+    expect(TOOL_DEFINITIONS.find((tool) => tool.id === 'settings')).toMatchObject({
+      instantiable: false,
+    })
   })
 })

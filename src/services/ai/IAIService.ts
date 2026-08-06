@@ -8,8 +8,12 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
   AIConversationResult,
+  AIEnabledToolRouteRequest,
+  AIEnabledToolRouteResult,
   AIProgressToolRequest,
   AIProgressToolResult,
+  AIToolActivationRequest,
+  AIToolActivationResult,
   ToolSessionRequest,
   ToolSessionResult,
 } from '../../domain/types'
@@ -41,10 +45,7 @@ export interface IAIService {
    * Takes a natural-language command plus current frontend state and returns
    * explicit actions the UI can review and apply.
    */
-  planCalendarActions(
-    command: string,
-    context: AICalendarContext,
-  ): Promise<AICalendarActionPlan>
+  planCalendarActions(command: string, context: AICalendarContext): Promise<AICalendarActionPlan>
 
   /**
    * Runs a configured tool-session prompt and returns validated calendar event drafts.
@@ -57,6 +58,18 @@ export interface IAIService {
    * recommendations for user review.
    */
   runProgressTool(request: AIProgressToolRequest): Promise<AIProgressToolResult>
+
+  /**
+   * Runs a short activation conversation for a tool template and returns the
+   * requirements summary used to register an active tool from a parent template.
+   */
+  runToolActivation(request: AIToolActivationRequest): Promise<AIToolActivationResult>
+
+  /**
+   * Chooses an existing active tool for a user message. This only routes to
+   * supplied active tools and must not create new active tools.
+   */
+  routeEnabledTool(request: AIEnabledToolRouteRequest): Promise<AIEnabledToolRouteResult>
 
   /**
    * Free-form multi-turn assistant conversation. When a context is provided,

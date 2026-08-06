@@ -1,0 +1,8 @@
+Desktop runtime
+
+The desktop shell uses Tauri and Tauri plugins under Apache-2.0 OR MIT. The
+build copies both applicable license texts from the locked Tauri dependency
+into the installer and portable licenses directory. Exact Rust dependency
+versions are recorded in src-tauri/Cargo.lock.
+
+Project: https://github.com/tauri-apps/tauri

@@ -1,0 +1,94 @@
+name: Release Windows desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  quality-gates:
+    uses: ./.github/workflows/validate.yml
+
+  windows-x64:
+    needs: quality-gates
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+
+      - name: Cache Rust build output
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Tesseract
+        shell: powershell
+        run: choco install tesseract --version=5.5.0.20241111 --yes --no-progress
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend test dependencies
+        run: python -m pip install --require-hashes -r requirements-server.lock
+
+      - name: Verify release version
+        run: npm run version:check
+
+      - name: Run frontend validation
+        run: |
+          npm run lint
+          npm run test:run
+          npm run build
+
+      - name: Run backend validation
+        run: python -m unittest discover tests/backend
+
+      - name: Prepare desktop sidecar and resources
+        shell: powershell
+        run: ./scripts/prepare-desktop.ps1
+
+      - name: Build signed updater and draft release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Calendar App v__VERSION__'
+          releaseBody: |
+            Windows x64 release. Install the NSIS package for automatic updates.
+            The portable ZIP checks for new versions but does not install them automatically.
+          releaseDraft: true
+          prerelease: false
+          args: --bundles nsis
+
+      - name: Package portable build and checksums
+        shell: powershell
+        run: ./scripts/package-desktop.ps1
+
+      - name: Upload portable assets to draft release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload $env:GITHUB_REF_NAME "dist-desktop/Calendar App Portable.zip" "dist-desktop/SHA256SUMS.txt" --clobber

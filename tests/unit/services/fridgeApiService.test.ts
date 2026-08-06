@@ -73,7 +73,10 @@ describe('FridgeApiService', () => {
   it('surfaces structured backend errors', async () => {
     const fetcher = vi.fn(async () =>
       jsonResponse(
-        { success: false, error: { code: 'invalid_image', message: 'Bad image', recoverable: true } },
+        {
+          success: false,
+          error: { code: 'invalid_image', message: 'Bad image', recoverable: true },
+        },
         { status: 400 },
       ),
     )
@@ -82,4 +85,3 @@ describe('FridgeApiService', () => {
     await expect(service.getInventoryItems()).rejects.toThrow('Bad image')
   })
 })
-

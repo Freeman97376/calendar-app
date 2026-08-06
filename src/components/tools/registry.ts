@@ -1,4 +1,4 @@
-import { agentLearningTool, fitnessAITool } from './ai-demo'
+import { agentLearningTool, fitnessAITool, seoLearningTool } from './ai-demo'
 import { fridgeTool } from './fridge'
 import { goalPlannerTool } from './goal-planner'
 import { settingsTool } from './settings'
@@ -10,6 +10,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   toolSessionsTool,
   fitnessAITool,
   agentLearningTool,
+  seoLearningTool,
   fridgeTool,
   goalPlannerTool,
 ]

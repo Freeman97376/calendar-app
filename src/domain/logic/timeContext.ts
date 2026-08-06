@@ -102,7 +102,14 @@ function dateTimeParts(date: Date, timezone: string): DateTimeParts {
 
 function offsetMinutesForTimezone(date: Date, timezone: string): number {
   const parts = dateTimeParts(date, timezone)
-  const zonedUtcTime = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
+  const zonedUtcTime = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  )
 
   return Math.round((zonedUtcTime - date.getTime()) / 60_000)
 }
