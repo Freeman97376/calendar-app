@@ -1,0 +1,217 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [
+      "backend"
+    ],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "vitest.config.ts",
+        "id": "ev:0b883b8cb856612215589f16",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "startLine": 1,
+        "symbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 21,
+        "file": "vitest.config.ts",
+        "id": "ev:0fbaee12d1274a476df355e3",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "startLine": 4,
+        "symbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 5,
+        "file": "vitest.config.ts",
+        "id": "ev:78867c5e609e743f1eaa131e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "startLine": 5,
+        "symbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 2,
+        "file": "vitest.config.ts",
+        "id": "ev:789e198e8df5327e7021b68e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "startLine": 2,
+        "symbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 21,
+        "file": "vitest.config.ts",
+        "id": "ev:file:2ee894bf23aa44ff4ce12a3d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "startLine": 1,
+        "symbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b"
+      }
+    ],
+    "paths": [
+      "vitest.config.ts"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:0fbaee12d1274a476df355e3"
+        ],
+        "id": "edge:a7d524c98a7cf6a3ed52ae98",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "defineConfig"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:78867c5e609e743f1eaa131e"
+        ],
+        "id": "edge:cd1701b44af84f6d8fab4122",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "react"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:789e198e8df5327e7021b68e"
+        ],
+        "id": "edge:d1733d5b9a4ca53601924687",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "@vitejs/plugin-react"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:0b883b8cb856612215589f16"
+        ],
+        "id": "edge:f53361af4ba633d45bdddb50",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend/fridge/config.py:backend/fridge/config.py:dbf1b46b24f4d77d",
+          "unresolvedText": "vitest/config"
+        },
+        "type": "imports"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "470856beaf654012f2f8370e3355954f12252f56e9d63c1776730e209566baf7",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:2ee894bf23aa44ff4ce12a3d"
+        ],
+        "generated": false,
+        "id": "sym:typescript:vitest.config.ts:vitest.config.ts:7b2b1e136b3f726b",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 21,
+          "file": "vitest.config.ts",
+          "startLine": 1
+        },
+        "name": "vitest.config",
+        "output": null,
+        "qualifiedName": "vitest.config.ts",
+        "sideEffects": [],
+        "signature": "module vitest.config.ts",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:2ee894bf23aa44ff4ce12a3d"
+            ],
+            "inputs": [],
+            "normalized": "module vitest.config.ts",
+            "output": null,
+            "raw": "module vitest.config.ts",
+            "signatureId": "sig:7b2b1e136b3f726ba6418423",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [
+      "vitest.config.ts"
+    ],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "vitest.config.ts",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

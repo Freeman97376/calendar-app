@@ -1,0 +1,1021 @@
+{
+  "$defs": {
+    "AnalysisDiagnosticV2": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "componentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "componentId",
+        "file",
+        "message",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "CodeLocation": {
+      "additionalProperties": false,
+      "properties": {
+        "endLine": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "file": {
+          "type": "string"
+        },
+        "startLine": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "endLine",
+        "file",
+        "startLine"
+      ],
+      "type": "object"
+    },
+    "ComponentAnalysisV2": {
+      "additionalProperties": false,
+      "properties": {
+        "dataFlows": {
+          "items": {
+            "$ref": "#/$defs/DataFlowV2"
+          },
+          "type": "array"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/AnalysisDiagnosticV2"
+          },
+          "type": "array"
+        },
+        "entrypoints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceV2"
+          },
+          "type": "array"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sideEffects": {
+          "items": {
+            "$ref": "#/$defs/SideEffectV2"
+          },
+          "type": "array"
+        },
+        "symbolEdges": {
+          "items": {
+            "$ref": "#/$defs/SymbolEdgeV2"
+          },
+          "type": "array"
+        },
+        "symbols": {
+          "items": {
+            "$ref": "#/$defs/SymbolV2"
+          },
+          "type": "array"
+        },
+        "testPaths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tombstones": {
+          "items": {
+            "$ref": "#/$defs/SymbolV2"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "dataFlows",
+        "dependencies",
+        "diagnostics",
+        "entrypoints",
+        "evidence",
+        "paths",
+        "sideEffects",
+        "symbolEdges",
+        "symbols",
+        "testPaths",
+        "tombstones"
+      ],
+      "type": "object"
+    },
+    "ComponentCurationV2": {
+      "additionalProperties": false,
+      "properties": {
+        "keyFlows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nonResponsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "userNotes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "keyFlows",
+        "nonResponsibilities",
+        "owner",
+        "responsibilities",
+        "summary",
+        "tags",
+        "userNotes"
+      ],
+      "type": "object"
+    },
+    "ComponentIdentityV2": {
+      "additionalProperties": false,
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "componentId": {
+          "type": "string"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "aliases",
+        "componentId",
+        "supersedes"
+      ],
+      "type": "object"
+    },
+    "DataFlowEndpointV2": {
+      "additionalProperties": false,
+      "properties": {
+        "componentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "externalId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "componentId",
+        "externalId",
+        "symbolId"
+      ],
+      "type": "object"
+    },
+    "DataFlowStepV2": {
+      "additionalProperties": false,
+      "properties": {
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inputShape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShapeNodeV2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operation": {
+          "type": "string"
+        },
+        "outputShape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShapeNodeV2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sideEffectIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "symbolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "evidenceIds",
+        "inputShape",
+        "operation",
+        "outputShape",
+        "sideEffectIds",
+        "symbolId"
+      ],
+      "type": "object"
+    },
+    "DataFlowV2": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness": {
+          "default": "complete",
+          "type": "string"
+        },
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "observationIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "resolved",
+            "probable",
+            "unresolved"
+          ],
+          "type": "string"
+        },
+        "sink": {
+          "$ref": "#/$defs/DataFlowEndpointV2"
+        },
+        "source": {
+          "$ref": "#/$defs/DataFlowEndpointV2"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/DataFlowStepV2"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "completeness",
+        "evidenceIds",
+        "id",
+        "name",
+        "observationIds",
+        "provenance",
+        "resolution",
+        "sink",
+        "source",
+        "steps"
+      ],
+      "type": "object"
+    },
+    "DynamicObservationV2": {
+      "additionalProperties": false,
+      "properties": {
+        "dataFlows": {
+          "items": {
+            "$ref": "#/$defs/DataFlowV2"
+          },
+          "type": "array"
+        },
+        "diagnosticSummary": {
+          "type": "string"
+        },
+        "exitCode": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "incomplete": {
+          "type": "boolean"
+        },
+        "inputHash": {
+          "type": "string"
+        },
+        "observedSymbolIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "sourceSnapshot": {
+          "$ref": "#/$defs/SourceSnapshotV2"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "dataFlows",
+        "diagnosticSummary",
+        "exitCode",
+        "id",
+        "incomplete",
+        "inputHash",
+        "observedSymbolIds",
+        "profileId",
+        "runId",
+        "sourceSnapshot",
+        "stale",
+        "status",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "EvidenceV2": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer": {
+          "type": "string"
+        },
+        "endLine": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "inputHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profileId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "runId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceHash": {
+          "type": "string"
+        },
+        "startLine": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "symbolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "analyzer",
+        "endLine",
+        "file",
+        "id",
+        "inputHash",
+        "profileId",
+        "provenance",
+        "runId",
+        "sourceHash",
+        "startLine",
+        "symbolId"
+      ],
+      "type": "object"
+    },
+    "ShapeFieldV2": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "shape": {
+          "$ref": "#/$defs/ShapeNodeV2"
+        }
+      },
+      "required": [
+        "name",
+        "nullable",
+        "optional",
+        "shape"
+      ],
+      "type": "object"
+    },
+    "ShapeNodeV2": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/ShapeFieldV2"
+          },
+          "type": "array"
+        },
+        "items": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShapeNodeV2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lengthMax": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "lengthMin": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string"
+        },
+        "variants": {
+          "items": {
+            "$ref": "#/$defs/ShapeNodeV2"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "fields",
+        "items",
+        "lengthMax",
+        "lengthMin",
+        "truncated",
+        "type",
+        "variants"
+      ],
+      "type": "object"
+    },
+    "SideEffectV2": {
+      "additionalProperties": false,
+      "properties": {
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "evidenceIds",
+        "id",
+        "kind",
+        "operation",
+        "target"
+      ],
+      "type": "object"
+    },
+    "SignatureV2": {
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/TypeRefV2"
+          },
+          "type": "array"
+        },
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/SymbolInputV2"
+          },
+          "type": "array"
+        },
+        "normalized": {
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRefV2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "signatureId": {
+          "type": "string"
+        },
+        "typeParameters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "errors",
+        "evidenceIds",
+        "inputs",
+        "normalized",
+        "output",
+        "raw",
+        "signatureId",
+        "typeParameters"
+      ],
+      "type": "object"
+    },
+    "SourceSnapshotV2": {
+      "additionalProperties": false,
+      "properties": {
+        "headCommit": {
+          "type": "string"
+        },
+        "worktreeHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "headCommit",
+        "worktreeHash"
+      ],
+      "type": "object"
+    },
+    "SymbolEdgeTargetV2": {
+      "additionalProperties": false,
+      "properties": {
+        "candidateSymbolIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "externalId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unresolvedText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "candidateSymbolIds",
+        "externalId",
+        "symbolId",
+        "unresolvedText"
+      ],
+      "type": "object"
+    },
+    "SymbolEdgeV2": {
+      "additionalProperties": false,
+      "properties": {
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "matchedSignatureId": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observationIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "resolved",
+            "probable",
+            "unresolved"
+          ],
+          "type": "string"
+        },
+        "sourceSymbolId": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/SymbolEdgeTargetV2"
+        },
+        "type": {
+          "enum": [
+            "contains",
+            "imports",
+            "calls",
+            "constructs",
+            "inherits",
+            "implements",
+            "reads",
+            "writes",
+            "emits",
+            "handles",
+            "registers",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidenceIds",
+        "id",
+        "matchedSignatureId",
+        "observationIds",
+        "provenance",
+        "resolution",
+        "sourceSymbolId",
+        "target",
+        "type"
+      ],
+      "type": "object"
+    },
+    "SymbolInputV2": {
+      "additionalProperties": false,
+      "properties": {
+        "hasDefault": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/TypeRefV2"
+        }
+      },
+      "required": [
+        "hasDefault",
+        "name",
+        "type"
+      ],
+      "type": "object"
+    },
+    "SymbolV2": {
+      "additionalProperties": false,
+      "properties": {
+        "bodyHash": {
+          "default": "",
+          "type": "string"
+        },
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/TypeRefV2"
+          },
+          "type": "array"
+        },
+        "evidenceIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generated": {
+          "default": false,
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/SymbolInputV2"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/CodeLocation"
+        },
+        "name": {
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRefV2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "qualifiedName": {
+          "type": "string"
+        },
+        "sideEffects": {
+          "items": {
+            "$ref": "#/$defs/SideEffectV2"
+          },
+          "type": "array"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "signatures": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SignatureV2"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "supersedes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "visibility": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bodyHash",
+        "errors",
+        "evidenceIds",
+        "generated",
+        "id",
+        "inputs",
+        "kind",
+        "language",
+        "location",
+        "name",
+        "output",
+        "qualifiedName",
+        "sideEffects",
+        "signature",
+        "signatures",
+        "status",
+        "supersedes",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "TypeRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "genericArgs": {
+          "items": {
+            "$ref": "#/$defs/TypeRefV2"
+          },
+          "type": "array"
+        },
+        "native": {
+          "type": "string"
+        },
+        "normalized": {
+          "type": "string"
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "resolvedSymbolId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "genericArgs",
+        "native",
+        "normalized",
+        "nullable",
+        "optional",
+        "resolvedSymbolId"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "component-v2.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "../schemas/component-v2.schema.json",
+      "type": "string"
+    },
+    "analysis": {
+      "$ref": "#/$defs/ComponentAnalysisV2"
+    },
+    "curation": {
+      "$ref": "#/$defs/ComponentCurationV2"
+    },
+    "identity": {
+      "$ref": "#/$defs/ComponentIdentityV2"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/DynamicObservationV2"
+      },
+      "type": "array"
+    },
+    "schemaVersion": {
+      "const": 2,
+      "format": "uint8",
+      "maximum": 255,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "$schema",
+    "analysis",
+    "curation",
+    "identity",
+    "observations",
+    "schemaVersion"
+  ],
+  "title": "Golden Goose Egg component facts v2",
+  "type": "object"
+}

@@ -1,0 +1,3313 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:f979d0e0cd1525e188411fcb"
+        ],
+        "id": "flow:static:56d3fb41a8a1556d51a00d19",
+        "name": "message_system emit",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:message-system",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "src",
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:f979d0e0cd1525e188411fcb"
+            ],
+            "inputShape": null,
+            "operation": "emit",
+            "outputShape": null,
+            "sideEffectIds": [
+              "effect:818b1016c6269541bc2fa5c5"
+            ],
+            "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+          }
+        ]
+      },
+      {
+        "completeness": "complete",
+        "evidenceIds": [
+          "ev:04e60276a5a09f434a304b79"
+        ],
+        "id": "flow:static:f3c29a1c43ac495569272210",
+        "name": "environment read",
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sink": {
+          "componentId": null,
+          "externalId": "external:environment",
+          "symbolId": null
+        },
+        "source": {
+          "componentId": "src",
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+        },
+        "steps": [
+          {
+            "evidenceIds": [
+              "ev:04e60276a5a09f434a304b79"
+            ],
+            "inputShape": null,
+            "operation": "read",
+            "outputShape": null,
+            "sideEffectIds": [
+              "effect:33e6e925da858c322cf72f01"
+            ],
+            "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      "backend",
+      "src-components",
+      "src-domain",
+      "src-services",
+      "src-store"
+    ],
+    "diagnostics": [],
+    "entrypoints": [
+      "src/main.tsx"
+    ],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 108,
+        "file": "src/main.tsx",
+        "id": "ev:026ce55736db646e674bf68c",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 63,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 13,
+        "file": "src/main.tsx",
+        "id": "ev:02ef60a7d37fe9850d824176",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 13,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 94,
+        "file": "src/main.tsx",
+        "id": "ev:04e60276a5a09f434a304b79",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 90,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 110,
+        "file": "src/main.tsx",
+        "id": "ev:05fcf279e1f7de45cc9d41cc",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 110,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 49,
+        "file": "src/main.tsx",
+        "id": "ev:0665eb2c6016b87bca17b0ab",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 49,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 4,
+        "file": "src/main.tsx",
+        "id": "ev:06f396e5710f58a5198d8c1e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 4,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 101,
+        "file": "src/main.tsx",
+        "id": "ev:0b2f5f844905122913849b09",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 96,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 67,
+        "file": "src/main.tsx",
+        "id": "ev:129b52aaad7defe82b32b267",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 67,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 28,
+        "file": "src/main.tsx",
+        "id": "ev:15515f5df0a935e5f866ac19",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 28,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 39,
+        "file": "src/main.tsx",
+        "id": "ev:16b6b884e773dae99820289f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 37,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 84,
+        "file": "src/main.tsx",
+        "id": "ev:1773c43247ebc03ed5dbbd56",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 84,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 48,
+        "file": "src/main.tsx",
+        "id": "ev:1834cbc6603a9c03c5465027",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 45,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 25,
+        "file": "src/App.tsx",
+        "id": "ev:1d9a6a784ee0446e13ba31e7",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 25,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 35,
+        "file": "src/main.tsx",
+        "id": "ev:220966b26baf318935c66387",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 35,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 38,
+        "file": "src/main.tsx",
+        "id": "ev:240a9ecf09d4ca1d8f858122",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 38,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 40,
+        "file": "src/main.tsx",
+        "id": "ev:2c1692990f8c04758842e532",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 40,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 57,
+        "file": "src/main.tsx",
+        "id": "ev:3397431cdfbc2ca06df82466",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 57,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 34,
+        "file": "src/main.tsx",
+        "id": "ev:35e9cfba9538ff39b7fc4036",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 34,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 27,
+        "file": "src/main.tsx",
+        "id": "ev:37b6aa012c42831d8b31356c",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 27,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 22,
+        "file": "src/App.tsx",
+        "id": "ev:384d391bffe25aed80e04153",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 18,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 7,
+        "file": "src/main.tsx",
+        "id": "ev:39cb318890e4e4efa0c2ea65",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 7,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 65,
+        "file": "src/App.tsx",
+        "id": "ev:3a9796365c3911c97375f531",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 14,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 10,
+        "file": "src/App.tsx",
+        "id": "ev:3b3d92719fd7bf3b55d02e2d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 10,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 55,
+        "file": "src/main.tsx",
+        "id": "ev:429236abe567dd1f84affe0f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 55,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 50,
+        "file": "src/App.tsx",
+        "id": "ev:4529147648d174e6a9993902",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 50,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 16,
+        "file": "src/App.tsx",
+        "id": "ev:47a827324fef41d063257025",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 16,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 8,
+        "file": "src/App.tsx",
+        "id": "ev:4a924e1235e6f812f06a87a2",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 8,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 41,
+        "file": "src/main.tsx",
+        "id": "ev:4c1f479c466971a1e1c51864",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 32,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 3,
+        "file": "src/App.tsx",
+        "id": "ev:4c9e020cef15c3a01d6c56ff",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 3,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 74,
+        "file": "src/main.tsx",
+        "id": "ev:4cfa3b110c2fbd977e935cbb",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 71,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 12,
+        "file": "src/App.tsx",
+        "id": "ev:4e8b2a045a6b5682d0d7f99d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 12,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 77,
+        "file": "src/main.tsx",
+        "id": "ev:518a9450bedb7a0b7c95e2e6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 77,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 33,
+        "file": "src/main.tsx",
+        "id": "ev:51a1c8cc22ba8ec0264b3bd1",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 33,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 33,
+        "file": "src/main.tsx",
+        "id": "ev:57341ed13bde174a4b985694",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 33,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 66,
+        "file": "src/main.tsx",
+        "id": "ev:5dd52c31039f694140e3a1e9",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 66,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 50,
+        "file": "src/main.tsx",
+        "id": "ev:605081407c470913e885f94e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 50,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 25,
+        "file": "src/App.tsx",
+        "id": "ev:641514dc48b3dc47d4563eaa",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 25,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 78,
+        "file": "src/main.tsx",
+        "id": "ev:6509b296ce1f414a650a3dcd",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 78,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 25,
+        "file": "src/main.tsx",
+        "id": "ev:6543897cb4331022329f0c5b",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 25,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 23,
+        "file": "src/main.tsx",
+        "id": "ev:6ae48e379bb48d210f102783",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 19,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 29,
+        "file": "src/main.tsx",
+        "id": "ev:6bc5409e2c1850ea8fa22888",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 29,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 107,
+        "file": "src/main.tsx",
+        "id": "ev:6d0617140765274ff8096e7a",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 103,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "src/main.tsx",
+        "id": "ev:71ad53ddd124795ba611366e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 1,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 61,
+        "file": "src/main.tsx",
+        "id": "ev:71ee9521fb12b0aa6d5dd7d6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 42,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 51,
+        "file": "src/main.tsx",
+        "id": "ev:742a0acf028b252a30c9609c",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 51,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 43,
+        "file": "src/main.tsx",
+        "id": "ev:75da0fad68bc28074f750a4f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 43,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 60,
+        "file": "src/main.tsx",
+        "id": "ev:78650a1b9da79da005419cb2",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 60,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 103,
+        "file": "src/main.tsx",
+        "id": "ev:7ef79d245d8c5e62c6d1ff22",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 103,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 34,
+        "file": "src/main.tsx",
+        "id": "ev:8031c572069edc2306364b65",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 34,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 58,
+        "file": "src/main.tsx",
+        "id": "ev:82d404eb8765d50a88321074",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 58,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 10,
+        "file": "src/main.tsx",
+        "id": "ev:8c2a7161932194ebc54a7830",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 10,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 56,
+        "file": "src/main.tsx",
+        "id": "ev:8f724a4a826ea960f4ea2895",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 56,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 11,
+        "file": "src/App.tsx",
+        "id": "ev:940c453577de32f7f544defc",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 11,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 49,
+        "file": "src/main.tsx",
+        "id": "ev:97299abb565546748a561bc7",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 49,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 55,
+        "file": "src/main.tsx",
+        "id": "ev:978cffa913f71ff8deab4b30",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 55,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 53,
+        "file": "src/main.tsx",
+        "id": "ev:99a87753e21d6eb030c4b2f6",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 53,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 35,
+        "file": "src/main.tsx",
+        "id": "ev:a14d3d3a0ad4e5205e344981",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 35,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 24,
+        "file": "src/main.tsx",
+        "id": "ev:a33fbc17e7d63bd6d0843963",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 24,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 38,
+        "file": "src/main.tsx",
+        "id": "ev:adb4b25db3f05e517e2bb8a4",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 38,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 52,
+        "file": "src/main.tsx",
+        "id": "ev:b00d3156979de25f02990cca",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 52,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 9,
+        "file": "src/main.tsx",
+        "id": "ev:b0beb6477e337cade1f46f3f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 9,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 103,
+        "file": "src/main.tsx",
+        "id": "ev:b25a193d14d5c589d8863cc1",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 103,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 84,
+        "file": "src/main.tsx",
+        "id": "ev:b6bf497acabd9204219b0427",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 84,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 53,
+        "file": "src/main.tsx",
+        "id": "ev:b7f3dd873214544668bb45ae",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 53,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 2,
+        "file": "src/main.tsx",
+        "id": "ev:ba8abf5bac903de7d01218ae",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 2,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 78,
+        "file": "src/main.tsx",
+        "id": "ev:bcb6ec964d3fa424c2a6977d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 78,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 40,
+        "file": "src/main.tsx",
+        "id": "ev:bdcf4b8b4fbcfc08ad105205",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 40,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 79,
+        "file": "src/main.tsx",
+        "id": "ev:c28d3714c7eaf306d54bbf40",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 79,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 8,
+        "file": "src/main.tsx",
+        "id": "ev:c314ea51f4d5d6a1abb52aba",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 8,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 95,
+        "file": "src/main.tsx",
+        "id": "ev:c50a65fcecb6f79927306454",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 95,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 18,
+        "file": "src/main.tsx",
+        "id": "ev:c8f6c09e311a0e4515a1bca9",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 14,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 36,
+        "file": "src/main.tsx",
+        "id": "ev:cb768aa98549e36b41c72774",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 36,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "src/App.tsx",
+        "id": "ev:cbdbc28ee43fe52c5ecfa953",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 1,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 36,
+        "file": "src/main.tsx",
+        "id": "ev:cd3767f559182e9a9c957ffc",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 36,
+        "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 20,
+        "file": "src/App.tsx",
+        "id": "ev:d02fed506d84e62f90f8bc2e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 20,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 12,
+        "file": "src/main.tsx",
+        "id": "ev:d2d25863fc29cf636ed2753a",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 12,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 6,
+        "file": "src/main.tsx",
+        "id": "ev:d39986c2c6fd2ee3edc96232",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 6,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 52,
+        "file": "src/main.tsx",
+        "id": "ev:d8c9188ac2f137d5402ac544",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 52,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 26,
+        "file": "src/main.tsx",
+        "id": "ev:da26c6d65c2a8a7d7677294d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 26,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 5,
+        "file": "src/App.tsx",
+        "id": "ev:e18c0f17faf54888c7049d07",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 5,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 7,
+        "file": "src/App.tsx",
+        "id": "ev:e250caa0e70f77b39186e7bf",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 7,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 78,
+        "file": "src/main.tsx",
+        "id": "ev:e396d24027b32c9af93f8ee5",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 78,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 26,
+        "file": "src/App.tsx",
+        "id": "ev:e918c69bcc6c23744a3d306c",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 24,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 30,
+        "file": "src/main.tsx",
+        "id": "ev:e949e72586a543f6c67e338f",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 30,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 11,
+        "file": "src/main.tsx",
+        "id": "ev:e996e2657d4759d9ff53f457",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 11,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 6,
+        "file": "src/App.tsx",
+        "id": "ev:ebc36c0b3c8ddb66a912de11",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 6,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 9,
+        "file": "src/App.tsx",
+        "id": "ev:ee280efbc67b3d9c413edc0e",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 9,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 50,
+        "file": "src/main.tsx",
+        "id": "ev:eeee6385714f0e13a8bbfd1a",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 50,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 45,
+        "file": "src/main.tsx",
+        "id": "ev:ef2b51269f4b272c22ea2b9b",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 45,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 76,
+        "file": "src/main.tsx",
+        "id": "ev:efb762fa80306365c42cafd2",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 76,
+        "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 4,
+        "file": "src/App.tsx",
+        "id": "ev:f53020350ebe2e8b9f3541a1",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 4,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 60,
+        "file": "src/main.tsx",
+        "id": "ev:f979d0e0cd1525e188411fcb",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 60,
+        "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 15,
+        "file": "src/App.tsx",
+        "id": "ev:fa8b2c217741615eac2b91fb",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 15,
+        "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 5,
+        "file": "src/main.tsx",
+        "id": "ev:fb43ee4e318503acec90da38",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 5,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 110,
+        "file": "src/main.tsx",
+        "id": "ev:file:1cd8b18798a1a103bfe13bef",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "startLine": 1,
+        "symbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 65,
+        "file": "src/App.tsx",
+        "id": "ev:file:26ad4b834941d9b19ebf9db8",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "startLine": 1,
+        "symbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d"
+      }
+    ],
+    "paths": [
+      "src/App.tsx",
+      "src/main.tsx"
+    ],
+    "sideEffects": [
+      {
+        "evidenceIds": [
+          "ev:04e60276a5a09f434a304b79"
+        ],
+        "id": "effect:33e6e925da858c322cf72f01",
+        "kind": "environment",
+        "operation": "read",
+        "target": "external:environment"
+      },
+      {
+        "evidenceIds": [
+          "ev:f979d0e0cd1525e188411fcb"
+        ],
+        "id": "effect:818b1016c6269541bc2fa5c5",
+        "kind": "message_system",
+        "operation": "emit",
+        "target": "external:message-system"
+      }
+    ],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:efb762fa80306365c42cafd2"
+        ],
+        "id": "edge:016aa888acc399c22ff047bf",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/authStore.ts:authStore::configureUserSessionReset:c9a6dcd7362ebbf5",
+          "unresolvedText": "configureUserSessionReset"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:e18c0f17faf54888c7049d07"
+        ],
+        "id": "edge:0432974a9d692b371fa75ed4",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/auth/LoginPage.tsx:src/components/auth/LoginPage.tsx:7bdee75cbf247583",
+            "sym:typescript:src/components/auth/LoginPage.tsx:LoginPage::LoginPage:4f38cfc63c87d9d2"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/auth/LoginPage"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:026ce55736db646e674bf68c"
+        ],
+        "id": "edge:05257082b8a6b4aad1ca6959",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+          "unresolvedText": "start"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:d02fed506d84e62f90f8bc2e"
+        ],
+        "id": "edge:0cdf7550066387824ee649d7",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/configStore.ts:configStore::initializeRuntimeConfig:81c9e7c484229703",
+          "unresolvedText": "initializeRuntimeConfig"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:c314ea51f4d5d6a1abb52aba"
+        ],
+        "id": "edge:0d1b01459ccfb4d7f60794d8",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/eventTypes/apiEventTypeService.ts:src/services/eventTypes/apiEventTypeService.ts:9131cd94dad51bc4",
+          "unresolvedText": "./services/eventTypes/apiEventTypeService"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:940c453577de32f7f544defc"
+        ],
+        "id": "edge:0ea2de918b9310ab12519806",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/desktopRuntime.ts:src/services/desktopRuntime.ts:aed94f4736267011",
+          "unresolvedText": "./services/desktopRuntime"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:bcb6ec964d3fa424c2a6977d"
+        ],
+        "id": "edge:110c952c28f95fc90cd1104d",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useAuthStore.getState().sessionExpired"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:429236abe567dd1f84affe0f"
+        ],
+        "id": "edge:11cffb3da89ab13a62daf349",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "jobs.push"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:518a9450bedb7a0b7c95e2e6"
+        ],
+        "id": "edge:13d3c726c3f8664200b98038",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/authStore.ts:authStore::configureUserSessionRefresh:4d5d787718521b8f",
+          "unresolvedText": "configureUserSessionRefresh"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:d39986c2c6fd2ee3edc96232"
+        ],
+        "id": "edge:142618cafb9011e2adabde57",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/appApiClient.ts:src/services/appApiClient.ts:9a4041ad73e5cd27",
+          "unresolvedText": "./services/appApiClient"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:16b6b884e773dae99820289f"
+        ],
+        "id": "edge:16b9621a1b8496aeca881791",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/longTermMemoryStore.ts:longTermMemoryStore::configureLongTermMemoryClient:a8dcb2760d4bbf19",
+          "unresolvedText": "configureLongTermMemoryClient"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:3a9796365c3911c97375f531"
+        ],
+        "id": "edge:1cfb58f78738add49bd650e1",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+          "unresolvedText": "App"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:4a924e1235e6f812f06a87a2"
+        ],
+        "id": "edge:1ee6e165458efb385801c3eb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/ui/ErrorBoundary.tsx:src/components/ui/ErrorBoundary.tsx:f287bfa658c450b9",
+            "sym:typescript:src/components/ui/ErrorBoundary.tsx:ErrorBoundary::ErrorBoundary:4998c23431ddf1e6"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/ui/ErrorBoundary"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:ba8abf5bac903de7d01218ae"
+        ],
+        "id": "edge:1f0382c2ed105f28de15f849",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "react-dom/client"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:ebc36c0b3c8ddb66a912de11"
+        ],
+        "id": "edge:20d568543fc639c1f0c9c8d2",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/desktop/DesktopUpdateBanner.tsx:src/components/desktop/DesktopUpdateBanner.tsx:dbc12c9a9b81d843",
+            "sym:typescript:src/components/desktop/DesktopUpdateBanner.tsx:DesktopUpdateBanner::DesktopUpdateBanner:7ca1072476392d05"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/desktop/DesktopUpdateBanner"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:6d0617140765274ff8096e7a"
+        ],
+        "id": "edge:244cd56f542987373aac294c",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/components/ui/ErrorBoundary.tsx:ErrorBoundary::ErrorBoundary::render:32e122e0f466a800",
+          "unresolvedText": "createRoot(document.getElementById('root')!).render"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:02ef60a7d37fe9850d824176"
+        ],
+        "id": "edge:293010a86d8398dac2ee20c0",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/desktopRuntime.ts:src/services/desktopRuntime.ts:aed94f4736267011",
+          "unresolvedText": "./services/desktopRuntime"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:e996e2657d4759d9ff53f457"
+        ],
+        "id": "edge:2ff0d965c618836925a6a99f",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/todos/apiTodoService.ts:src/services/todos/apiTodoService.ts:a3a5fc3660b3afb4",
+          "unresolvedText": "./services/todos/apiTodoService"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:37b6aa012c42831d8b31356c"
+        ],
+        "id": "edge:36a349adcc9c54236fc0d508",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/longTermMemoryStore.ts:src/store/longTermMemoryStore.ts:1104f367667201bf",
+          "unresolvedText": "./store/longTermMemoryStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:6ae48e379bb48d210f102783"
+        ],
+        "id": "edge:37dc848cc0b8c0f98de4b06f",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/configStore.ts:src/store/configStore.ts:911ee317f65542ac",
+          "unresolvedText": "./store/configStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:742a0acf028b252a30c9609c"
+        ],
+        "id": "edge:39c288529aab9f5bdfbd2815",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "memory.loadOverview"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:ef2b51269f4b272c22ea2b9b"
+        ],
+        "id": "edge:3accb9c31ebdfdb0ffaf4e45",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useEventStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:1834cbc6603a9c03c5465027"
+        ],
+        "id": "edge:3c2479a1829b703fd1218616",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useEventStore.getState().loadEvents"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:384d391bffe25aed80e04153"
+        ],
+        "id": "edge:3d6bd021fa1ab6c0ea03f838",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useEffect"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:6543897cb4331022329f0c5b"
+        ],
+        "id": "edge:3d9280b2f7e71d900091b65e",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/eventTypeStore.ts:src/store/eventTypeStore.ts:89995df1a4eaead4",
+          "unresolvedText": "./store/eventTypeStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:0b2f5f844905122913849b09"
+        ],
+        "id": "edge:45f3bfa6e6933553b35a1478",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/configStore.ts:configStore::initializeRuntimeConfig:81c9e7c484229703",
+          "unresolvedText": "initializeRuntimeConfig"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:da26c6d65c2a8a7d7677294d"
+        ],
+        "id": "edge:49cb4b21f40af5862483f572",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/fridgeStore.ts:src/store/fridgeStore.ts:21720587c0db843c",
+          "unresolvedText": "./store/fridgeStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:8c2a7161932194ebc54a7830"
+        ],
+        "id": "edge:49ccaeb93fbca0264c441430",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/storage/apiCalendarStorageAdapter.ts:src/services/storage/apiCalendarStorageAdapter.ts:d20dc7c9204fbc97",
+          "unresolvedText": "./services/storage/apiCalendarStorageAdapter"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:06f396e5710f58a5198d8c1e"
+        ],
+        "id": "edge:522be97df2a74c227dc3352e",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+            "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./App"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:eeee6385714f0e13a8bbfd1a"
+        ],
+        "id": "edge:58671909521728e68ae99071",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useTodoStore.getState().loadTodos"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:1d9a6a784ee0446e13ba31e7"
+        ],
+        "id": "edge:596dbefafa908718756018d6",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "checkForDesktopUpdate"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:4e8b2a045a6b5682d0d7f99d"
+        ],
+        "id": "edge:5c0fc4af6d049316f74bc2a9",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/configStore.ts:src/store/configStore.ts:911ee317f65542ac",
+          "unresolvedText": "./store/configStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:8031c572069edc2306364b65"
+        ],
+        "id": "edge:5ebfdeda5981804c700934ac",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/eventStore.ts:eventStore::configureEventSync:95b79226bef0dbc8",
+          "unresolvedText": "configureEventSync"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:ee280efbc67b3d9c413edc0e"
+        ],
+        "id": "edge:61a79713255269f3bc537e3d",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/hooks/useAuth.ts:src/hooks/useAuth.ts:01caf0e816a1c789",
+            "sym:typescript:src/hooks/useAuth.ts:useAuth::useAuth:c9635430edd1b1c1"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./hooks/useAuth"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:3397431cdfbc2ca06df82466"
+        ],
+        "id": "edge:6388e75ba31cb090566ed0fe",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "results.some"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:8f724a4a826ea960f4ea2895"
+        ],
+        "id": "edge:63c295fc3e5c10828e144b97",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "Promise.allSettled"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:35e9cfba9538ff39b7fc4036"
+        ],
+        "id": "edge:6543a64221259af2ced90767",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/storage/apiCalendarStorageAdapter.ts:apiCalendarStorageAdapter::ApiCalendarStorageAdapter:a0c80462c4d3ca72",
+          "unresolvedText": "ApiCalendarStorageAdapter"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:fb43ee4e318503acec90da38"
+        ],
+        "id": "edge:666b06786ff8b27f294f3bc5",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./index.css"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:b25a193d14d5c589d8863cc1"
+        ],
+        "id": "edge:6d21b30e88c2dedd35dd1d7e",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "document.getElementById"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:c8f6c09e311a0e4515a1bca9"
+        ],
+        "id": "edge:6d95c091bde84154d639e102",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/authStore.ts:src/store/authStore.ts:36b553ca52b28851",
+          "unresolvedText": "./store/authStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:bdcf4b8b4fbcfc08ad105205"
+        ],
+        "id": "edge:71eb7c0e4cfb5940cfd37dd9",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/toolSessions/apiToolPresetService.ts:apiToolPresetService::ApiToolPresetService:333f486ac8d8d3d5",
+          "unresolvedText": "ApiToolPresetService"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:adb4b25db3f05e517e2bb8a4"
+        ],
+        "id": "edge:761c2812a95e7546da3024eb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/longTermMemoryClient.ts:longTermMemoryClient::LongTermMemoryClient:f12b60a7c8e6251b",
+          "unresolvedText": "LongTermMemoryClient"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:a33fbc17e7d63bd6d0843963"
+        ],
+        "id": "edge:77216f696bbb8c87087d2f54",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/eventStore.ts:src/store/eventStore.ts:aa2bbc294732ba4a",
+          "unresolvedText": "./store/eventStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:b7f3dd873214544668bb45ae"
+        ],
+        "id": "edge:779754940e1b23f375041414",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useFridgeStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:b00d3156979de25f02990cca"
+        ],
+        "id": "edge:7e6e192fc1528e93ed36b5bb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useToolSessionStore.getState().loadPresets"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:39cb318890e4e4efa0c2ea65"
+        ],
+        "id": "edge:81d095f12e8cb94bb1ffeadb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/calendarApiClient.ts:src/services/calendarApiClient.ts:d5f1b7e66836aac0",
+          "unresolvedText": "./services/calendarApiClient"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:6509b296ce1f414a650a3dcd"
+        ],
+        "id": "edge:8209d07081cc444ca4a8adf6",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/appApiClient.ts:appApiClient::setApiUnauthorizedHandler:eafb2136a46c2fa4",
+          "unresolvedText": "setApiUnauthorizedHandler"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:a14d3d3a0ad4e5205e344981"
+        ],
+        "id": "edge:83035753f736856210b4b492",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/eventTypes/apiEventTypeService.ts:apiEventTypeService::ApiEventTypeService:dca09c8c6ef1ab33",
+          "unresolvedText": "ApiEventTypeService"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:71ee9521fb12b0aa6d5dd7d6"
+        ],
+        "id": "edge:844e25c424f8f417c230a865",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+          "unresolvedText": "refreshUserSessionStores"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:0665eb2c6016b87bca17b0ab"
+        ],
+        "id": "edge:868af3adc931e01c42df19f0",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useEventTypeStore.getState().loadEventTypes"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:b0beb6477e337cade1f46f3f"
+        ],
+        "id": "edge:88c217c69243e1a8fc62b917",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/longTermMemoryClient.ts:src/services/longTermMemoryClient.ts:4cd6b8fe611cae65",
+          "unresolvedText": "./services/longTermMemoryClient"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:97299abb565546748a561bc7"
+        ],
+        "id": "edge:8a7d802b8522080b060f126e",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useEventTypeStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:05fcf279e1f7de45cc9d41cc"
+        ],
+        "id": "edge:8a842cf23e1650b8b809ad35",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:javascript:scripts/e2e-launcher.mjs:e2e-launcher::start:bf0986b52e08ccba",
+            "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+            "sym:typescript:src/hooks/useGoalConversation.ts:useGoalConversation::useGoalConversation::start:2345876ab1a1d086"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "start"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:e949e72586a543f6c67e338f"
+        ],
+        "id": "edge:8b115d59776328b0a4b57748",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/resetUserSession.ts:src/store/resetUserSession.ts:fecbecdf96c8bb46",
+          "unresolvedText": "./store/resetUserSession"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:c50a65fcecb6f79927306454"
+        ],
+        "id": "edge:8db5b0bf09583ff47382cbb9",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useConfigStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:2c1692990f8c04758842e532"
+        ],
+        "id": "edge:8f8aad7e6ca02056618d3359",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/toolSessionStore.ts:toolSessionStore::configureToolPresetService:30ec96c0b3df557c",
+          "unresolvedText": "configureToolPresetService"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:d8c9188ac2f137d5402ac544"
+        ],
+        "id": "edge:925680ff2b5d9de7f8344830",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useToolSessionStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:7ef79d245d8c5e62c6d1ff22"
+        ],
+        "id": "edge:9539e1ebf5d976d6f6d6dedd",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "createRoot"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:4c1f479c466971a1e1c51864"
+        ],
+        "id": "edge:9960fe6a318d7b7e2f17df29",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+          "unresolvedText": "configureApiBackedServices"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:978cffa913f71ff8deab4b30"
+        ],
+        "id": "edge:99b082802ff16b6d5962df41",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "memory.loadProjectDetails"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:cbdbc28ee43fe52c5ecfa953"
+        ],
+        "id": "edge:9ba92ee9ef38ef9030928f5f",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "react"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:c28d3714c7eaf306d54bbf40"
+        ],
+        "id": "edge:a0c0d66166b9eee00ad0ba99",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+          "unresolvedText": "configureApiBackedServices"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:4cfa3b110c2fbd977e935cbb"
+        ],
+        "id": "edge:a940c0ab29d68815739f96b0",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useAuthStore.setState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:47a827324fef41d063257025"
+        ],
+        "id": "edge:aae40ab12441ed9ca095a742",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/hooks/useDesktopUpdate.ts:src/hooks/useDesktopUpdate.ts:bae447eb95e69bf7",
+            "sym:typescript:src/hooks/useDesktopUpdate.ts:useDesktopUpdate::useDesktopUpdate:ee389244da15be88"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useDesktopUpdate"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:99a87753e21d6eb030c4b2f6"
+        ],
+        "id": "edge:b2a03b2e529fb706cfed22cf",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useFridgeStore.getState().loadInventory"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:04e60276a5a09f434a304b79"
+        ],
+        "id": "edge:b2a47120af48940c3553898c",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:environment",
+          "symbolId": null,
+          "unresolvedText": "configureRuntimeEnvironment"
+        },
+        "type": "reads"
+      },
+      {
+        "evidenceIds": [
+          "ev:cb768aa98549e36b41c72774"
+        ],
+        "id": "edge:b35d00dceb4277053846f1fd",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/todos/apiTodoService.ts:apiTodoService::ApiTodoService:13d2b9ed462494dd",
+          "unresolvedText": "ApiTodoService"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:15515f5df0a935e5f866ac19"
+        ],
+        "id": "edge:b3620499305e42d5f5e0238b",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/todoStore.ts:src/store/todoStore.ts:46fd0ba535386b44",
+          "unresolvedText": "./store/todoStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:78650a1b9da79da005419cb2"
+        ],
+        "id": "edge:b82cc03b146b438c4f5b18ca",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/domain/schemas/event.schema.ts:event.schema::Event:a6d4786620cfdb55",
+          "unresolvedText": "Event"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:4c9e020cef15c3a01d6c56ff"
+        ],
+        "id": "edge:b9c10c9543c270f7e87522db",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/calendar/CalendarShell.tsx:src/components/calendar/CalendarShell.tsx:797551cd956d818c",
+            "sym:typescript:src/components/calendar/CalendarShell.tsx:CalendarShell::CalendarShell:ccb7470ef2b84e3b"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/calendar/CalendarShell"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:220966b26baf318935c66387"
+        ],
+        "id": "edge:bc8d56f41e0939d431e901e7",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/eventTypeStore.ts:eventTypeStore::configureEventTypeService:743707bef3004535",
+          "unresolvedText": "configureEventTypeService"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:b6bf497acabd9204219b0427"
+        ],
+        "id": "edge:c0e1aae5ee7a3a3fffff6d76",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:python:backend/server.py:server::create_app::bootstrap:8aa76df869680496",
+          "unresolvedText": "useAuthStore.getState().bootstrap"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:6bc5409e2c1850ea8fa22888"
+        ],
+        "id": "edge:c2c4344551fc2ee87b0b57c3",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/toolSessionStore.ts:src/store/toolSessionStore.ts:e5bb0b815378e6e0",
+          "unresolvedText": "./store/toolSessionStore"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:641514dc48b3dc47d4563eaa"
+        ],
+        "id": "edge:cd685b0e58890453a71ccf27",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/desktopRuntime.ts:desktopRuntime::desktopRuntimeInfo:c50c310169c4cb93",
+          "unresolvedText": "desktopRuntimeInfo"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:75da0fad68bc28074f750a4f"
+        ],
+        "id": "edge:ce383d3f7fea34f67177c4b9",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useLongTermMemoryStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:e250caa0e70f77b39186e7bf"
+        ],
+        "id": "edge:d16fba15f97e25b2216e95d7",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/auth/StartupRecoveryPage.tsx:src/components/auth/StartupRecoveryPage.tsx:bd9e781dfa4cace1",
+            "sym:typescript:src/components/auth/StartupRecoveryPage.tsx:StartupRecoveryPage::StartupRecoveryPage:3f953fcf3fae36ff"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/auth/StartupRecoveryPage"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:d2d25863fc29cf636ed2753a"
+        ],
+        "id": "edge:dd64cf26f1401fd8d8dfff8d",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/toolSessions/apiToolPresetService.ts:src/services/toolSessions/apiToolPresetService.ts:3c3e64eb87cd93e6",
+          "unresolvedText": "./services/toolSessions/apiToolPresetService"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:f53020350ebe2e8b9f3541a1"
+        ],
+        "id": "edge:dfa412fba4fb14f699473730",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/components/auth/AccountBar.tsx:src/components/auth/AccountBar.tsx:837c4773051760c0",
+            "sym:typescript:src/components/auth/AccountBar.tsx:AccountBar::AccountBar:1ad9d8fbe22c5bae"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./components/auth/AccountBar"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:3b3d92719fd7bf3b55d02e2d"
+        ],
+        "id": "edge:e4474fb482e079a5f9029531",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/hooks/useDesktopUpdate.ts:src/hooks/useDesktopUpdate.ts:bae447eb95e69bf7",
+            "sym:typescript:src/hooks/useDesktopUpdate.ts:useDesktopUpdate::useDesktopUpdate:ee389244da15be88"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "./hooks/useDesktopUpdate"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:71ad53ddd124795ba611366e"
+        ],
+        "id": "edge:e7caf26cededa036b9c5fdd5",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "react"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:4529147648d174e6a9993902"
+        ],
+        "id": "edge:e86ae8428c65e966966b5443",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "element.toggleAttribute"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:605081407c470913e885f94e"
+        ],
+        "id": "edge:e8af79b7d117bdaa4a5612fa",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useTodoStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:82d404eb8765d50a88321074"
+        ],
+        "id": "edge:e93499e87eed7cdf4741fabb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "Error"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:51a1c8cc22ba8ec0264b3bd1"
+        ],
+        "id": "edge:eb756115cb846674ea573cb3",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/calendarApiClient.ts:calendarApiClient::CalendarApiClient:96494b12ce9d58ae",
+          "unresolvedText": "CalendarApiClient"
+        },
+        "type": "constructs"
+      },
+      {
+        "evidenceIds": [
+          "ev:f979d0e0cd1525e188411fcb"
+        ],
+        "id": "edge:ef745e204798a1c91a675686",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": "external:message-system",
+          "symbolId": null,
+          "unresolvedText": "window.dispatchEvent"
+        },
+        "type": "emits"
+      },
+      {
+        "evidenceIds": [
+          "ev:57341ed13bde174a4b985694"
+        ],
+        "id": "edge:f0264eac49d37a7215cd23f9",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/appApiClient.ts:appApiClient::apiBaseUrl:8ce7f890da18b461",
+          "unresolvedText": "apiBaseUrl"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:5dd52c31039f694140e3a1e9"
+        ],
+        "id": "edge:f1b1531c473894f4c667d5eb",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/services/desktopRuntime.ts:desktopRuntime::configureDesktopRuntime:14388eabfe3e5126",
+          "unresolvedText": "configureDesktopRuntime"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:129b52aaad7defe82b32b267"
+        ],
+        "id": "edge:f4c8c4a48646801c077eae98",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "window.alert"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:e396d24027b32c9af93f8ee5"
+        ],
+        "id": "edge:f9608cac473701449b3a2af3",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useAuthStore.getState"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:fa8b2c217741615eac2b91fb"
+        ],
+        "id": "edge:f9c5176eb116553135f8d602",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "probable",
+        "sourceSymbolId": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "target": {
+          "candidateSymbolIds": [
+            "sym:typescript:src/hooks/useAuth.ts:src/hooks/useAuth.ts:01caf0e816a1c789",
+            "sym:typescript:src/hooks/useAuth.ts:useAuth::useAuth:c9635430edd1b1c1"
+          ],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "useAuth"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:cd3767f559182e9a9c957ffc"
+        ],
+        "id": "edge:ffb4bde99889fe47a792f16a",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:src/store/todoStore.ts:todoStore::configureTodoService:45f042de2f0d0b37",
+          "unresolvedText": "configureTodoService"
+        },
+        "type": "calls"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "fc271472533069e55602ce85f4eed2b3cfc509ad4cd223dffba8c0dc2304df16",
+        "errors": [],
+        "evidenceIds": [
+          "ev:3a9796365c3911c97375f531"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/App.tsx:App::App:e06d95e530dc0d6a",
+        "inputs": [],
+        "kind": "function",
+        "language": "typescript",
+        "location": {
+          "endLine": 65,
+          "file": "src/App.tsx",
+          "startLine": 14
+        },
+        "name": "App",
+        "output": null,
+        "qualifiedName": "App::App",
+        "sideEffects": [],
+        "signature": "function App()",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:3a9796365c3911c97375f531"
+            ],
+            "inputs": [],
+            "normalized": "function App()",
+            "output": null,
+            "raw": "function App()",
+            "signatureId": "sig:e06d95e530dc0d6a229c41f0",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "7065fafc7536b860dc9b9e1958c417493a9465ecb967cd75c1c50957ebfc5368",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:26ad4b834941d9b19ebf9db8"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/App.tsx:src/App.tsx:39afcd59c2c1378d",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 65,
+          "file": "src/App.tsx",
+          "startLine": 1
+        },
+        "name": "App",
+        "output": null,
+        "qualifiedName": "src/App.tsx",
+        "sideEffects": [],
+        "signature": "module src/App.tsx",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:26ad4b834941d9b19ebf9db8"
+            ],
+            "inputs": [],
+            "normalized": "module src/App.tsx",
+            "output": null,
+            "raw": "module src/App.tsx",
+            "signatureId": "sig:39afcd59c2c1378de703117f",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "754ba25183f9e98623b45b19ec510a3c7e1a8c4c5494ebe965696f3a159dec54",
+        "errors": [],
+        "evidenceIds": [
+          "ev:4c1f479c466971a1e1c51864"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/main.tsx:main::configureApiBackedServices:1166c65c6da8464b",
+        "inputs": [],
+        "kind": "function",
+        "language": "typescript",
+        "location": {
+          "endLine": 41,
+          "file": "src/main.tsx",
+          "startLine": 32
+        },
+        "name": "configureApiBackedServices",
+        "output": null,
+        "qualifiedName": "main::configureApiBackedServices",
+        "sideEffects": [],
+        "signature": "function configureApiBackedServices()",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:4c1f479c466971a1e1c51864"
+            ],
+            "inputs": [],
+            "normalized": "function configureApiBackedServices()",
+            "output": null,
+            "raw": "function configureApiBackedServices()",
+            "signatureId": "sig:1166c65c6da8464b21efe182",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "229ed9301b92410527bdf6b449436fc1268403bf0a3cd94de55d2f5c60f732d9",
+        "errors": [],
+        "evidenceIds": [
+          "ev:71ee9521fb12b0aa6d5dd7d6"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/main.tsx:main::refreshUserSessionStores:4cc897153aead4d5",
+        "inputs": [],
+        "kind": "function",
+        "language": "typescript",
+        "location": {
+          "endLine": 61,
+          "file": "src/main.tsx",
+          "startLine": 42
+        },
+        "name": "refreshUserSessionStores",
+        "output": null,
+        "qualifiedName": "main::refreshUserSessionStores",
+        "sideEffects": [
+          {
+            "evidenceIds": [
+              "ev:f979d0e0cd1525e188411fcb"
+            ],
+            "id": "effect:818b1016c6269541bc2fa5c5",
+            "kind": "message_system",
+            "operation": "emit",
+            "target": "external:message-system"
+          }
+        ],
+        "signature": "async function refreshUserSessionStores()",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:71ee9521fb12b0aa6d5dd7d6"
+            ],
+            "inputs": [],
+            "normalized": "async function refreshUserSessionStores()",
+            "output": null,
+            "raw": "async function refreshUserSessionStores()",
+            "signatureId": "sig:4cc897153aead4d566e3a8b7",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "0741228640c8053072d55ccafd6da2104ee331eac22ec6f1a56d428f399398e0",
+        "errors": [],
+        "evidenceIds": [
+          "ev:026ce55736db646e674bf68c"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/main.tsx:main::start:090f31728bfb27a2",
+        "inputs": [],
+        "kind": "function",
+        "language": "typescript",
+        "location": {
+          "endLine": 108,
+          "file": "src/main.tsx",
+          "startLine": 63
+        },
+        "name": "start",
+        "output": null,
+        "qualifiedName": "main::start",
+        "sideEffects": [
+          {
+            "evidenceIds": [
+              "ev:04e60276a5a09f434a304b79"
+            ],
+            "id": "effect:33e6e925da858c322cf72f01",
+            "kind": "environment",
+            "operation": "read",
+            "target": "external:environment"
+          }
+        ],
+        "signature": "async function start()",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:026ce55736db646e674bf68c"
+            ],
+            "inputs": [],
+            "normalized": "async function start()",
+            "output": null,
+            "raw": "async function start()",
+            "signatureId": "sig:090f31728bfb27a2e8bd4cd6",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "ae0ccb03dacfba22b85428e8f9f5f55d6bed6fdb1b3d70c144a2da9371800688",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:1cd8b18798a1a103bfe13bef"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/main.tsx:src/main.tsx:2253fbda9f8c105c",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 110,
+          "file": "src/main.tsx",
+          "startLine": 1
+        },
+        "name": "main",
+        "output": null,
+        "qualifiedName": "src/main.tsx",
+        "sideEffects": [],
+        "signature": "module src/main.tsx",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:1cd8b18798a1a103bfe13bef"
+            ],
+            "inputs": [],
+            "normalized": "module src/main.tsx",
+            "output": null,
+            "raw": "module src/main.tsx",
+            "signatureId": "sig:2253fbda9f8c105cd6a164d8",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "src",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "findings": [
+    {
+      "id": "AUD-0001",
+      "title": "客户端信任服务端价格回显",
+      "type": "correctness",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "open",
+      "confidence": "medium",
+      "componentIds": [
+        "web",
+        "api"
+      ],
+      "locations": [
+        {
+          "file": "src/web/cart.tsx",
+          "startLine": 122,
+          "endLine": null
+        }
+      ],
+      "evidence": "提交订单时客户端价格被重新发送，服务端处理路径尚未明确忽略该字段。",
+      "recommendation": "服务端只根据商品和促销规则重新计算价格。",
+      "acceptanceCriteria": [
+        "篡改请求价格不会改变订单金额"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "RUN-DEMO"
+      },
+      "firstSeenCommit": null,
+      "lastVerifiedCommit": null,
+      "fingerprint": "correctness-8f02a114",
+      "verificationPending": null,
+      "custom": {}
+    }
+  ]
+}

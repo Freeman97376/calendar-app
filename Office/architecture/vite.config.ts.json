@@ -1,0 +1,366 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 2,
+        "file": "vite.config.ts",
+        "id": "ev:1b580e4adcc1b36eda878ddd",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 2,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 28,
+        "file": "vite.config.ts",
+        "id": "ev:49883174e719254b30206eb2",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 4,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 9,
+        "file": "vite.config.ts",
+        "id": "ev:56c5801477eb7ce64c5d0a0b",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 9,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 1,
+        "file": "vite.config.ts",
+        "id": "ev:92bfd0a16fd383b8a479a540",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 1,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 17,
+        "file": "vite.config.ts",
+        "id": "ev:b4b67500c34ab19182f09747",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 17,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 11,
+        "file": "vite.config.ts",
+        "id": "ev:b72cf8b8c3fc8220ee6d9508",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 11,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 13,
+        "file": "vite.config.ts",
+        "id": "ev:ee49ba4ab4f2d6df50cb4ecb",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 8,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 10,
+        "file": "vite.config.ts",
+        "id": "ev:fc37d1c6d60d36166f1e34db",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 10,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b"
+      },
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 28,
+        "file": "vite.config.ts",
+        "id": "ev:file:6a3b01ba97829c9566ef2d8d",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "startLine": 1,
+        "symbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868"
+      }
+    ],
+    "paths": [
+      "vite.config.ts"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [
+      {
+        "evidenceIds": [
+          "ev:92bfd0a16fd383b8a479a540"
+        ],
+        "id": "edge:1bfea5fe6d07df19f833a1c3",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "vite"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:b4b67500c34ab19182f09747"
+        ],
+        "id": "edge:36899657c67402a876639b57",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "react"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:ee49ba4ab4f2d6df50cb4ecb"
+        ],
+        "id": "edge:8e4979870b99d32c5009a21c",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "resolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b",
+          "unresolvedText": "manualChunks"
+        },
+        "type": "contains"
+      },
+      {
+        "evidenceIds": [
+          "ev:1b580e4adcc1b36eda878ddd"
+        ],
+        "id": "edge:a46ed9df36de322235257321",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "@vitejs/plugin-react"
+        },
+        "type": "imports"
+      },
+      {
+        "evidenceIds": [
+          "ev:49883174e719254b30206eb2"
+        ],
+        "id": "edge:b4c5d46791c0df9cefc1056b",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "defineConfig"
+        },
+        "type": "calls"
+      },
+      {
+        "evidenceIds": [
+          "ev:56c5801477eb7ce64c5d0a0b"
+        ],
+        "id": "edge:fc63d5eaace33148941b0141",
+        "matchedSignatureId": null,
+        "observationIds": [],
+        "provenance": "static",
+        "resolution": "unresolved",
+        "sourceSymbolId": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b",
+        "target": {
+          "candidateSymbolIds": [],
+          "externalId": null,
+          "symbolId": null,
+          "unresolvedText": "id.includes"
+        },
+        "type": "calls"
+      }
+    ],
+    "symbols": [
+      {
+        "bodyHash": "af80b7836ff95a51e8beec9603435c7a5c28f323c10f5ea1d790d9df1d13365e",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:6a3b01ba97829c9566ef2d8d"
+        ],
+        "generated": false,
+        "id": "sym:typescript:vite.config.ts:vite.config.ts:a66d8ed4de437868",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 28,
+          "file": "vite.config.ts",
+          "startLine": 1
+        },
+        "name": "vite.config",
+        "output": null,
+        "qualifiedName": "vite.config.ts",
+        "sideEffects": [],
+        "signature": "module vite.config.ts",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:6a3b01ba97829c9566ef2d8d"
+            ],
+            "inputs": [],
+            "normalized": "module vite.config.ts",
+            "output": null,
+            "raw": "module vite.config.ts",
+            "signatureId": "sig:a66d8ed4de437868eea438ed",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      },
+      {
+        "bodyHash": "498a808d7321d444d072198b5006227beb2b289ec5f0b0379bb9905f96f6e197",
+        "errors": [],
+        "evidenceIds": [
+          "ev:ee49ba4ab4f2d6df50cb4ecb"
+        ],
+        "generated": false,
+        "id": "sym:typescript:vite.config.ts:vite.config::manualChunks:4b6833714510023b",
+        "inputs": [
+          {
+            "hasDefault": false,
+            "name": "id",
+            "type": {
+              "genericArgs": [],
+              "native": "unknown",
+              "normalized": "object",
+              "nullable": false,
+              "optional": false,
+              "resolvedSymbolId": null
+            }
+          }
+        ],
+        "kind": "method",
+        "language": "typescript",
+        "location": {
+          "endLine": 13,
+          "file": "vite.config.ts",
+          "startLine": 8
+        },
+        "name": "manualChunks",
+        "output": null,
+        "qualifiedName": "vite.config::manualChunks",
+        "sideEffects": [],
+        "signature": "manualChunks(id)",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:ee49ba4ab4f2d6df50cb4ecb"
+            ],
+            "inputs": [
+              {
+                "hasDefault": false,
+                "name": "id",
+                "type": {
+                  "genericArgs": [],
+                  "native": "unknown",
+                  "normalized": "object",
+                  "nullable": false,
+                  "optional": false,
+                  "resolvedSymbolId": null
+                }
+              }
+            ],
+            "normalized": "manualChunks(id)",
+            "output": null,
+            "raw": "manualChunks(id)",
+            "signatureId": "sig:4b6833714510023b4baafbce",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "vite.config.ts",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

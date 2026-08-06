@@ -105,6 +105,7 @@ Choose only from enabledTools supplied in the request. Never invent or create a 
 Set matchedProjectId to null and confidence to 0 when no active tool clearly matches.
 Use alias, toolName, longTermGoalLabel, toolFeatures, implementationPlan, routeTags, sourceToolId, and activationSummary to decide.
 Preserve the user's request in rewrittenInstruction, only tightening it for the matched tool when helpful.
+Always include rewrittenInstruction, even when matchedProjectId is null. If no rewrite is needed, copy userMessage exactly.
 Use only the documented keys. Omit optional fields instead of returning null.`
 
 const breakdownJsonShape = `{
@@ -436,7 +437,7 @@ export class ApiAIService implements IAIService {
       ].join('\n'),
       1024,
       undefined,
-      normalizeEnabledToolRouteOutput,
+      (value) => normalizeEnabledToolRouteOutput(value, request),
       'route',
     )
   }
@@ -845,9 +846,10 @@ function normalizeActivationForm(
   const draft = request?.activationFormDraft ?? {}
   const form = Object.fromEntries(
     activationFields.map((field) => {
-      const draftValue = hasOwnValue(draft, field.id) ? draft[field.id]?.trim() ?? '' : undefined
-      const modelValue = hasOwnValue(modelForm, field.id) ? modelForm[field.id]?.trim() ?? '' : ''
-      const value = draftValue || modelValue || (draftValue === '' ? '' : field.defaultValue ?? '')
+      const draftValue = hasOwnValue(draft, field.id) ? (draft[field.id]?.trim() ?? '') : undefined
+      const modelValue = hasOwnValue(modelForm, field.id) ? (modelForm[field.id]?.trim() ?? '') : ''
+      const value =
+        draftValue || modelValue || (draftValue === '' ? '' : (field.defaultValue ?? ''))
       return [field.id, value]
     }),
   )
@@ -916,7 +918,10 @@ function normalizeToolActivationOutput(value: unknown, request?: AIToolActivatio
   })
 }
 
-function normalizeEnabledToolRouteOutput(value: unknown): unknown {
+function normalizeEnabledToolRouteOutput(
+  value: unknown,
+  request: AIEnabledToolRouteRequest,
+): unknown {
   const output = unwrapStructuredOutput(value)
   if (!isRecord(output)) return output
 
@@ -926,7 +931,7 @@ function normalizeEnabledToolRouteOutput(value: unknown): unknown {
     matchedProjectId: output.matchedProjectId === '' ? null : output.matchedProjectId,
     needsConfirmation: booleanFromUnknown(output.needsConfirmation),
     reason: optionalString(output.reason),
-    rewrittenInstruction: optionalString(output.rewrittenInstruction),
+    rewrittenInstruction: optionalString(output.rewrittenInstruction) ?? request.userMessage,
   })
 }
 

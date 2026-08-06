@@ -349,6 +349,55 @@ describe('ApiAIService', () => {
     expect(result.suggestedInstanceAlias).toBe('groceries')
   })
 
+  it.each([undefined, null, '  '])(
+    'routeEnabledTool falls back to the original message when rewrittenInstruction is %p',
+    async (rewrittenInstruction) => {
+      const service = new ApiAIService({
+        apiKey: 'test-key',
+        fetcher: vi.fn(async () =>
+          apiResponse({
+            confidence: 0,
+            matchedProjectId: null,
+            needsConfirmation: true,
+            reason: 'No active tool matched the message.',
+            rewrittenInstruction,
+          }),
+        ),
+      })
+
+      const result = await service.routeEnabledTool({
+        enabledTools: [],
+        today: '2026-07-29',
+        userMessage: 'Plan tomorrow afternoon.',
+      })
+
+      expect(result.rewrittenInstruction).toBe('Plan tomorrow afternoon.')
+    },
+  )
+
+  it('routeEnabledTool preserves a valid rewritten instruction', async () => {
+    const service = new ApiAIService({
+      apiKey: 'test-key',
+      fetcher: vi.fn(async () =>
+        apiResponse({
+          confidence: 0.9,
+          matchedProjectId: 'project-1',
+          needsConfirmation: true,
+          reason: 'Matched the planning tool.',
+          rewrittenInstruction: 'Prepare a focused plan for tomorrow afternoon.',
+        }),
+      ),
+    })
+
+    const result = await service.routeEnabledTool({
+      enabledTools: [],
+      today: '2026-07-29',
+      userMessage: 'Plan tomorrow afternoon.',
+    })
+
+    expect(result.rewrittenInstruction).toBe('Prepare a focused plan for tomorrow afternoon.')
+  })
+
   it('planCalendarActions sends authoritative local time context to the API model', async () => {
     const fetcher = vi.fn(async () =>
       apiResponse({

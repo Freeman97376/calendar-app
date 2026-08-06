@@ -1,0 +1,93 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-typescript",
+        "endLine": 21,
+        "file": "src/types/longTermMemory.ts",
+        "id": "ev:file:c60b8d1b9f35f18342ea6098",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "48922fcbea702e8d367f31ef5d250711b2faf283bb8e8f32b7635950da0b6ff9",
+        "startLine": 1,
+        "symbolId": "sym:typescript:src/types/longTermMemory.ts:src/types/longTermMemory.ts:49d9b881b0f26989"
+      }
+    ],
+    "paths": [
+      "src/types/longTermMemory.ts"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [],
+    "symbols": [
+      {
+        "bodyHash": "48922fcbea702e8d367f31ef5d250711b2faf283bb8e8f32b7635950da0b6ff9",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:c60b8d1b9f35f18342ea6098"
+        ],
+        "generated": false,
+        "id": "sym:typescript:src/types/longTermMemory.ts:src/types/longTermMemory.ts:49d9b881b0f26989",
+        "inputs": [],
+        "kind": "module",
+        "language": "typescript",
+        "location": {
+          "endLine": 21,
+          "file": "src/types/longTermMemory.ts",
+          "startLine": 1
+        },
+        "name": "longTermMemory",
+        "output": null,
+        "qualifiedName": "src/types/longTermMemory.ts",
+        "sideEffects": [],
+        "signature": "module src/types/longTermMemory.ts",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:c60b8d1b9f35f18342ea6098"
+            ],
+            "inputs": [],
+            "normalized": "module src/types/longTermMemory.ts",
+            "output": null,
+            "raw": "module src/types/longTermMemory.ts",
+            "signatureId": "sig:49d9b881b0f26989f6062b60",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [
+      "Module responsibility inferred from code location (confirm in draft)"
+    ],
+    "summary": "Module responsibility inferred from code location (confirm in draft)",
+    "tags": [
+      "scan-draft",
+      "JavaScript/TypeScript"
+    ],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "src-types",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}

@@ -1,0 +1,88 @@
+{
+  "$schema": "../schemas/component-v2.schema.json",
+  "analysis": {
+    "dataFlows": [],
+    "dependencies": [],
+    "diagnostics": [],
+    "entrypoints": [],
+    "evidence": [
+      {
+        "analyzer": "tree-sitter-javascript",
+        "endLine": 6,
+        "file": "postcss.config.js",
+        "id": "ev:file:05ed1c7f99e45b4857081155",
+        "inputHash": null,
+        "profileId": null,
+        "provenance": "static",
+        "runId": null,
+        "sourceHash": "47f2dff3208826bf663a9ca490b376a130a8153e0e8e713aed09b9f42289a3bd",
+        "startLine": 1,
+        "symbolId": "sym:javascript:postcss.config.js:postcss.config.js:a5920349204f5e1e"
+      }
+    ],
+    "paths": [
+      "postcss.config.js"
+    ],
+    "sideEffects": [],
+    "symbolEdges": [],
+    "symbols": [
+      {
+        "bodyHash": "47f2dff3208826bf663a9ca490b376a130a8153e0e8e713aed09b9f42289a3bd",
+        "errors": [],
+        "evidenceIds": [
+          "ev:file:05ed1c7f99e45b4857081155"
+        ],
+        "generated": false,
+        "id": "sym:javascript:postcss.config.js:postcss.config.js:a5920349204f5e1e",
+        "inputs": [],
+        "kind": "module",
+        "language": "javascript",
+        "location": {
+          "endLine": 6,
+          "file": "postcss.config.js",
+          "startLine": 1
+        },
+        "name": "postcss.config",
+        "output": null,
+        "qualifiedName": "postcss.config.js",
+        "sideEffects": [],
+        "signature": "module postcss.config.js",
+        "signatures": [
+          {
+            "errors": [],
+            "evidenceIds": [
+              "ev:file:05ed1c7f99e45b4857081155"
+            ],
+            "inputs": [],
+            "normalized": "module postcss.config.js",
+            "output": null,
+            "raw": "module postcss.config.js",
+            "signatureId": "sig:a5920349204f5e1ea40e3ec0",
+            "typeParameters": []
+          }
+        ],
+        "status": "active",
+        "supersedes": [],
+        "visibility": "internal"
+      }
+    ],
+    "testPaths": [],
+    "tombstones": []
+  },
+  "curation": {
+    "keyFlows": [],
+    "nonResponsibilities": [],
+    "owner": null,
+    "responsibilities": [],
+    "summary": "Deterministically analyzed code component.",
+    "tags": [],
+    "userNotes": ""
+  },
+  "identity": {
+    "aliases": [],
+    "componentId": "postcss.config.js",
+    "supersedes": []
+  },
+  "observations": [],
+  "schemaVersion": 2
+}
