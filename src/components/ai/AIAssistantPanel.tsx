@@ -6,6 +6,7 @@ import { useAI, type AIComposerOptions } from '../../hooks/useAI'
 import { useI18n } from '../../hooks/useI18n'
 import { useRuntimeConfig } from '../../hooks/useRuntimeConfig'
 import { useWorkspacePanel } from '../../hooks/useWorkspacePanel'
+import { useActiveToolOnboardingPanel } from '../../hooks/useActiveToolOnboardingPanel'
 import Button from '../ui/Button'
 import AIMessageBubble from './AIMessageBubble'
 import AIScheduleSuggestion from './AIScheduleSuggestion'
@@ -63,6 +64,11 @@ export default function AIAssistantPanel() {
   const ai = useAI()
   const approvalDrawer = useApprovalDrawer()
   const runtimeConfig = useRuntimeConfig()
+  const {
+    clear: clearActiveToolOnboarding,
+    seed: onboardingSeed,
+    start: startActiveToolOnboarding,
+  } = useActiveToolOnboardingPanel()
   const workspace = useWorkspacePanel()
   const { t } = useI18n()
   const [mode, setMode] = useState<ComposerMode>('chat')
@@ -84,9 +90,17 @@ export default function AIAssistantPanel() {
   }, [ai.model, ai.provider])
 
   useEffect(() => {
+    if (onboardingSeed) setShowGoalConversation(true)
+  }, [onboardingSeed])
+  useEffect(() => {
     setActivationDraft(ai.pendingToolTemplateActivation?.activationFormDraft ?? {})
     setEditingTemplateDetails(false)
   }, [ai.pendingToolTemplateActivation])
+
+  const missingRecommendedFields =
+    ai.pendingToolTemplateActivation?.activationFields.filter(
+      (field) => field.recommended && !activationDraft[field.id]?.trim(),
+    ) ?? []
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -101,6 +115,7 @@ export default function AIAssistantPanel() {
       confirmActiveToolRouting,
       includeCalendarContext,
       includeTodoContext,
+      recordToolCreationJourney: mode === 'tools',
     }
 
     if (mode === 'goal') {
@@ -141,8 +156,38 @@ export default function AIAssistantPanel() {
     ai.setModel(nextModel)
   }
 
+  function beginTemplateOnboarding() {
+    const pending = ai.pendingToolTemplateActivation
+    if (!pending) return
+    const mergedActivationForm = { ...pending.activationFormDraft, ...activationDraft }
+    const accuracyNotes = missingRecommendedFields.map(
+      (field) =>
+        'Missing recommended ' +
+        field.label +
+        ': ' +
+        (field.accuracyImpact ?? t('ai.accuracyMayBeLower')),
+    )
+
+    startActiveToolOnboarding({
+      activationForm: mergedActivationForm,
+      activationSummary: accuracyNotes.length
+        ? 'Accuracy notes:\\n' + accuracyNotes.map((note) => '- ' + note).join('\\n')
+        : pending.reason,
+      journeyId: pending.journeyId,
+      originalRequest: pending.originalMessage,
+      routeTags: pending.template.routeTags ?? [],
+      source: 'ai-assistant',
+      suggestedInstanceAlias: pending.template.label,
+      template: pending.template,
+    })
+    ai.clearToolTemplateActivation()
+    setShowGoalConversation(true)
+  }
+
   if (showGoalConversation) {
-    return <GoalConversationPanel onClose={() => setShowGoalConversation(false)} />
+    return (
+      <GoalConversationPanel onClose={() => setShowGoalConversation(false)} seed={onboardingSeed} />
+    )
   }
 
   return (
@@ -159,7 +204,13 @@ export default function AIAssistantPanel() {
             <Button onClick={() => workspace.openPanel('tools')} variant="ghost">
               {t('panel.toolTemplates')}
             </Button>
-            <Button onClick={() => setShowGoalConversation(true)} variant="primary">
+            <Button
+              onClick={() => {
+                clearActiveToolOnboarding()
+                setShowGoalConversation(true)
+              }}
+              variant="primary"
+            >
               {t('ai.newLongTermGoal')}
             </Button>
           </div>
@@ -396,21 +447,15 @@ export default function AIAssistantPanel() {
               </div>
             ) : null}
 
-            {ai.pendingToolTemplateActivation.missingRecommendedFieldIds.length ? (
+            {missingRecommendedFields.length ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-900">
                 <p className="font-semibold">{t('ai.missingRecommendedParameters')}</p>
                 <ul className="mt-1 list-disc space-y-1 pl-4">
-                  {ai.pendingToolTemplateActivation.activationFields
-                    .filter((field) =>
-                      ai.pendingToolTemplateActivation?.missingRecommendedFieldIds.includes(
-                        field.id,
-                      ),
-                    )
-                    .map((field) => (
-                      <li key={field.id}>
-                        {field.label}: {field.accuracyImpact ?? t('ai.accuracyMayBeLower')}
-                      </li>
-                    ))}
+                  {missingRecommendedFields.map((field) => (
+                    <li key={field.id}>
+                      {field.label}: {field.accuracyImpact ?? t('ai.accuracyMayBeLower')}
+                    </li>
+                  ))}
                 </ul>
               </div>
             ) : null}
@@ -424,7 +469,10 @@ export default function AIAssistantPanel() {
 
                 if (field.type === 'textarea') {
                   return (
-                    <label className="sm:col-span-2 text-xs font-medium text-slate-700" key={field.id}>
+                    <label
+                      className="sm:col-span-2 text-xs font-medium text-slate-700"
+                      key={field.id}
+                    >
                       {label}
                       <textarea
                         className="mt-1 min-h-16 w-full rounded-md border border-slate-300 px-2 py-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -488,18 +536,12 @@ export default function AIAssistantPanel() {
             </div>
 
             {editingTemplateDetails ? (
-              <p className="text-xs leading-5 text-indigo-800">
-                {t('ai.editDetailsHint')}
-              </p>
+              <p className="text-xs leading-5 text-indigo-800">{t('ai.editDetailsHint')}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={ai.isLoading}
-                onClick={() => void ai.confirmToolTemplateActivation(activationDraft)}
-                variant="primary"
-              >
-                {t('ai.enableTemplate')}
+              <Button disabled={ai.isLoading} onClick={beginTemplateOnboarding} variant="primary">
+                {t('ai.reviewInitialPlan')}
               </Button>
               <Button
                 disabled={ai.isLoading}

@@ -13,12 +13,17 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:backend": "node scripts/run-python.mjs -m unittest discover Office/test/backend",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "node scripts/run-playwright.mjs desktop",
     "test:e2e:server": "node scripts/run-playwright.mjs server",
-    "openapi:generate": "python scripts/export-openapi.py",
-    "openapi:check": "python scripts/export-openapi.py --check",
+    "openapi:generate": "node scripts/run-python.mjs scripts/export-openapi.py",
+    "openapi:check": "node scripts/run-python.mjs scripts/export-openapi.py --check",
+    "catalog:check": "node scripts/check-test-catalog.mjs",
+    "catalog:check:structure": "node scripts/check-test-catalog.mjs --skip-provenance",
+    "catalog:provenance": "node scripts/check-test-catalog.mjs --print-provenance",
     "test:mysql": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-mysql.ps1",
+    "test:server:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-mysql.ps1 -IncludeServerE2E",
     "rust:check": "node scripts/check-rust.mjs",
     "legacy:firebase-export": "node scripts/export-legacy-firebase.mjs",
     "desktop:dev": "tauri dev",
@@ -75,6 +80,6 @@
   },
   "overrides": {
     "form-data": "4.0.6",
-    "protobufjs": "7.6.3"
+    "protobufjs": "7.6.5"
   }
 }

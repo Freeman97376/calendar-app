@@ -50,6 +50,8 @@ export default tseslint.config(
       'scratch',
       'src-tauri/target',
       '.pytest_cache',
+      '.venv',
+      '.venv-test',
     ],
   },
   js.configs.recommended,

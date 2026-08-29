@@ -1,6 +1,127 @@
 {
   "components": {
     "schemas": {
+      "ActivationFunnelEventPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "errorCategory": {
+            "anyOf": [
+              {
+                "maxLength": 48,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcategory"
+          },
+          "eventName": {
+            "enum": [
+              "tool_creation_request_submitted",
+              "template_recommendation_shown",
+              "template_recommendation_accepted",
+              "clarification_shown",
+              "clarification_completed",
+              "clarification_skipped",
+              "initial_plan_generated",
+              "initial_plan_structured_edit",
+              "initial_plan_ai_revision",
+              "initial_plan_approved",
+              "active_tool_created",
+              "active_tool_workspace_opened",
+              "journey_failed"
+            ],
+            "title": "Eventname",
+            "type": "string"
+          },
+          "journeyId": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journeyid"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "maxProperties": 8,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          },
+          "source": {
+            "enum": [
+              "ai-assistant",
+              "template-library"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "maxLength": 48,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "templateId": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Templateid",
+            "type": "string"
+          },
+          "threadId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threadid"
+          }
+        },
+        "required": [
+          "eventName",
+          "templateId",
+          "source"
+        ],
+        "title": "ActivationFunnelEventPayload",
+        "type": "object"
+      },
       "Body_analyze_receipt_api_fridge_receipt_analyze_post": {
         "properties": {
           "image": {
@@ -323,6 +444,135 @@
         "title": "EventCreatePayload",
         "type": "object"
       },
+      "EventTypeCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "appliesTo": {
+            "default": "both",
+            "enum": [
+              "calendar",
+              "todo",
+              "both"
+            ],
+            "title": "Appliesto",
+            "type": "string"
+          },
+          "color": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Color",
+            "type": "string"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "isArchived": {
+            "default": false,
+            "title": "Isarchived",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "color"
+        ],
+        "title": "EventTypeCreatePayload",
+        "type": "object"
+      },
+      "EventTypeUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "appliesTo": {
+            "anyOf": [
+              {
+                "enum": [
+                  "calendar",
+                  "todo",
+                  "both"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appliesto"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "isArchived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isarchived"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "EventTypeUpdatePayload",
+        "type": "object"
+      },
       "EventUpdatePayload": {
         "additionalProperties": false,
         "properties": {
@@ -531,6 +781,408 @@
         "title": "EventUpdatePayload",
         "type": "object"
       },
+      "FridgeItemCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "cache_hit": {
+            "default": false,
+            "title": "Cache Hit",
+            "type": "boolean"
+          },
+          "cache_layer": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Layer"
+          },
+          "cache_match_type": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Match Type"
+          },
+          "category": {
+            "default": "unknown",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "confidence": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "estimated_expiration_date": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Expiration Date"
+          },
+          "estimated_shelf_life_days": {
+            "anyOf": [
+              {
+                "maximum": 36500.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Shelf Life Days"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "item_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Item Name",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FridgePredictionMetadataPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "normalized_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Name"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 10000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "purchase_date": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Date"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "source": {
+            "default": "manual",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "storage_type": {
+            "default": "unknown",
+            "enum": [
+              "fridge",
+              "freezer",
+              "room_temp",
+              "unknown"
+            ],
+            "title": "Storage Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_name"
+        ],
+        "title": "FridgeItemCreatePayload",
+        "type": "object"
+      },
+      "FridgeItemUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "estimated_expiration_date": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Expiration Date"
+          },
+          "estimated_shelf_life_days": {
+            "anyOf": [
+              {
+                "maximum": 36500.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Shelf Life Days"
+          },
+          "item_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Name"
+          },
+          "normalized_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "purchase_date": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Date"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "storage_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "fridge",
+                  "freezer",
+                  "room_temp",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage Type"
+          }
+        },
+        "title": "FridgeItemUpdatePayload",
+        "type": "object"
+      },
+      "FridgePredictionMetadataPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "cache_hit": {
+            "title": "Cache Hit",
+            "type": "boolean"
+          },
+          "cache_layer": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Layer"
+          },
+          "cache_match_type": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Match Type"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "source": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cache_hit",
+          "source",
+          "confidence"
+        ],
+        "title": "FridgePredictionMetadataPayload",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -639,6 +1291,37 @@
         "title": "ImportPreviewPayload",
         "type": "object"
       },
+      "LocalCalendarSnapshotPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "eventTypes": {
+            "items": {
+              "$ref": "#/components/schemas/EventTypeCreatePayload"
+            },
+            "maxItems": 10000,
+            "title": "Eventtypes",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotEventPayload"
+            },
+            "maxItems": 100000,
+            "title": "Events",
+            "type": "array"
+          },
+          "todos": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotTodoPayload"
+            },
+            "maxItems": 100000,
+            "title": "Todos",
+            "type": "array"
+          }
+        },
+        "title": "LocalCalendarSnapshotPayload",
+        "type": "object"
+      },
       "LoginPayload": {
         "additionalProperties": false,
         "properties": {
@@ -662,6 +1345,110 @@
         "title": "LoginPayload",
         "type": "object"
       },
+      "MemoryGoalCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "status": {
+            "default": "active",
+            "enum": [
+              "active",
+              "paused",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "MemoryGoalCreatePayload",
+        "type": "object"
+      },
+      "MemoryGoalProjectCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "$ref": "#/components/schemas/MemoryGoalCreatePayload"
+          },
+          "project": {
+            "$ref": "#/components/schemas/MemoryProjectForGoalCreatePayload"
+          }
+        },
+        "required": [
+          "goal",
+          "project"
+        ],
+        "title": "MemoryGoalProjectCreatePayload",
+        "type": "object"
+      },
+      "MemoryProjectForGoalCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "status": {
+            "default": "active",
+            "enum": [
+              "active",
+              "paused",
+              "completed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "MemoryProjectForGoalCreatePayload",
+        "type": "object"
+      },
       "PreUpdateBackupPayload": {
         "additionalProperties": false,
         "properties": {
@@ -683,6 +1470,202 @@
           "toVersion"
         ],
         "title": "PreUpdateBackupPayload",
+        "type": "object"
+      },
+      "PreferenceUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "aiMonthlyHardLimit": {
+            "anyOf": [
+              {
+                "maximum": 2147483647.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aimonthlyhardlimit"
+          },
+          "aiMonthlySoftLimit": {
+            "anyOf": [
+              {
+                "maximum": 2147483647.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aimonthlysoftlimit"
+          },
+          "aiUsageMode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "economy",
+                  "balanced",
+                  "quality"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aiusagemode"
+          },
+          "confirmEnabledToolRouting": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmenabledtoolrouting"
+          },
+          "defaultEventColor": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulteventcolor"
+          },
+          "defaultEventEndTime": {
+            "anyOf": [
+              {
+                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulteventendtime"
+          },
+          "defaultEventStartTime": {
+            "anyOf": [
+              {
+                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulteventstarttime"
+          },
+          "defaultEventTypeId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulteventtypeid"
+          },
+          "defaultTodoEventTypeId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulttodoeventtypeid"
+          },
+          "defaultTodoPriority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaulttodopriority"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "en",
+                  "zh"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "layoutPanelPosition": {
+            "anyOf": [
+              {
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layoutpanelposition"
+          },
+          "layoutPanelSizePercent": {
+            "anyOf": [
+              {
+                "maximum": 40.0,
+                "minimum": 15.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layoutpanelsizepercent"
+          },
+          "timezoneOverride": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezoneoverride"
+          }
+        },
+        "title": "PreferenceUpdatePayload",
         "type": "object"
       },
       "RecurrenceEndCount": {
@@ -827,6 +1810,349 @@
           "frequency"
         ],
         "title": "RecurrenceRulePayload",
+        "type": "object"
+      },
+      "SnapshotEventPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "allDay": {
+            "default": false,
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "deletedOccurrences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedoccurrences"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "displayDetails": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displaydetails"
+          },
+          "endAt": {
+            "format": "date-time",
+            "title": "Endat",
+            "type": "string"
+          },
+          "eventTypeId": {
+            "default": "general",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventtypeid",
+            "type": "string"
+          },
+          "exceptionDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptiondate"
+          },
+          "exceptionFor": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceptionfor"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "linkedTodoId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedtodoid"
+          },
+          "masterId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Masterid"
+          },
+          "recurrenceRule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecurrenceRulePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startAt": {
+            "format": "date-time",
+            "title": "Startat",
+            "type": "string"
+          },
+          "syncStatus": {
+            "default": "pending",
+            "enum": [
+              "synced",
+              "pending",
+              "conflict"
+            ],
+            "title": "Syncstatus",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "startAt",
+          "endAt"
+        ],
+        "title": "SnapshotEventPayload",
+        "type": "object"
+      },
+      "SnapshotTodoPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "dueDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duedate"
+          },
+          "energyNeeded": {
+            "default": "medium",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Energyneeded",
+            "type": "string"
+          },
+          "etaMinutes": {
+            "default": 30,
+            "maximum": 480.0,
+            "minimum": 5.0,
+            "title": "Etaminutes",
+            "type": "integer"
+          },
+          "eventTypeId": {
+            "default": "general",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventtypeid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "linkedEventId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedeventid"
+          },
+          "longProject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TodoLongProjectPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "priority": {
+            "default": "medium",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "status": {
+            "default": "todo",
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "SnapshotTodoPayload",
         "type": "object"
       },
       "TodoCreatePayload": {
@@ -1186,6 +2512,319 @@
         "title": "TodoUpdatePayload",
         "type": "object"
       },
+      "ToolPresetCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "defaultLlmOptions": {
+            "$ref": "#/components/schemas/ToolPresetLlmOptionsPayload"
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ToolPresetFieldPayload"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "isBuiltIn": {
+            "default": false,
+            "title": "Isbuiltin",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "outputSchemaKey": {
+            "const": "calendar_event_drafts",
+            "default": "calendar_event_drafts",
+            "title": "Outputschemakey",
+            "type": "string"
+          },
+          "prompt": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "description",
+          "fields",
+          "id",
+          "label",
+          "prompt"
+        ],
+        "title": "ToolPresetCreatePayload",
+        "type": "object"
+      },
+      "ToolPresetFieldOptionPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "ToolPresetFieldOptionPayload",
+        "type": "object"
+      },
+      "ToolPresetFieldPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "defaultValue": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalue"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolPresetFieldOptionPayload"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "placeholder": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeholder"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "default": "text",
+            "enum": [
+              "text",
+              "textarea",
+              "date",
+              "time",
+              "number",
+              "select"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ToolPresetFieldPayload",
+        "type": "object"
+      },
+      "ToolPresetLlmOptionsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "default": "global",
+            "enum": [
+              "global",
+              "api",
+              "local"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "title": "ToolPresetLlmOptionsPayload",
+        "type": "object"
+      },
+      "ToolPresetUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "defaultLlmOptions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolPresetLlmOptionsPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ToolPresetFieldPayload"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "outputSchemaKey": {
+            "anyOf": [
+              {
+                "const": "calendar_event_drafts",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputschemakey"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "title": "ToolPresetUpdatePayload",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1234,6 +2873,166 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/active-tool-journeys/funnel": {
+      "get": {
+        "operationId": "active_tool_funnel_baseline_api_active_tool_journeys_funnel_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Active Tool Funnel Baseline Api Active Tool Journeys Funnel Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Active Tool Funnel Baseline"
+      }
+    },
+    "/api/active-tool-journeys/{journey_id}/events": {
+      "post": {
+        "operationId": "record_active_tool_journey_event_api_active_tool_journeys__journey_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "title": "Journey Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationFunnelEventPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Record Active Tool Journey Event Api Active Tool Journeys  Journey Id  Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Active Tool Journey Event"
+      }
+    },
     "/api/ai/chat/completions": {
       "post": {
         "operationId": "proxy_ai_api_ai_chat_completions_post",
@@ -1629,9 +3428,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/EventTypeCreatePayload"
               }
             }
           },
@@ -1712,9 +3509,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/EventTypeUpdatePayload"
               }
             }
           },
@@ -2086,9 +3881,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/LocalCalendarSnapshotPayload"
               }
             }
           },
@@ -3260,9 +5053,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/FridgeItemCreatePayload"
               }
             }
           },
@@ -3412,9 +5203,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/FridgeItemUpdatePayload"
               }
             }
           },
@@ -3911,6 +5700,87 @@
         "summary": "Activate Goal Conversation"
       }
     },
+    "/api/goal-conversations/{thread_id}/funnel-events": {
+      "post": {
+        "operationId": "record_activation_funnel_event_api_goal_conversations__thread_id__funnel_events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationFunnelEventPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Record Activation Funnel Event Api Goal Conversations  Thread Id  Funnel Events Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Activation Funnel Event"
+      }
+    },
     "/api/goal-conversations/{thread_id}/messages": {
       "post": {
         "operationId": "add_goal_message_api_goal_conversations__thread_id__messages_post",
@@ -4191,9 +6061,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/PreferenceUpdatePayload"
               }
             }
           },
@@ -4381,6 +6249,78 @@
           }
         },
         "summary": "Update Action"
+      }
+    },
+    "/api/memory/goal-projects": {
+      "post": {
+        "operationId": "create_goal_project_api_memory_goal_projects_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryGoalProjectCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Goal Project Api Memory Goal Projects Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Goal Project"
       }
     },
     "/api/memory/goals": {
@@ -7014,9 +8954,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/ToolPresetCreatePayload"
               }
             }
           },
@@ -7166,9 +9104,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
+                "$ref": "#/components/schemas/ToolPresetUpdatePayload"
               }
             }
           },

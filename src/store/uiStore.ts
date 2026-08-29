@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import { todayISODate } from '../domain/logic/dateHelpers'
 import type { Event } from '../domain/types'
+import type { ActiveToolOnboardingSeed } from '../domain/types/goalControl'
 
 export type WorkspacePanelId =
   | 'home'
@@ -21,11 +22,18 @@ type WorkspaceOpenOptions = {
   replace?: boolean
 }
 
+export type EventCreationTimeRange = {
+  endTime: string
+  startTime: string
+}
+
 export type UIStore = {
   eventModalOpen: boolean
   editingEventId: string | null
   editingEventSnapshot: Event | null
   selectedDate: string
+  selectedEndTime: string | null
+  selectedStartTime: string | null
   aiPanelOpen: boolean
   debugPanelOpen: boolean
   fridgePanelOpen: boolean
@@ -39,12 +47,13 @@ export type UIStore = {
   approvalDrawerSource: ApprovalDrawerSource | null
   activeToolId: string
   activeEnabledToolProjectId: string
+  pendingActiveToolOnboarding: ActiveToolOnboardingSeed | null
   closeDebugPanel: () => void
   closeEnabledToolsPanel: () => void
   closeToolsPanel: () => void
   openAIPanel: () => void
-  openCreateEventModal: (selectedDate: string) => void
-  openCreateEventDetails: (selectedDate: string) => void
+  openCreateEventModal: (selectedDate: string, timeRange?: EventCreationTimeRange) => void
+  openCreateEventDetails: (selectedDate: string, timeRange?: EventCreationTimeRange) => void
   openEditEventModal: (eventId: string, eventSnapshot?: Event) => void
   openEventDetails: (eventId: string, eventSnapshot?: Event) => void
   closeEventModal: () => void
@@ -65,6 +74,8 @@ export type UIStore = {
   openToolsPanel: (activeToolId?: string) => void
   setActiveEnabledToolProjectId: (projectId: string) => void
   setActiveToolId: (activeToolId: string) => void
+  startActiveToolOnboarding: (seed: ActiveToolOnboardingSeed) => void
+  clearActiveToolOnboarding: () => void
   toggleToolsPanel: () => void
   reset: () => void
 }
@@ -117,6 +128,8 @@ export const useUIStore = create<UIStore>((set) => ({
   editingEventId: null,
   editingEventSnapshot: null,
   selectedDate: todayISODate(),
+  selectedEndTime: null,
+  selectedStartTime: null,
   aiPanelOpen: false,
   debugPanelOpen: false,
   fridgePanelOpen: false,
@@ -130,6 +143,7 @@ export const useUIStore = create<UIStore>((set) => ({
   approvalDrawerSource: null,
   activeToolId: 'fitness-ai',
   activeEnabledToolProjectId: '',
+  pendingActiveToolOnboarding: null,
   closeDebugPanel: () => set(workspaceState('home')),
   closeEnabledToolsPanel: () => set(workspaceState('home')),
   closeToolsPanel: () => set(workspaceState('home')),
@@ -140,17 +154,16 @@ export const useUIStore = create<UIStore>((set) => ({
         nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'),
       ),
     ),
-  openCreateEventDetails: (selectedDate) =>
+  startActiveToolOnboarding: (pendingActiveToolOnboarding) =>
     set((state) => ({
       ...workspaceState(
-        'event-details',
-        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+        'ai',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'ai'),
       ),
-      editingEventId: null,
-      editingEventSnapshot: null,
-      selectedDate,
+      pendingActiveToolOnboarding,
     })),
-  openCreateEventModal: (selectedDate) =>
+  clearActiveToolOnboarding: () => set({ pendingActiveToolOnboarding: null }),
+  openCreateEventDetails: (selectedDate, timeRange) =>
     set((state) => ({
       ...workspaceState(
         'event-details',
@@ -159,6 +172,20 @@ export const useUIStore = create<UIStore>((set) => ({
       editingEventId: null,
       editingEventSnapshot: null,
       selectedDate,
+      selectedEndTime: timeRange?.endTime ?? null,
+      selectedStartTime: timeRange?.startTime ?? null,
+    })),
+  openCreateEventModal: (selectedDate, timeRange) =>
+    set((state) => ({
+      ...workspaceState(
+        'event-details',
+        nextHistory(state.activeWorkspacePanel, state.workspacePanelHistory, 'event-details'),
+      ),
+      editingEventId: null,
+      editingEventSnapshot: null,
+      selectedDate,
+      selectedEndTime: timeRange?.endTime ?? null,
+      selectedStartTime: timeRange?.startTime ?? null,
     })),
   openEventDetails: (eventId, eventSnapshot = undefined) =>
     set((state) => ({
@@ -168,6 +195,8 @@ export const useUIStore = create<UIStore>((set) => ({
       ),
       editingEventId: eventId,
       editingEventSnapshot: eventSnapshot ?? null,
+      selectedEndTime: null,
+      selectedStartTime: null,
     })),
   openEditEventModal: (eventId, eventSnapshot = undefined) =>
     set((state) => ({
@@ -177,6 +206,8 @@ export const useUIStore = create<UIStore>((set) => ({
       ),
       editingEventId: eventId,
       editingEventSnapshot: eventSnapshot ?? null,
+      selectedEndTime: null,
+      selectedStartTime: null,
     })),
   closeEventModal: () =>
     set((state) => {
@@ -187,6 +218,8 @@ export const useUIStore = create<UIStore>((set) => ({
         ...workspaceState(previous, history),
         editingEventId: null,
         editingEventSnapshot: null,
+        selectedEndTime: null,
+        selectedStartTime: null,
       }
     }),
   closeApprovalDrawer: () => set({ approvalDrawerOpen: false, approvalDrawerSource: null }),
@@ -314,6 +347,8 @@ export const useUIStore = create<UIStore>((set) => ({
       editingEventId: null,
       editingEventSnapshot: null,
       selectedDate: todayISODate(),
+      selectedEndTime: null,
+      selectedStartTime: null,
       aiPanelOpen: false,
       debugPanelOpen: false,
       fridgePanelOpen: false,
@@ -327,5 +362,6 @@ export const useUIStore = create<UIStore>((set) => ({
       approvalDrawerSource: null,
       activeToolId: 'fitness-ai',
       activeEnabledToolProjectId: '',
+      pendingActiveToolOnboarding: null,
     }),
 }))

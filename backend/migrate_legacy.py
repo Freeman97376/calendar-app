@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
+import sys
+from collections.abc import Mapping
 from contextlib import closing
 from pathlib import Path
 from typing import Any
 
 from .auth import AuthError, AuthService
 from .database import create_database_engine, require_migration_head
+from .manage_users import ServerDatabaseConfigurationError, require_server_database_url
 from .user_data import BACKUP_FORMAT_VERSION, DataPortabilityService, checksum_entities
 
 
@@ -16,6 +20,26 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CALENDAR_DB = PROJECT_ROOT / "backend" / "data" / "calendar_app.sqlite3"
 DEFAULT_MEMORY_DB = PROJECT_ROOT / "backend" / "data" / "long_term_memory.sqlite3"
 DEFAULT_FRIDGE_JSON = PROJECT_ROOT / "backend" / "data" / "fridge_inventory.json"
+
+
+class LegacyImportConfigurationError(RuntimeError):
+    pass
+
+
+def require_legacy_import_database_url(
+    configured: str | None,
+    environment: Mapping[str, str] | None = None,
+) -> str:
+    source = os.environ if environment is None else environment
+    candidate = (configured or source.get('CALENDAR_DATABASE_URL', '')).strip()
+    try:
+        return require_server_database_url({'CALENDAR_DATABASE_URL': candidate})
+    except ServerDatabaseConfigurationError as error:
+        raise LegacyImportConfigurationError(
+            'Legacy server import requires an explicit MySQL database URL via '
+            '--database-url or CALENDAR_DATABASE_URL.'
+        ) from error
+
 
 ENTITY_IDS = {
     "eventTypes": "id",
@@ -225,10 +249,23 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     try:
-        report = migrate(build_parser().parse_args())
-    except (AuthError, OSError, sqlite3.DatabaseError, json.JSONDecodeError, ValueError) as error:
+        args.database_url = require_legacy_import_database_url(args.database_url)
+    except LegacyImportConfigurationError as error:
+        print(f'Error: {error}', file=sys.stderr)
+        return 2
+    try:
+        report = migrate(args)
+    except (
+        AuthError,
+        OSError,
+        RuntimeError,
+        sqlite3.DatabaseError,
+        json.JSONDecodeError,
+        ValueError,
+    ) as error:
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False, indent=2))
         return 1
     print(json.dumps({"ok": True, "report": report}, ensure_ascii=False, indent=2))

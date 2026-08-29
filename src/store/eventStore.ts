@@ -39,8 +39,14 @@ export type EventStore = {
 }
 
 let eventSyncManager: EventSyncManager | null = null
+let eventLoadGeneration = 0
+
+function invalidateEventLoads() {
+  eventLoadGeneration += 1
+}
 
 export function configureEventSync(syncManager: EventSyncManager | null) {
+  invalidateEventLoads()
   eventSyncManager = syncManager
 }
 
@@ -190,20 +196,26 @@ export const useEventStore = create<EventStore>((set, get) => ({
   isLoading: false,
   error: null,
   loadEvents: async (range) => {
+    const loadGeneration = ++eventLoadGeneration
     set({ isLoading: true, error: null })
 
     try {
       if (eventSyncManager) {
         const events = await eventSyncManager.getEvents(range)
-        set({ events, isLoading: false })
+        if (loadGeneration === eventLoadGeneration) {
+          set({ events, isLoading: false })
+        }
         return getEventsInRange(events, range)
       }
 
       const events = getEventsInRange(get().events, range)
-      set({ isLoading: false })
+      if (loadGeneration === eventLoadGeneration) {
+        set({ isLoading: false })
+      }
       return events
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load events'
+      if (loadGeneration !== eventLoadGeneration) return []
       set({ isLoading: false, error: message })
       throw error
     }
@@ -215,9 +227,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       const nextEvents = [...previousEvents, event]
 
       await persistEventChanges(previousEvents, nextEvents)
+      invalidateEventLoads()
       set({
         events: nextEvents,
         error: null,
+        isLoading: false,
       })
       return event
     } catch (error) {
@@ -249,9 +263,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           .concat(exception)
 
         await persistEventChanges(previousEvents, nextEvents)
+        invalidateEventLoads()
         set({
           events: nextEvents,
           error: null,
+          isLoading: false,
         })
         return exception
       }
@@ -283,9 +299,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
           .concat(newMaster)
 
         await persistEventChanges(previousEvents, nextEvents)
+        invalidateEventLoads()
         set({
           events: nextEvents,
           error: null,
+          isLoading: false,
         })
         return newMaster
       }
@@ -298,9 +316,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       )
 
       await persistEventChanges(previousEvents, nextEvents)
+      invalidateEventLoads()
       set({
         events: nextEvents,
         error: null,
+        isLoading: false,
       })
       return updatedMaster
     }
@@ -317,9 +337,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       const nextEvents = previousEvents.map((event) => (event.id === id ? updated : event))
 
       await persistEventChanges(previousEvents, nextEvents)
+      invalidateEventLoads()
       set({
         events: nextEvents,
         error: null,
+        isLoading: false,
       })
       return updated
     } catch (error) {
@@ -350,9 +372,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
         )
 
         await persistEventChanges(previousEvents, nextEvents)
+        invalidateEventLoads()
         set({
           events: nextEvents,
           error: null,
+          isLoading: false,
         })
         return
       }
@@ -369,9 +393,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
         )
 
         await persistEventChanges(previousEvents, nextEvents)
+        invalidateEventLoads()
         set({
           events: nextEvents,
           error: null,
+          isLoading: false,
         })
         return
       }
@@ -382,9 +408,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
       )
 
       await persistEventChanges(previousEvents, nextEvents)
+      invalidateEventLoads()
       set({
         events: nextEvents,
         error: null,
+        isLoading: false,
       })
       return
     }
@@ -393,10 +421,15 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const nextEvents = previousEvents.filter((event) => event.id !== id)
 
     await persistEventChanges(previousEvents, nextEvents)
+    invalidateEventLoads()
     set({
       events: nextEvents,
       error: null,
+      isLoading: false,
     })
   },
-  reset: (events = []) => set({ events, isLoading: false, error: null }),
+  reset: (events = []) => {
+    invalidateEventLoads()
+    set({ events, isLoading: false, error: null })
+  },
 }))

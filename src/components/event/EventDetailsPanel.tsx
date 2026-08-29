@@ -5,7 +5,15 @@ import EventForm from './EventForm'
 
 export default function EventDetailsPanel() {
   const { t } = useI18n()
-  const { editingEvent, selectedDate, closeEventModal, saveEvent, deleteEditingEvent } = useEvents()
+  const {
+    editingEvent,
+    selectedDate,
+    selectedEndTime,
+    selectedStartTime,
+    closeEventModal,
+    saveEvent,
+    deleteEditingEvent,
+  } = useEvents()
 
   async function handleDelete(scope: RecurrenceEditScope) {
     if (!window.confirm(t('event.deleteConfirm'))) return
@@ -24,11 +32,16 @@ export default function EventDetailsPanel() {
       </div>
       <EventForm
         event={editingEvent}
-        key={editingEvent?.id ?? `new-${selectedDate}`}
+        key={
+          editingEvent?.id ??
+          `new-${selectedDate}-${selectedStartTime ?? 'default'}-${selectedEndTime ?? 'default'}`
+        }
         onCancel={closeEventModal}
         onDelete={editingEvent ? handleDelete : undefined}
         onSubmit={saveEvent}
         selectedDate={selectedDate}
+        selectedEndTime={selectedEndTime}
+        selectedStartTime={selectedStartTime}
       />
     </div>
   )

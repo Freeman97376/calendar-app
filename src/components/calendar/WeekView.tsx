@@ -14,6 +14,7 @@ type WeekViewProps = {
   eventsByDate: Record<string, Event[]>
   onSelectDate: (isoDate: string) => void
   onSelectEvent: (event: Event) => void
+  onSelectTimeSlot: (isoDate: string, hour: number) => void
 }
 
 export default function WeekView({
@@ -21,6 +22,7 @@ export default function WeekView({
   eventsByDate,
   onSelectDate,
   onSelectEvent,
+  onSelectTimeSlot,
 }: WeekViewProps) {
   return (
     <TimeGrid
@@ -28,6 +30,7 @@ export default function WeekView({
       eventsByDate={eventsByDate}
       onSelectDate={onSelectDate}
       onSelectEvent={onSelectEvent}
+      onSelectTimeSlot={onSelectTimeSlot}
     />
   )
 }

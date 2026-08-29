@@ -319,8 +319,15 @@ Open the app, click `Fridge`, upload a receipt image, and run analysis. The pane
 
 ### Backend Tests
 
+Install the isolated test dependency lock, which adds `httpx2` without changing server or desktop production locks:
+
 ```powershell
-python -m unittest discover tests/backend
+python -m venv .venv-test
+.\.venv-test\Scripts\python.exe -m pip install --require-hashes -r requirements-test.lock
+```
+
+```powershell
+.\.venv-test\Scripts\python.exe -m unittest discover Office/test/backend
 npm.cmd run test:mysql
 ```
 
@@ -333,15 +340,14 @@ npm.cmd run lint
 npm.cmd run test:run
 npm.cmd run build
 npm.cmd run openapi:check
-python -m unittest discover tests.backend
+.\.venv-test\Scripts\python.exe -m unittest discover Office/test/backend
 npm.cmd run test:e2e:desktop
-npm.cmd run test:mysql       # requires Docker/MySQL or CALENDAR_MYSQL_TEST_URL
-$env:CALENDAR_E2E_DATABASE_URL = 'mysql+pymysql://calendar_test:calendar_test@127.0.0.1:33306/calendar_test?charset=utf8mb4'
-npm.cmd run test:e2e:server
+npm.cmd run test:server:local
 npm.cmd run rust:check
 npm.cmd audit
 python -m pip_audit -r requirements-server.lock
 python -m pip_audit -r requirements-desktop.lock
+python -m pip_audit -r requirements-test.lock
 npm.cmd run desktop:build
 ```
 

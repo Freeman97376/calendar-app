@@ -58,7 +58,7 @@ Playwright E2E still needs a live dev server and browser pass for final Phase 7 
 ## Notes
 
 - Use `C:\Program Files\nodejs\node.exe` directly when package shims resolve to the blocked WindowsApps Node.
-- Stable automated tests belong in `tests/`; ad hoc scripts belong in `scratch/test-scripts/`.
+- Stable automated tests belong in `Office/test/`; ad hoc scripts belong in `scratch/test-scripts/`.
 - Commands that invoke Vite/Vitest/esbuild may need sandbox escalation in this desktop environment.
 - To-do types are stored in `calendar_event_types` and should stay user-editable data, not an enum in the event schema.
 - For receipt OCR manual QA, run `tesseract --version` in the same PowerShell session that starts `python -m backend.server`.

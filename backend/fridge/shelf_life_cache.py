@@ -19,9 +19,12 @@ class ShelfLifeCache:
         self,
         runtime_path: Path | str | None = None,
         defaults_path: Path | str | None = None,
+        *,
+        runtime_enabled: bool = True,
     ) -> None:
         self.runtime_path = Path(runtime_path) if runtime_path else fridge_data_dir() / "shelf_life_cache.json"
         self.defaults_path = Path(defaults_path) if defaults_path else fridge_data_dir() / "shelf_life_defaults.json"
+        self.runtime_enabled = runtime_enabled
         self.path = self.runtime_path
         self._defaults: dict[str, Any] = {"items": {}}
         self._runtime: dict[str, Any] = {"items": {}}
@@ -30,7 +33,7 @@ class ShelfLifeCache:
 
     def load(self) -> None:
         self._defaults = self._load_json(self.defaults_path)
-        self._runtime = self._load_json(self.runtime_path)
+        self._runtime = self._load_json(self.runtime_path) if self.runtime_enabled else {'items': {}}
         merged_items = {
             **self._defaults.get("items", {}),
             **self._runtime.get("items", {}),
@@ -38,6 +41,8 @@ class ShelfLifeCache:
         self._data = {"items": merged_items}
 
     def save(self) -> None:
+        if not self.runtime_enabled:
+            return
         self.runtime_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self.runtime_path.with_suffix(".tmp")
         with tmp_path.open("w", encoding="utf-8") as file:
@@ -80,7 +85,7 @@ class ShelfLifeCache:
         return "unknown"
 
     def upsert_prediction(self, prediction: ShelfLifePrediction) -> None:
-        if prediction.estimated_shelf_life_days is None:
+        if not self.runtime_enabled or prediction.estimated_shelf_life_days is None:
             return
 
         normalized = normalize_item_name(prediction.normalized_name or prediction.item_name)

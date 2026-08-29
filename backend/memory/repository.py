@@ -135,10 +135,13 @@ class MemoryRepository:
         db_path: Path | str | None = None,
         *,
         engine: Engine | None = None,
+        initialize: bool | None = None,
         user_id: str = "local",
     ) -> None:
+        owns_engine = engine is None
         self.engine = engine or create_database_engine(db_path=db_path)
-        initialize_schema(self.engine)
+        if initialize if initialize is not None else owns_engine:
+            initialize_schema(self.engine)
         self.session_factory = create_session_factory(self.engine)
         self.user_id = user_id
 
@@ -168,6 +171,39 @@ class MemoryRepository:
         )
         self._add(record)
         return goal_from_record(record)
+
+    def create_goal_project(
+        self,
+        goal: dict[str, Any],
+        project: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        goal_record = GoalRecord(
+            user_id=self.user_id,
+            goal_id=goal["goal_id"],
+            title=goal["title"],
+            description=goal["description"],
+            status=goal["status"],
+            metadata_json=goal.get("metadata", {}),
+            created_at=goal["created_at"],
+            updated_at=goal["updated_at"],
+        )
+        project_record = ProjectRecord(
+            user_id=self.user_id,
+            project_id=project["project_id"],
+            goal_id=goal["goal_id"],
+            title=project["title"],
+            description=project["description"],
+            status=project["status"],
+            metadata_json=project.get("metadata", {}),
+            created_at=project["created_at"],
+            updated_at=project["updated_at"],
+        )
+        with self.session_factory.begin() as session:
+            session.add(goal_record)
+            session.flush()
+            session.add(project_record)
+            session.flush()
+        return goal_from_record(goal_record), project_from_record(project_record)
 
     def update_goal(self, goal_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         with self.session_factory.begin() as session:

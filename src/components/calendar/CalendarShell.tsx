@@ -115,6 +115,7 @@ export default function CalendarShell() {
                   eventsByDate={events.eventsByDate}
                   onSelectDate={events.openCreateEvent}
                   onSelectEvent={events.openEditEvent}
+                  onSelectTimeSlot={events.openCreateEventAtHour}
                 />
               ) : null}
 
@@ -124,6 +125,7 @@ export default function CalendarShell() {
                   eventsByDate={events.eventsByDate}
                   onSelectDate={events.openCreateEvent}
                   onSelectEvent={events.openEditEvent}
+                  onSelectTimeSlot={events.openCreateEventAtHour}
                 />
               ) : null}
             </>

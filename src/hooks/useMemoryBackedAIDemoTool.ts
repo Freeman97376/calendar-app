@@ -165,10 +165,9 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
   const createEvent = useEventStore((state) => state.createEvent)
   const actions = useLongTermMemoryStore((state) => state.actions)
   const createAction = useLongTermMemoryStore((state) => state.createAction)
-  const createGoal = useLongTermMemoryStore((state) => state.createGoal)
+  const createGoalProject = useLongTermMemoryStore((state) => state.createGoalProject)
   const createMilestone = useLongTermMemoryStore((state) => state.createMilestone)
   const createProgress = useLongTermMemoryStore((state) => state.createProgress)
-  const createProject = useLongTermMemoryStore((state) => state.createProject)
   const createToolRun = useLongTermMemoryStore((state) => state.createToolRun)
   const error = useLongTermMemoryStore((state) => state.error)
   const goals = useLongTermMemoryStore((state) => state.goals)
@@ -236,16 +235,17 @@ export function useMemoryBackedAIDemoTool(options: UseMemoryBackedAIDemoToolOpti
     if (selectedProject) return selectedProject
 
     const metadata = toolMetadata(options.toolKind, options.sourceToolId)
-    const goal = await createGoal({
-      description: description || options.defaultProjectDescription,
-      metadata,
-      title: title || options.defaultProjectTitle,
-    })
-    const project = await createProject({
-      description: description || options.defaultProjectDescription,
-      goal_id: goal.goal_id,
-      metadata,
-      title: title || options.defaultProjectTitle,
+    const { project } = await createGoalProject({
+      goal: {
+        description: description || options.defaultProjectDescription,
+        metadata,
+        title: title || options.defaultProjectTitle,
+      },
+      project: {
+        description: description || options.defaultProjectDescription,
+        metadata,
+        title: title || options.defaultProjectTitle,
+      },
     })
     setSelectedProjectId(project.project_id)
     await loadProjectDetails(project.project_id)

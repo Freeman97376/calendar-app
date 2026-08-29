@@ -24,23 +24,35 @@ from fastapi import Body, Cookie, Depends, FastAPI, File, Form, Header, Query, R
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.engine import Engine
 
 from .auth import AuthError, AuthService, Principal
 from .calendar import CalendarRepository
-from .calendar.repository import CalendarRowNotFoundError
+from .calendar.repository import CalendarReferenceError, CalendarRowNotFoundError
 from .database import (
     LOCAL_USER_ID,
     create_database_engine,
     database_url,
-    initialize_schema,
+    lock_runtime_schema,
     require_migration_head,
+    require_schema_fingerprint,
 )
 from .desktop_migration import DesktopMigrationError, prepare_desktop_database
 from .fridge.config import fridge_data_dir, load_env_files
-from .fridge.deepseek_client import DEFAULT_BASE_URL as DEEPSEEK_DEFAULT_BASE_URL
-from .fridge.deepseek_client import DEFAULT_MODEL as DEEPSEEK_DEFAULT_MODEL
+from .fridge.deepseek_client import (
+    DEFAULT_BASE_URL as DEEPSEEK_DEFAULT_BASE_URL,
+    DEFAULT_MODEL as DEEPSEEK_DEFAULT_MODEL,
+    SYSTEM_PROMPT as FRIDGE_SYSTEM_PROMPT,
+    DeepSeekBudgetExceededError,
+    DeepSeekClient,
+    DeepSeekConfig,
+    DeepSeekError,
+    DeepSeekInvalidResponseError,
+    DeepSeekRateLimitError,
+    DeepSeekTimeoutError,
+    build_deepseek_prompt,
+)
 from .fridge.pipeline import FridgePipelineError, ImageValidationError, InvalidRequestError, ReceiptAnalyzer
 from .goal_control import (
     AI_OPERATION_ALIASES,
@@ -67,22 +79,6 @@ from .user_data import (
 SESSION_COOKIE = "calendar_session"
 CSRF_COOKIE = "calendar_csrf"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-PERSONAL_PREFERENCE_KEYS = {
-    "confirmEnabledToolRouting",
-    "defaultEventColor",
-    "defaultEventEndTime",
-    "defaultEventStartTime",
-    "defaultEventTypeId",
-    "defaultTodoEventTypeId",
-    "defaultTodoPriority",
-    "language",
-    "aiUsageMode",
-    "aiMonthlySoftLimit",
-    "aiMonthlyHardLimit",
-    "layoutPanelPosition",
-    "layoutPanelSizePercent",
-    "timezoneOverride",
-}
 AI_OPERATIONS = {
     "routine",
     "route",
@@ -207,6 +203,25 @@ class TodoLongProjectPayload(StrictDto):
     sourceToolId: str | None = Field(default=None, min_length=1, max_length=64)
 
 
+class MemoryGoalCreatePayload(StrictDto):
+    title: str = Field(min_length=1, max_length=200, strict=True)
+    description: str | None = Field(default=None, max_length=10_000, strict=True)
+    status: Literal["active", "paused", "completed", "archived"] = "active"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class MemoryProjectForGoalCreatePayload(StrictDto):
+    title: str = Field(min_length=1, max_length=200, strict=True)
+    description: str | None = Field(default=None, max_length=10_000, strict=True)
+    status: Literal["active", "paused", "completed"] = "active"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class MemoryGoalProjectCreatePayload(StrictDto):
+    goal: MemoryGoalCreatePayload
+    project: MemoryProjectForGoalCreatePayload
+
+
 class TodoCreatePayload(StrictDto):
     id: str | None = Field(default=None, min_length=1, max_length=64)
     title: str = Field(min_length=1, max_length=200)
@@ -243,6 +258,281 @@ class TodoUpdatePayload(StrictDto):
         required = {"title", "status", "eventTypeId", "etaMinutes", "energyNeeded", "priority", "updatedAt"}
         for field_name in required:
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null.")
+        return self
+
+
+class EventTypeCreatePayload(StrictDto):
+    id: str = Field(min_length=1, max_length=64, strict=True)
+    label: str = Field(min_length=1, max_length=40, strict=True)
+    color: str = Field(min_length=1, max_length=32, strict=True)
+    appliesTo: Literal["calendar", "todo", "both"] = "both"
+    isArchived: bool = Field(default=False, strict=True)
+    createdAt: datetime | None = None
+    updatedAt: datetime | None = None
+
+
+class EventTypeUpdatePayload(StrictDto):
+    label: str | None = Field(default=None, min_length=1, max_length=40, strict=True)
+    color: str | None = Field(default=None, min_length=1, max_length=32, strict=True)
+    appliesTo: Literal["calendar", "todo", "both"] | None = None
+    isArchived: bool | None = Field(default=None, strict=True)
+
+    @model_validator(mode="after")
+    def reject_explicit_nulls(self) -> "EventTypeUpdatePayload":
+        for field_name in self.model_fields_set:
+            if getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null.")
+        return self
+
+
+class SnapshotEventPayload(EventCreatePayload):
+    id: str = Field(min_length=1, max_length=64, strict=True)
+
+
+class SnapshotTodoPayload(TodoCreatePayload):
+    id: str = Field(min_length=1, max_length=64, strict=True)
+
+
+class LocalCalendarSnapshotPayload(StrictDto):
+    eventTypes: list[EventTypeCreatePayload] = Field(default_factory=list, max_length=10_000)
+    todos: list[SnapshotTodoPayload] = Field(default_factory=list, max_length=100_000)
+    events: list[SnapshotEventPayload] = Field(default_factory=list, max_length=100_000)
+
+    @model_validator(mode="after")
+    def reject_duplicate_ids(self) -> "LocalCalendarSnapshotPayload":
+        for field_name in ("eventTypes", "todos", "events"):
+            values = getattr(self, field_name)
+            identifiers = [item.id for item in values]
+            if len(identifiers) != len(set(identifiers)):
+                raise ValueError(f"{field_name} must not contain duplicate ids.")
+        return self
+
+
+class FridgePredictionMetadataPayload(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    cache_hit: bool
+    cache_match_type: str | None = Field(default=None, min_length=1, max_length=80)
+    cache_layer: str | None = Field(default=None, min_length=1, max_length=80)
+    source: str = Field(min_length=1, max_length=80)
+    confidence: float = Field(ge=0, le=1)
+
+
+class FridgeItemCreatePayload(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    item_id: str | None = Field(default=None, min_length=1, max_length=64)
+    item_name: str = Field(min_length=1, max_length=200)
+    normalized_name: str | None = Field(default=None, min_length=1, max_length=200)
+    category: str = Field(default='unknown', min_length=1, max_length=80)
+    storage_type: Literal['fridge', 'freezer', 'room_temp', 'unknown'] = 'unknown'
+    purchase_date: str | None = Field(default=None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    estimated_expiration_date: str | None = Field(default=None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    estimated_shelf_life_days: int | None = Field(default=None, ge=0, le=36_500)
+    confidence: float = Field(default=0.5, ge=0, le=1)
+    source: str = Field(default='manual', min_length=1, max_length=80)
+    receipt_id: str | None = Field(default=None, min_length=1, max_length=64)
+    quantity: str | None = Field(default=None, min_length=1, max_length=80)
+    notes: str = Field(default='', max_length=10_000)
+    cache_hit: bool = False
+    cache_match_type: str | None = Field(default=None, min_length=1, max_length=80)
+    cache_layer: str | None = Field(default=None, min_length=1, max_length=80)
+    metadata: FridgePredictionMetadataPayload | None = None
+
+    @field_validator('item_name', 'normalized_name', 'category', 'source')
+    @classmethod
+    def strip_nonempty_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        clean = value.strip()
+        if not clean:
+            raise ValueError('value must contain non-whitespace characters.')
+        return clean
+
+    @field_validator('purchase_date', 'estimated_expiration_date')
+    @classmethod
+    def validate_iso_date(cls, value: str | None) -> str | None:
+        if value is not None:
+            date.fromisoformat(value)
+        return value
+
+
+class FridgeItemUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    item_name: str | None = Field(default=None, min_length=1, max_length=200)
+    normalized_name: str | None = Field(default=None, min_length=1, max_length=200)
+    category: str | None = Field(default=None, min_length=1, max_length=80)
+    storage_type: Literal['fridge', 'freezer', 'room_temp', 'unknown'] | None = None
+    purchase_date: str | None = Field(default=None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    estimated_expiration_date: str | None = Field(default=None, pattern=r'^\d{4}-\d{2}-\d{2}$')
+    estimated_shelf_life_days: int | None = Field(default=None, ge=0, le=36_500)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    source: str | None = Field(default=None, min_length=1, max_length=80)
+    receipt_id: str | None = Field(default=None, min_length=1, max_length=64)
+    quantity: str | None = Field(default=None, min_length=1, max_length=80)
+    notes: str | None = Field(default=None, max_length=10_000)
+
+    @field_validator('item_name', 'normalized_name', 'category', 'source')
+    @classmethod
+    def strip_nonempty_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        clean = value.strip()
+        if not clean:
+            raise ValueError('value must contain non-whitespace characters.')
+        return clean
+
+    @field_validator('purchase_date', 'estimated_expiration_date')
+    @classmethod
+    def validate_iso_date(cls, value: str | None) -> str | None:
+        if value is not None:
+            date.fromisoformat(value)
+        return value
+
+    @model_validator(mode='after')
+    def reject_empty_or_null_required_patch(self) -> 'FridgeItemUpdatePayload':
+        if not self.model_fields_set:
+            raise ValueError('At least one fridge item field must be provided.')
+        nullable = {
+            'estimated_expiration_date',
+            'estimated_shelf_life_days',
+            'receipt_id',
+            'quantity',
+        }
+        for field_name in self.model_fields_set - nullable:
+            if getattr(self, field_name) is None:
+                raise ValueError(f'{field_name} cannot be null.')
+        return self
+
+
+class PreferenceUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    confirmEnabledToolRouting: bool | None = None
+    defaultEventColor: str | None = Field(default=None, min_length=1, max_length=32)
+    defaultEventEndTime: str | None = Field(
+        default=None,
+        pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$",
+    )
+    defaultEventStartTime: str | None = Field(
+        default=None,
+        pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$",
+    )
+    defaultEventTypeId: str | None = Field(default=None, min_length=1, max_length=64)
+    defaultTodoEventTypeId: str | None = Field(default=None, min_length=1, max_length=64)
+    defaultTodoPriority: Literal["high", "medium", "low"] | None = None
+    language: Literal["en", "zh"] | None = None
+    aiUsageMode: Literal["economy", "balanced", "quality"] | None = None
+    aiMonthlySoftLimit: int | None = Field(default=None, ge=1, le=2_147_483_647)
+    aiMonthlyHardLimit: int | None = Field(default=None, ge=1, le=2_147_483_647)
+    layoutPanelPosition: Literal["left", "right", "top", "bottom"] | None = None
+    layoutPanelSizePercent: int | None = Field(default=None, ge=15, le=40)
+    timezoneOverride: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def reject_explicit_nulls(self) -> "PreferenceUpdatePayload":
+        for field_name in self.model_fields_set:
+            if getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null.")
+        return self
+
+
+class ToolPresetLlmOptionsPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    model: str | None = Field(default=None, max_length=200)
+    provider: Literal["global", "api", "local"] = "global"
+
+
+class ToolPresetFieldOptionPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    label: str = Field(min_length=1, max_length=80)
+    value: str = Field(min_length=1, max_length=120)
+
+    @field_validator("label", "value")
+    @classmethod
+    def strip_nonempty_text(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("value must contain non-whitespace characters.")
+        return clean
+
+
+class ToolPresetFieldPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    defaultValue: str | None = Field(default=None, max_length=10_000)
+    id: str = Field(min_length=1, max_length=64)
+    label: str = Field(min_length=1, max_length=80)
+    options: list[ToolPresetFieldOptionPayload] | None = Field(default=None, max_length=100)
+    placeholder: str | None = Field(default=None, max_length=160)
+    required: bool = False
+    type: Literal["text", "textarea", "date", "time", "number", "select"] = "text"
+
+    @field_validator("id", "label")
+    @classmethod
+    def strip_nonempty_text(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("value must contain non-whitespace characters.")
+        return clean
+
+
+class ToolPresetCreatePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    createdAt: datetime | None = None
+    defaultLlmOptions: ToolPresetLlmOptionsPayload = Field(
+        default_factory=ToolPresetLlmOptionsPayload,
+    )
+    description: str = Field(min_length=1, max_length=500)
+    fields: list[ToolPresetFieldPayload] = Field(min_length=1, max_length=20)
+    id: str = Field(min_length=1, max_length=80)
+    isBuiltIn: bool = False
+    label: str = Field(min_length=1, max_length=80)
+    outputSchemaKey: Literal["calendar_event_drafts"] = "calendar_event_drafts"
+    prompt: str = Field(min_length=1, max_length=4_000)
+    updatedAt: datetime | None = None
+
+    @field_validator("description", "id", "label", "prompt")
+    @classmethod
+    def strip_nonempty_text(cls, value: str) -> str:
+        clean = value.strip()
+        if not clean:
+            raise ValueError("value must contain non-whitespace characters.")
+        return clean
+
+
+class ToolPresetUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    defaultLlmOptions: ToolPresetLlmOptionsPayload | None = None
+    description: str | None = Field(default=None, min_length=1, max_length=500)
+    fields: list[ToolPresetFieldPayload] | None = Field(default=None, min_length=1, max_length=20)
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+    outputSchemaKey: Literal["calendar_event_drafts"] | None = None
+    prompt: str | None = Field(default=None, min_length=1, max_length=4_000)
+    updatedAt: datetime | None = None
+
+    @field_validator("description", "label", "prompt")
+    @classmethod
+    def strip_nonempty_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        clean = value.strip()
+        if not clean:
+            raise ValueError("value must contain non-whitespace characters.")
+        return clean
+
+    @model_validator(mode="after")
+    def reject_empty_or_null_patch(self) -> "ToolPresetUpdatePayload":
+        if not self.model_fields_set:
+            raise ValueError("At least one tool preset field must be provided.")
+        for field_name in self.model_fields_set:
+            if getattr(self, field_name) is None:
                 raise ValueError(f"{field_name} cannot be null.")
         return self
 
@@ -386,6 +676,91 @@ class ServerState:
     ai_requests: dict[str, deque[float]] = field(default_factory=lambda: defaultdict(deque))
 
 
+class MeteredReceiptDeepSeekClient:
+    '''Apply the shared per-user AI policy to each actual Fridge provider call.'''
+
+    def __init__(self, client: object, state: ServerState, control: GoalControlService) -> None:
+        self.client = client
+        self.state = state
+        self.control = control
+
+    def extract_fridge_items(
+        self,
+        receipt_text: str,
+        candidate_items: list[str],
+        purchase_date: date,
+    ) -> list[Any]:
+        usage = self.control.usage_summary()
+        if usage['degraded']:
+            raise DeepSeekBudgetExceededError(
+                'The monthly AI hard limit has been reached. Local receipt analysis remains available.'
+            )
+        try:
+            enforce_ai_limit(self.state, self.control.user_id)
+        except AuthError as exc:
+            if exc.code == 'ai_rate_limited':
+                raise DeepSeekRateLimitError(str(exc)) from exc
+            raise
+
+        prompt = build_deepseek_prompt(receipt_text, candidate_items, purchase_date)
+        estimated_input_tokens = max(1, (len(FRIDGE_SYSTEM_PROMPT) + len(prompt)) // 4)
+        try:
+            predictions = self.client.extract_fridge_items(  # type: ignore[attr-defined]
+                receipt_text,
+                candidate_items,
+                purchase_date,
+            )
+        except DeepSeekError as exc:
+            if isinstance(exc, DeepSeekTimeoutError):
+                status = 'upstream_timeout'
+            elif isinstance(exc, DeepSeekRateLimitError):
+                status = 'upstream_rate_limit'
+            elif isinstance(exc, DeepSeekInvalidResponseError):
+                status = 'upstream_invalid'
+            else:
+                status = 'upstream_error'
+            self._record(usage, estimated_input_tokens, 0, status)
+            raise
+        except Exception:
+            self._record(usage, estimated_input_tokens, 0, 'upstream_error')
+            raise
+
+        estimated_output_tokens = max(
+            1,
+            len(
+                json.dumps(
+                    [
+                        prediction.to_dict() if hasattr(prediction, 'to_dict') else str(prediction)
+                        for prediction in predictions
+                    ],
+                    ensure_ascii=False,
+                )
+            )
+            // 4,
+        )
+        self._record(usage, estimated_input_tokens, estimated_output_tokens, 'success')
+        return predictions
+
+    def _record(
+        self,
+        usage: dict[str, Any],
+        input_tokens: int,
+        output_tokens: int,
+        status: str,
+    ) -> None:
+        config = getattr(self.client, 'config', None)
+        model = str(getattr(config, 'model', '') or os.getenv('DEEPSEEK_MODEL', DEEPSEEK_DEFAULT_MODEL))
+        self.control.record_usage(
+            operation='receipt_analysis',
+            model=model,
+            usage_mode=str(usage['effective_mode']),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            status=status,
+            estimated=True,
+        )
+
+
 def parse_multipart_form(content_type: str, body: bytes) -> dict[str, dict[str, Any]]:
     """Compatibility parser retained for focused unit tests and legacy callers."""
     boundary_match = re.search(r"boundary=([^;]+)", content_type)
@@ -445,25 +820,37 @@ def create_app(
         engine = create_database_engine(resolved_database_url)
     else:
         engine = create_database_engine(configured_database_url)
+    if resolved_mode == 'server' and engine.dialect.name not in {'mysql', 'sqlite'}:
+        engine.dispose()
+        raise RuntimeError('Server mode requires a mysql+pymysql CALENDAR_DATABASE_URL.')
+    if (
+        resolved_mode == 'server'
+        and engine.dialect.name != 'mysql'
+        and configured_database_url is None
+    ):
+        engine.dispose()
+        raise RuntimeError(
+            'Server mode requires a mysql+pymysql CALENDAR_DATABASE_URL. '
+            'SQLite tests must pass configured_database_url explicitly.'
+        )
     if (
         resolved_mode == "server"
         and engine.dialect.name != "mysql"
         and os.getenv("CALENDAR_ALLOW_SERVER_SQLITE", "").lower() not in {"1", "true", "yes"}
-        and configured_database_url is None
     ):
         raise RuntimeError("Server mode requires a mysql+pymysql CALENDAR_DATABASE_URL.")
-    if resolved_mode == "server" and engine.dialect.name == "mysql":
+    if resolved_mode == "server":
         require_migration_head(engine)
-    elif resolved_mode == "server":
-        initialize_schema(engine)
-    auth = AuthService(engine)
+    require_schema_fingerprint(engine)
+    lock_runtime_schema(engine)
+    auth = AuthService(engine, initialize=False)
     if resolved_mode == "desktop":
         auth.ensure_desktop_user()
     state = ServerState(
         mode=resolved_mode,
         engine=engine,
         auth=auth,
-        analyzer=ReceiptAnalyzer(),
+        analyzer=build_receipt_analyzer(resolved_mode),
         request_limits=request_limits,
         launch_token=launch_token or os.getenv("CALENDAR_DESKTOP_LAUNCH_TOKEN", "").strip(),
     )
@@ -524,6 +911,16 @@ def create_app(
     async def _calendar_not_found(_request: Request, exc: CalendarRowNotFoundError) -> JSONResponse:
         return error_response("calendar_item_not_found", clean_key_error(exc), 404)
 
+    @api.exception_handler(CalendarReferenceError)
+    async def _calendar_reference_error(_request: Request, exc: CalendarReferenceError) -> JSONResponse:
+        return error_response(
+            "validation_error",
+            "Calendar relationship validation failed.",
+            422,
+            retryable=False,
+            field_errors={"reference": [str(exc)]},
+        )
+
     @api.exception_handler(MemoryNotFoundError)
     async def _memory_not_found(_request: Request, exc: MemoryNotFoundError) -> JSONResponse:
         return error_response("memory_not_found", clean_key_error(exc), 404)
@@ -532,10 +929,16 @@ def create_app(
     async def _user_data_not_found(_request: Request, exc: UserDataNotFoundError) -> JSONResponse:
         return error_response("item_not_found", clean_key_error(exc), 404)
 
+    async def _memory_validation_error(
+        _request: Request,
+        exc: MemoryValidationError,
+    ) -> JSONResponse:
+        return error_response("invalid_request", str(exc), 422)
+
     async def _validation_error(_request: Request, exc: Exception) -> JSONResponse:
         return error_response("invalid_request", str(exc), 400)
 
-    api.add_exception_handler(MemoryValidationError, _validation_error)
+    api.add_exception_handler(MemoryValidationError, _memory_validation_error)
     api.add_exception_handler(BackupValidationError, _validation_error)
     api.add_exception_handler(PreUpdateBackupError, _validation_error)
 
@@ -676,9 +1079,11 @@ def create_app(
         if state.mode != "desktop":
             raise AuthError("server_config_read_only", "Server configuration is managed by environment variables.", 403)
         updates: dict[str, str] = {}
+        analyzer_needs_refresh = False
         api_key = str(payload.get("deepseek_api_key", "")).strip()
         if api_key:
             set_local_ai_key(api_key)
+            analyzer_needs_refresh = True
         for payload_key, env_key in {
             "deepseek_base_url": "DEEPSEEK_BASE_URL",
             "deepseek_model": "DEEPSEEK_MODEL",
@@ -689,7 +1094,9 @@ def create_app(
         if updates:
             update_env_file(application_data_dir() / ".env.local", updates)
             os.environ.update({key: value for key, value in updates.items() if value})
-            state.analyzer = ReceiptAnalyzer()
+            analyzer_needs_refresh = True
+        if analyzer_needs_refresh:
+            state.analyzer = build_receipt_analyzer(state.mode)
         return backend_config_status(state.mode)
 
     @api.get("/api/calendar/todos")
@@ -762,16 +1169,38 @@ def create_app(
         return {"success": True, "eventTypes": CalendarRepository(engine=state.engine).list_event_types(principal.user_id)}
 
     @api.post("/api/calendar/event-types")
-    def create_event_type(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "eventType": CalendarRepository(engine=state.engine).upsert_event_type(payload, principal.user_id)}
+    def create_event_type(payload: EventTypeCreatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {
+            "success": True,
+            "eventType": CalendarRepository(engine=state.engine).upsert_event_type(
+                payload.model_dump(mode="json", exclude_none=True),
+                principal.user_id,
+            ),
+        }
 
     @api.patch("/api/calendar/event-types/{event_type_id}")
-    def update_event_type(event_type_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "eventType": CalendarRepository(engine=state.engine).upsert_event_type({**payload, "id": event_type_id}, principal.user_id)}
+    def update_event_type(event_type_id: str, payload: EventTypeUpdatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {
+            "success": True,
+            "eventType": CalendarRepository(engine=state.engine).upsert_event_type(
+                {
+                    **payload.model_dump(mode="json", exclude_unset=True),
+                    "id": event_type_id,
+                },
+                principal.user_id,
+                create_missing=False,
+            ),
+        }
 
     @api.post("/api/calendar/import/local-snapshot")
-    def import_calendar(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "imported": CalendarRepository(engine=state.engine).import_local_snapshot(payload, principal.user_id)}
+    def import_calendar(payload: LocalCalendarSnapshotPayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {
+            "success": True,
+            "imported": CalendarRepository(engine=state.engine).import_local_snapshot(
+                payload.model_dump(mode="json", exclude_none=True),
+                principal.user_id,
+            ),
+        }
 
     def memory(principal: Principal) -> LongTermMemoryService:
         return LongTermMemoryService(engine=state.engine, user_id=principal.user_id)
@@ -783,6 +1212,16 @@ def create_app(
     @api.post("/api/memory/goals")
     def create_goal(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
         return {"success": True, "goal": memory(principal).create_goal(payload)}
+
+    @api.post("/api/memory/goal-projects")
+    def create_goal_project(
+        payload: MemoryGoalProjectCreatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        created = memory(principal).create_goal_project(
+            payload.model_dump(mode="python", exclude_none=True)
+        )
+        return {"success": True, **created}
 
     @api.patch("/api/memory/goals/{goal_id}")
     def update_goal(goal_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
@@ -889,12 +1328,19 @@ def create_app(
         )
         with control.session_factory() as session:
             effective_timezone, _zone = control._user_timezone(session)
+        provider_client = state.analyzer.deepseek_client
+        metered_client = (
+            MeteredReceiptDeepSeekClient(provider_client, state, control)
+            if provider_client is not None
+            else None
+        )
         return state.analyzer.analyze(
             bytes(content),
             image.filename or "receipt",
             image.content_type or "application/octet-stream",
             purchase_date=parsed_date,
             timezone=effective_timezone,
+            deepseek_client=metered_client,
         )
 
     @api.get("/api/fridge/items")
@@ -902,11 +1348,24 @@ def create_app(
         return {"success": True, "items": FridgeRepository(state.engine, principal.user_id).list_items()}
 
     @api.post("/api/fridge/items")
-    def create_fridge_item(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    def create_fridge_item(
+        payload: FridgeItemCreatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        payload = payload.model_dump(
+            mode='json',
+            exclude_none=True,
+            exclude={'cache_hit', 'cache_match_type', 'cache_layer', 'metadata'},
+        )
         return {"success": True, "item": FridgeRepository(state.engine, principal.user_id).create_item(payload)}
 
     @api.patch("/api/fridge/items/{item_id}")
-    def update_fridge_item(item_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    def update_fridge_item(
+        item_id: str,
+        payload: FridgeItemUpdatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        payload = payload.model_dump(mode='json', exclude_unset=True)
         return {"success": True, "item": FridgeRepository(state.engine, principal.user_id).update_item(item_id, payload)}
 
     @api.delete("/api/fridge/items/{item_id}")
@@ -919,16 +1378,15 @@ def create_app(
         return {"success": True, "preferences": PreferenceRepository(state.engine, principal.user_id).get()}
 
     @api.patch("/api/me/preferences")
-    def update_preferences(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        clean = {key: value for key, value in payload.items() if key in PERSONAL_PREFERENCE_KEYS}
+    def update_preferences(payload: PreferenceUpdatePayload, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        clean = payload.model_dump(exclude_unset=True)
         timezone_override = str(clean.get("timezoneOverride") or "").strip()
         if timezone_override:
             GoalControlService._timezone(timezone_override)
+            clean["timezoneOverride"] = timezone_override
         if "aiUsageMode" in clean:
-            requested_mode = str(clean["aiUsageMode"] or "").strip().lower()
+            requested_mode = clean["aiUsageMode"]
             maximum_mode = clean_mode(os.getenv("AI_MAX_USAGE_MODE", "balanced"))
-            if requested_mode not in USAGE_MODES:
-                raise MemoryValidationError("aiUsageMode must be economy, balanced, or quality.")
             if USAGE_MODES.index(requested_mode) > USAGE_MODES.index(maximum_mode):
                 raise AuthError("ai_usage_mode_not_allowed", "The requested AI usage mode exceeds the administrator maximum.", 403)
         budget_keys = {"aiMonthlySoftLimit", "aiMonthlyHardLimit"}
@@ -947,12 +1405,30 @@ def create_app(
         return {"success": True, "presets": ToolPresetRepository(state.engine, principal.user_id).list_presets()}
 
     @api.post("/api/tool-presets")
-    def save_preset(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "preset": ToolPresetRepository(state.engine, principal.user_id).save_preset(payload)}
+    def save_preset(
+        payload: ToolPresetCreatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        clean = payload.model_dump(mode="json", exclude_none=True)
+        return {
+            "success": True,
+            "preset": ToolPresetRepository(state.engine, principal.user_id).save_preset(clean),
+        }
 
     @api.patch("/api/tool-presets/{preset_id}")
-    def update_preset(preset_id: str, payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return {"success": True, "preset": ToolPresetRepository(state.engine, principal.user_id).save_preset({**payload, "id": preset_id})}
+    def update_preset(
+        preset_id: str,
+        payload: ToolPresetUpdatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        clean = payload.model_dump(mode="json", exclude_unset=True)
+        return {
+            "success": True,
+            "preset": ToolPresetRepository(state.engine, principal.user_id).update_preset(
+                preset_id,
+                clean,
+            ),
+        }
 
     @api.delete("/api/tool-presets/{preset_id}")
     def delete_preset(preset_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
@@ -1031,8 +1507,23 @@ def create_app(
                 422,
                 retryable=False,
             )
-        project_id = str(payload.pop("_calendarProjectId", "")).strip() or None
-        thread_id = str(payload.pop("_calendarThreadId", "")).strip() or None
+        context_ids: dict[str, str | None] = {}
+        for field_name in ("_calendarProjectId", "_calendarThreadId"):
+            if field_name not in payload:
+                context_ids[field_name] = None
+                continue
+            raw_context_id = payload.pop(field_name)
+            if not isinstance(raw_context_id, str) or len(raw_context_id) > 64:
+                return error_response(
+                    "ai_context_id_invalid",
+                    f"{field_name} must be a string of at most 64 characters.",
+                    422,
+                    retryable=False,
+                    field_errors={field_name: ["Must be a string of at most 64 characters."]},
+                )
+            context_ids[field_name] = raw_context_id.strip() or None
+        project_id = context_ids["_calendarProjectId"]
+        thread_id = context_ids["_calendarThreadId"]
         control = GoalControlService(
             engine=state.engine,
             user_id=principal.user_id,
@@ -1050,7 +1541,19 @@ def create_app(
         fallback_model = os.getenv("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL)
         model_env = "AI_PLANNING_MODEL" if operation in AI_PLANNING_OPERATIONS else "AI_ROUTINE_MODEL"
         allowed_model = os.getenv(model_env, fallback_model).strip() or fallback_model
-        requested_output = int(payload.get("max_tokens") or operation_limits["output"])
+        requested_output = payload.get("max_tokens", operation_limits["output"])
+        if (
+            isinstance(requested_output, bool)
+            or not isinstance(requested_output, int)
+            or requested_output <= 0
+        ):
+            return error_response(
+                "ai_max_tokens_invalid",
+                "max_tokens must be a positive integer.",
+                422,
+                retryable=False,
+                field_errors={"max_tokens": ["Must be a positive integer."]},
+            )
         clean_payload = {
             **{key: value for key, value in payload.items() if not key.startswith("_calendar")},
             "model": allowed_model,
@@ -1277,6 +1780,24 @@ def set_local_ai_key(value: str) -> None:
         keyring.set_password("CalendarApp", "deepseek-api-key", value)
     except Exception as exc:
         raise InvalidRequestError(f"Unable to save API key in Windows Credential Manager: {exc}") from exc
+
+
+def build_receipt_analyzer(mode: str) -> ReceiptAnalyzer:
+    if mode != 'desktop':
+        return ReceiptAnalyzer(runtime_cache_enabled=False)
+    api_key = local_ai_key()
+    if not api_key:
+        return ReceiptAnalyzer(runtime_cache_enabled=True)
+    return ReceiptAnalyzer(
+        deepseek_client=DeepSeekClient(
+            DeepSeekConfig(
+                api_key=api_key,
+                base_url=os.getenv('DEEPSEEK_BASE_URL', DEEPSEEK_DEFAULT_BASE_URL).rstrip('/'),
+                model=os.getenv('DEEPSEEK_MODEL', DEEPSEEK_DEFAULT_MODEL),
+            )
+        ),
+        runtime_cache_enabled=True,
+    )
 
 
 def enforce_ai_limit(state: ServerState, user_id: str) -> None:

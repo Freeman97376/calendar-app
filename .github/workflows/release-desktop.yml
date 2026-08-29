@@ -48,7 +48,7 @@ jobs:
         run: npm ci
 
       - name: Install backend test dependencies
-        run: python -m pip install --require-hashes -r requirements-server.lock
+        run: python -m pip install --require-hashes -r requirements-test.lock
 
       - name: Verify release version
         run: npm run version:check
@@ -60,7 +60,9 @@ jobs:
           npm run build
 
       - name: Run backend validation
-        run: python -m unittest discover tests/backend
+        env:
+          PYTHONWARNINGS: error::DeprecationWarning
+        run: python -m unittest discover Office/test/backend
 
       - name: Prepare desktop sidecar and resources
         shell: powershell

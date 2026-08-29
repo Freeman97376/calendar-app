@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
+from weakref import WeakSet
 
 from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKeyConstraint, Integer, JSON, String, Text, UniqueConstraint, create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
@@ -13,7 +14,59 @@ from sqlalchemy.pool import NullPool
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = PROJECT_ROOT / "backend" / "data" / "calendar_app.sqlite3"
 LOCAL_USER_ID = "local"
-ALEMBIC_HEAD = "20260719_0008"
+ALEMBIC_HEAD = "20260819_0009"
+
+
+_RUNTIME_SCHEMA_LOCKS: WeakSet[Engine] = WeakSet()
+
+_CRITICAL_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
+    'users': ('id',),
+    'sessions': ('id',),
+}
+
+_CRITICAL_UNIQUE_KEYS: dict[str, set[tuple[str, ...]]] = {
+    'users': {('username',)},
+    'sessions': {('token_hash',)},
+    'auth_throttle_buckets': {('scope', 'key_hash')},
+    'event_types': {('user_id', 'id')},
+    'goals': {('user_id', 'goal_id')},
+    'projects': {
+        ('user_id', 'project_id'),
+        ('user_id', 'project_id', 'goal_id'),
+    },
+    'activation_funnel_events': {('user_id', 'event_id'), ('user_id', 'journey_id', 'dedupe_key')},
+    'conversation_threads': {('user_id', 'thread_id')},
+}
+
+_CRITICAL_FOREIGN_KEYS: dict[
+    str,
+    set[tuple[tuple[str, ...], str, tuple[str, ...]]],
+] = {
+    'projects': {
+        (('user_id', 'goal_id'), 'goals', ('user_id', 'goal_id')),
+    },
+    'conversation_threads': {
+        (
+            ('user_id', 'project_id', 'goal_id'),
+            'projects',
+            ('user_id', 'project_id', 'goal_id'),
+        ),
+    },
+    'progress_logs': {
+        (
+            ('user_id', 'project_id', 'goal_id'),
+            'projects',
+            ('user_id', 'project_id', 'goal_id'),
+        ),
+    },
+    'tool_runs': {
+        (
+            ('user_id', 'project_id', 'goal_id'),
+            'projects',
+            ('user_id', 'project_id', 'goal_id'),
+        ),
+    },
+}
 
 
 class Base(DeclarativeBase):
@@ -74,6 +127,8 @@ def initialize_schema(engine: Engine, *, stamp_migration_head: bool = False) -> 
     create-all-then-stamp shortcut because it can claim constraints that were
     never installed.
     """
+    if engine in _RUNTIME_SCHEMA_LOCKS:
+        raise RuntimeError('Runtime schema initialization is locked; run Alembic migrations before startup.')
     if stamp_migration_head:
         raise RuntimeError("Direct migration stamping is disabled; run Alembic migrations.")
     Base.metadata.create_all(engine)
@@ -112,6 +167,79 @@ def require_migration_head(engine: Engine, expected: str = ALEMBIC_HEAD) -> None
         raise RuntimeError(
             f"Database schema is at {current or 'no revision'}; expected {expected}. "
             "Run `alembic upgrade head`."
+        )
+
+
+def lock_runtime_schema(engine: Engine) -> None:
+    '''Prevent create-all helpers from mutating a validated runtime engine.'''
+    _RUNTIME_SCHEMA_LOCKS.add(engine)
+
+
+def require_schema_fingerprint(engine: Engine) -> None:
+    '''Read-only verification that an Alembic head stamp matches the critical schema.'''
+    problems: list[str] = []
+    try:
+        inspector = inspect(engine)
+        actual_tables = set(inspector.get_table_names())
+        required_tables = set(Base.metadata.tables)
+        missing_tables = sorted(required_tables - actual_tables)
+        if missing_tables:
+            problems.append('missing tables: ' + ', '.join(missing_tables))
+
+        for table_name in sorted(required_tables & actual_tables):
+            expected_columns = set(Base.metadata.tables[table_name].columns.keys())
+            actual_columns = {str(column['name']) for column in inspector.get_columns(table_name)}
+            missing_columns = sorted(expected_columns - actual_columns)
+            if missing_columns:
+                problems.append(table_name + ' missing columns: ' + ', '.join(missing_columns))
+
+        for table_name, expected_columns in _CRITICAL_PRIMARY_KEYS.items():
+            if table_name not in actual_tables:
+                continue
+            actual_columns = tuple(inspector.get_pk_constraint(table_name).get('constrained_columns') or ())
+            if actual_columns != expected_columns:
+                problems.append(f'{table_name} primary key is {actual_columns!r}, expected {expected_columns!r}')
+
+        for table_name, expected_keys in _CRITICAL_UNIQUE_KEYS.items():
+            if table_name not in actual_tables:
+                continue
+            actual_keys = {
+                tuple(item.get('column_names') or ())
+                for item in inspector.get_unique_constraints(table_name)
+            }
+            actual_keys.update(
+                tuple(item.get('column_names') or ())
+                for item in inspector.get_indexes(table_name)
+                if item.get('unique')
+            )
+            for expected_key in sorted(expected_keys):
+                if expected_key not in actual_keys:
+                    problems.append(f'{table_name} missing unique key {expected_key!r}')
+
+        for table_name, expected_keys in _CRITICAL_FOREIGN_KEYS.items():
+            if table_name not in actual_tables:
+                continue
+            actual_keys = {
+                (
+                    tuple(item.get('constrained_columns') or ()),
+                    str(item.get('referred_table') or ''),
+                    tuple(item.get('referred_columns') or ()),
+                )
+                for item in inspector.get_foreign_keys(table_name)
+            }
+            for expected_key in sorted(expected_keys):
+                if expected_key not in actual_keys:
+                    problems.append(f'{table_name} missing foreign key {expected_key!r}')
+    except Exception as error:
+        raise RuntimeError(
+            'Unable to verify the database schema fingerprint; refusing to start the runtime.'
+        ) from error
+
+    if problems:
+        raise RuntimeError(
+            'Database schema fingerprint mismatch: '
+            + '; '.join(problems)
+            + '. Run `alembic upgrade head`; the runtime will not modify this database.'
         )
 
 
@@ -490,6 +618,31 @@ class ConversationMessageRecord(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     structured_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+
+class ActivationFunnelEventRecord(Base):
+    __tablename__ = "activation_funnel_events"
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_id", name="uq_activation_events_user_external"),
+        UniqueConstraint(
+            "user_id", "journey_id", "dedupe_key", name="uq_activation_events_user_journey_stage"
+        ),
+    )
+
+    row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    journey_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    thread_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    project_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    template_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    dedupe_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    stage: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[str] = mapped_column(String(40), nullable=False)
     updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
 

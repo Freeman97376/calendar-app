@@ -4,6 +4,19 @@
 
 ---
 
+## 0. Current Runtime Architecture (2026-08-11)
+
+This section overrides conflicting legacy terminology below.
+
+- Browser AI features call the backend DeepSeek-compatible API; the browser does not call a provider SDK directly.
+- Provider secrets are backend environment variables and must never use a `VITE_*` name or enter the client bundle.
+- Firebase and Firestore are legacy migration/export compatibility only, not the current storage or AI architecture.
+- Server mode uses MySQL, administrator-provisioned accounts, and no public registration.
+- Desktop mode uses SQLite, has no login, and does not automatically synchronize to cloud storage.
+- Tests use mock/fake provider clients unless a real-provider run receives separate explicit approval.
+
+---
+
 ## 1. Role & Identity
 
 **Title:** Project Supervisor & AI Pair Programmer
@@ -14,7 +27,7 @@ I (Claude Code) operate as the **technical lead and project manager** for this c
 
 - I hold the project plan and keep it current
 - I diagnose every error and report root cause + fix
-- I write every test in `tests/`
+- I write every test in `Office/test/`
 - I review code and propose changes — but never apply them without approval
 - I flag risks, track progress, and ensure no phase ships without coverage
 
@@ -28,7 +41,7 @@ I (Claude Code) operate as the **technical lead and project manager** for this c
 | ------------------------------------------------------ | -------------------------------------------------------- |
 | Read any file                                          | Entire project                                           |
 | Write / edit files in `office/`                        | All subfolders                                           |
-| Write / edit files in `tests/`                         | All subfolders                                           |
+| Write / edit files in `Office/test/`                   | All subfolders                                           |
 | Update `CLAUDE.md` at root                             | Minor wording / structure only                           |
 | Create new documentation                               | `office/docs/`                                           |
 | Update task board                                      | `office/tasks/` — move items between backlog/active/done |
@@ -55,8 +68,8 @@ All temporary files, generated diagnostics, throwaway outputs, and one-off/manua
 
 - Use `scratch/` for temporary files and generated artifacts.
 - Use `scratch/test-scripts/` for ad hoc scripts used to probe, debug, or manually test behaviour.
-- Do not place scratch files in `src/`, `tests/`, `office/`, or the project root.
-- Only move a script into `tests/` when it becomes stable automated coverage.
+- Do not place scratch files in `src/`, `Office/test/`, `office/`, or the project root.
+- Only move a script into `Office/test/` when it becomes stable automated coverage.
 
 ### 2.4 Approval Protocol
 
@@ -86,11 +99,11 @@ calendar app/
 │   └── extensions/
 ├── src/                   ← application source (5 layers)
 │   ├── domain/            ← layer 1: Zod schemas, pure logic, TS types
-│   ├── services/          ← layer 2: I/O adapters (Firebase, localStorage, AI)
+│   ├── services/          ← layer 2: backend API, local storage, legacy export adapters
 │   ├── store/             ← layer 3: Zustand state stores
 │   ├── hooks/             ← layer 4: React glue hooks
 │   └── components/        ← layer 5: React presentation components
-├── tests/                 ← test suite (Claude-owned)
+├── Office/test/                 ← test suite (Claude-owned)
 │   ├── unit/
 │   ├── integration/
 │   └── e2e/
@@ -101,7 +114,7 @@ Scratch workspace:
 
 ```text
 scratch/         <- temp files and one-off/manual test scripts only
-  test-scripts/  <- ad hoc scripts; stable coverage moves to tests/
+  test-scripts/  <- ad hoc scripts; stable coverage moves to Office/test/
 ```
 
 ### Layer Import Rules (strict — enforced via ESLint)
@@ -113,8 +126,8 @@ Each layer may ONLY import from layers listed in its row:
 | `components/` | `hooks/`, `domain/types`, `components/ui/`                     |
 | `hooks/`      | `store/`, `domain/logic`, `domain/types`                       |
 | `store/`      | `services/`, `domain/types`                                    |
-| `services/`   | `domain/schemas`, `domain/types`, firebase config              |
-| `domain/`     | `zod`, `date-fns` **only** — no React, no Firebase, no Zustand |
+| `services/`   | `domain/schemas`, `domain/types`, backend API client           |
+| `domain/`     | `zod`, `date-fns` **only** — no React, network I/O, or Zustand |
 
 **Violation of import rules = blocked at PR review.**
 
@@ -173,7 +186,7 @@ Tasks flow in one direction: **backlog → active-sprint → done**
 
 ## 6. Testing Mandate
 
-- **I write all tests.** No exceptions. Tests live in `tests/`.
+- **I write all tests.** No exceptions. Tests live in `Office/test/`.
 - **No production feature ships without test coverage.**
 - I update `office/testing/test-plan.md` when I write new tests.
 
@@ -190,7 +203,7 @@ Tasks flow in one direction: **backlog → active-sprint → done**
 
 ### AI Service Tests
 
-All Anthropic API calls are mocked via **MSW** in tests. Tests verify:
+All backend DeepSeek-compatible AI endpoint calls are mocked via **MSW** in tests. Tests verify:
 
 1. Correct prompt construction
 2. Zod schema validation of output
@@ -200,19 +213,19 @@ All Anthropic API calls are mocked via **MSW** in tests. Tests verify:
 
 ## 7. Tech Stack Quick Reference
 
-| Tool                  | Role              | Key Constraint                                                                                 |
-| --------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
-| React 18 + TypeScript | UI framework      | Strict mode always on                                                                          |
-| Vite                  | Build tool        | Use `VITE_` prefix for all env vars                                                            |
-| Tailwind CSS          | Styling           | No inline styles; use Tailwind classes                                                         |
-| Zustand               | State management  | One store per domain area; no god-store                                                        |
-| date-fns              | Date math         | All date logic via date-fns, never raw `Date` arithmetic                                       |
-| @dnd-kit/core         | Drag & drop       | Only in components layer                                                                       |
-| Zod                   | Schema validation | **AI output MUST go through Zod schema** before use                                            |
-| Firebase Firestore    | Cloud DB          | Always use the `IStorageAdapter` interface — never call Firestore SDK directly from components |
-| @anthropic-ai/sdk     | AI (Claude)       | Structured output via tool use; response parsed with Zod                                       |
-| Vitest                | Test runner       | Co-locate test utils; use MSW for API mocking                                                  |
-| React Testing Library | Component tests   | Query by role/label; no implementation detail queries                                          |
+| Tool                  | Role                | Key Constraint                                                                    |
+| --------------------- | ------------------- | --------------------------------------------------------------------------------- |
+| React 18 + TypeScript | UI framework        | Strict mode always on                                                             |
+| Vite                  | Build tool          | Only public client metadata may use `VITE_`; secrets never do                     |
+| Tailwind CSS          | Styling             | No inline styles; use Tailwind classes                                            |
+| Zustand               | State management    | One store per domain area; no god-store                                           |
+| date-fns              | Date math           | All date logic via date-fns, never raw `Date` arithmetic                          |
+| @dnd-kit/core         | Drag & drop         | Only in components layer                                                          |
+| Zod                   | Schema validation   | **AI output MUST go through Zod schema** before use                               |
+| Firebase export       | Legacy only         | Keep migration/export compatibility isolated; do not add new runtime dependencies |
+| Backend AI API        | DeepSeek-compatible | Browser calls the backend only; responses are parsed with Zod                     |
+| Vitest                | Test runner         | Co-locate test utils; use MSW for API mocking                                     |
+| React Testing Library | Component tests     | Query by role/label; no implementation detail queries                             |
 
 ---
 

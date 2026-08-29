@@ -11,6 +11,8 @@ import RecurrenceSelector from './RecurrenceSelector'
 type EventFormProps = {
   event: Event | null
   selectedDate: string
+  selectedEndTime?: string | null
+  selectedStartTime?: string | null
   onCancel: () => void
   onDelete?: (scope: RecurrenceEditScope) => Promise<void>
   onSubmit: (values: EventFormValues) => Promise<void>
@@ -33,6 +35,8 @@ function toLocalTimeInput(isoDateTime: string): string {
 export default function EventForm({
   event,
   selectedDate,
+  selectedEndTime,
+  selectedStartTime,
   onCancel,
   onDelete,
   onSubmit,
@@ -65,15 +69,19 @@ export default function EventForm({
       description: event?.description ?? '',
       displayDetails: event?.displayDetails ?? '',
       date: event ? toLocalDateInput(event.startAt) : selectedDate,
-      startTime: event ? toLocalTimeInput(event.startAt) : runtimeConfig.defaultEventStartTime,
-      endTime: event ? toLocalTimeInput(event.endAt) : runtimeConfig.defaultEventEndTime,
+      startTime: event
+        ? toLocalTimeInput(event.startAt)
+        : (selectedStartTime ?? runtimeConfig.defaultEventStartTime),
+      endTime: event
+        ? toLocalTimeInput(event.endAt)
+        : (selectedEndTime ?? runtimeConfig.defaultEventEndTime),
       allDay: event?.allDay ?? false,
       color: event?.color ?? runtimeConfig.defaultEventColor,
       eventTypeId: event?.eventTypeId ?? defaultEventTypeId,
       recurrenceRule: event?.recurrenceRule,
       recurrenceScope: event?.masterId ? 'this' : 'all',
     }),
-    [defaultEventTypeId, event, runtimeConfig, selectedDate],
+    [defaultEventTypeId, event, runtimeConfig, selectedDate, selectedEndTime, selectedStartTime],
   )
 
   const [values, setValues] = useState(initialValues)

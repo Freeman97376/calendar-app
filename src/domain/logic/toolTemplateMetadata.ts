@@ -113,25 +113,43 @@ function extractActivationFieldValue(
   const lowerMessage = lower(message)
 
   if (fieldId === 'heightCm') {
-    return firstMatch(message, [/\u8eab\u9ad8\s*[:\uff1a]?\s*(\d{2,3})/, /(\d{2,3})\s*(?:cm|\u5398\u7c73)/i])
+    return firstMatch(message, [
+      /\u8eab\u9ad8\s*[:\uff1a]?\s*(\d{2,3})/,
+      /(\d{2,3})\s*(?:cm|\u5398\u7c73)/i,
+    ])
   }
 
   if (fieldId === 'weightKg') {
-    return firstMatch(message, [/\u4f53\u91cd\s*[:\uff1a]?\s*(\d{2,3})/, /(\d{2,3})\s*(?:kg|\u516c\u65a4|\u5343\u514b)/i])
+    return firstMatch(message, [
+      /\u4f53\u91cd\s*[:\uff1a]?\s*(\d{2,3})/,
+      /(\d{2,3})\s*(?:kg|\u516c\u65a4|\u5343\u514b)/i,
+    ])
   }
 
   if (fieldId === 'preferences') {
-    return firstMatch(message, [/(?:\u504f\u597d|\u559c\u6b22|prefer(?:ence)?s?)\s*[:\uff1a]?\s*([^\uff0c,\u3002\uff1b;.!\uff01\uff1f]+)/i])
+    return firstMatch(message, [
+      /(?:\u504f\u597d|\u559c\u6b22|prefer(?:ence)?s?)\s*[:\uff1a]?\s*([^\uff0c,\u3002\uff1b;.!\uff01\uff1f]+)/i,
+    ])
   }
 
   if (fieldId === 'constraints') {
-    const explicit = firstMatch(message, [/(?:\u9650\u5236|\u7ea6\u675f|constraints?|injur(?:y|ies))\s*[:\uff1a]?\s*([^\uff0c,\u3002\uff1b;.!\uff01\uff1f]+)/i])
+    const explicit = firstMatch(message, [
+      /(?:\u9650\u5236|\u7ea6\u675f|constraints?|injur(?:y|ies))\s*[:\uff1a]?\s*([^\uff0c,\u3002\uff1b;.!\uff01\uff1f]+)/i,
+    ])
     if (explicit) return explicit
-    if (/\u4f24|\u75db|knee|injur|pain|\u819d\u76d6|\u8170|\u4f4e\u51b2\u51fb|low impact/i.test(message)) return message
+    if (
+      /\u4f24|\u75db|knee|injur|pain|\u819d\u76d6|\u8170|\u4f4e\u51b2\u51fb|low impact/i.test(
+        message,
+      )
+    )
+      return message
   }
 
   if (fieldId === 'frequency') {
-    const weekly = firstMatch(message, [/\u6bcf\u5468\s*(\d+)\s*\u6b21/, /(\d+)\s*(?:times|sessions)\s*(?:per|a)\s*week/i])
+    const weekly = firstMatch(message, [
+      /\u6bcf\u5468\s*(\d+)\s*\u6b21/,
+      /(\d+)\s*(?:times|sessions)\s*(?:per|a)\s*week/i,
+    ])
     if (weekly) return `${weekly} times per week`
   }
 
@@ -146,12 +164,20 @@ function extractActivationFieldValue(
   }
 
   if (fieldId === 'learningTrack') {
-    if (template.id === 'seo-learning' || /seo|\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d/i.test(message)) return 'SEO skills'
-    if (/agent|\u667a\u80fd\u4f53|prompt|\u63d0\u793a\u8bcd|retrieval|\u68c0\u7d22/i.test(message)) return 'AI agent skills'
+    if (
+      template.id === 'seo-learning' ||
+      /seo|\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d/i.test(message)
+    )
+      return 'SEO skills'
+    if (/agent|\u667a\u80fd\u4f53|prompt|\u63d0\u793a\u8bcd|retrieval|\u68c0\u7d22/i.test(message))
+      return 'AI agent skills'
   }
 
   if (fieldId === 'weeklyTime') {
-    const hours = firstMatch(message, [/\u6bcf\u5468\s*(\d+)\s*(?:\u5c0f\u65f6|\u949f\u5934)/, /(\d+)\s*hours?\s*(?:per|a)\s*week/i])
+    const hours = firstMatch(message, [
+      /\u6bcf\u5468\s*(\d+)\s*(?:\u5c0f\u65f6|\u949f\u5934)/,
+      /(\d+)\s*hours?\s*(?:per|a)\s*week/i,
+    ])
     if (hours) return `${hours} hours per week`
   }
 

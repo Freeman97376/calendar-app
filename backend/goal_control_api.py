@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from fastapi import Body, Depends, FastAPI, Query, Request
 from fastapi.responses import JSONResponse
@@ -36,6 +36,32 @@ class CheckInAnswerPayload(StrictGoalControlDto):
     answers: dict[str, Any] | list[dict[str, Any]] = Field(default_factory=dict)
     effort_minutes: int = Field(default=0, ge=0, le=10_080)
     metric_values: list[CheckInMetricValuePayload] = Field(default_factory=list, max_length=10)
+
+
+class ActivationFunnelEventPayload(StrictGoalControlDto):
+    eventName: Literal[
+        "tool_creation_request_submitted",
+        "template_recommendation_shown",
+        "template_recommendation_accepted",
+        "clarification_shown",
+        "clarification_completed",
+        "clarification_skipped",
+        "initial_plan_generated",
+        "initial_plan_structured_edit",
+        "initial_plan_ai_revision",
+        "initial_plan_approved",
+        "active_tool_created",
+        "active_tool_workspace_opened",
+        "journey_failed",
+    ]
+    journeyId: str | None = Field(default=None, min_length=1, max_length=80)
+    templateId: str = Field(min_length=1, max_length=80)
+    source: Literal["ai-assistant", "template-library"]
+    threadId: str | None = Field(default=None, max_length=64)
+    projectId: str | None = Field(default=None, max_length=64)
+    stage: str | None = Field(default=None, max_length=48)
+    errorCategory: str | None = Field(default=None, max_length=48)
+    metadata: dict[str, bool | int] = Field(default_factory=dict, max_length=8)
 
 
 def usage_capabilities(mode: str) -> dict[str, Any]:
@@ -126,6 +152,36 @@ def install_goal_control_routes(
         principal: Principal = Depends(current_principal),
     ) -> dict[str, Any]:
         return {"success": True, "message": control(principal).add_message(thread_id, payload)}
+
+    @api.post("/api/goal-conversations/{thread_id}/funnel-events")
+    def record_activation_funnel_event(
+        thread_id: str,
+        payload: ActivationFunnelEventPayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        event = control(principal).record_funnel_event(thread_id, payload.model_dump())
+        return {"success": True, "event": event}
+
+    @api.post("/api/active-tool-journeys/{journey_id}/events")
+    def record_active_tool_journey_event(
+        journey_id: str,
+        payload: ActivationFunnelEventPayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        values = payload.model_dump()
+        values["journeyId"] = journey_id
+        event = control(principal).record_funnel_event(None, values)
+        return {"success": True, "event": event}
+
+    @api.get("/api/active-tool-journeys/funnel")
+    def active_tool_funnel_baseline(
+        template_id: str | None = Query(default=None, max_length=80),
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        return {
+            "success": True,
+            "funnel": control(principal).activation_funnel_baseline(template_id),
+        }
 
     @api.post("/api/goal-conversations/{thread_id}/activate")
     def activate_goal_conversation(

@@ -8,19 +8,17 @@ import type {
   AICalendarContext,
 } from '../domain/types'
 import { AIEnabledToolRouteRequestSchema } from '../domain/schemas/ai.schema'
+import { isReviewFirstTemplate } from '../domain/logic/activeToolOnboarding'
 import {
   activeToolRouteSummary,
   activeToolsFromProjects,
-  createActiveToolMetadata,
   type ActiveTool,
 } from '../domain/logic/enabledTools'
 import {
-  activationAccuracyWarnings,
   activationFormDraftForTemplate,
   findToolTemplateIntent,
   instantiableToolTemplates,
   missingRecommendedActivationFields,
-  templateToolName,
   type ToolTemplateMetadata,
 } from '../domain/logic/toolTemplateMetadata'
 import {
@@ -28,6 +26,7 @@ import {
   TIME_CONFLICT_WARNING_PREFIX,
 } from '../domain/types/aiWarnings'
 import type { AIConversationContext } from '../domain/types/aiConversation'
+import { goalControlClient } from '../services/goalControlClient'
 import { dispatchEnabledToolInstance } from './enabledToolRunner'
 import { useLongTermMemoryStore } from './longTermMemoryStore'
 import { useUIStore } from './uiStore'
@@ -67,12 +66,14 @@ export type PendingToolTemplateActivation = {
   missingRecommendedFieldIds: string[]
   originalMessage: string
   reason: string
+  journeyId: string
   template: ToolTemplateMetadata
 }
 
 type EnabledToolRoutingOptions = {
   allowEnabledToolRouting?: boolean
   confirmEnabledToolRouting?: boolean
+  recordToolCreationJourney?: boolean
 }
 
 export type AIStore = {
@@ -93,7 +94,6 @@ export type AIStore = {
   clearHistory: () => void
   clearToolTemplateActivation: () => void
   confirmEnabledToolRoute: (context: AICalendarContext) => Promise<void>
-  confirmToolTemplateActivation: (formDraft?: Record<string, string>) => Promise<void>
   continueWithoutToolTemplateActivation: (context: AICalendarContext) => Promise<void>
   dismissSuggestion: () => void
   markActionPlanApplied: () => void
@@ -117,14 +117,30 @@ export type AIStore = {
 }
 
 let aiService: IAIService | null = null
+let aiRequestGeneration = 0
+
+function beginAIRequest(): number {
+  aiRequestGeneration += 1
+  return aiRequestGeneration
+}
+
+function invalidateAIRequests() {
+  aiRequestGeneration += 1
+}
+
+function isCurrentAIRequest(requestGeneration: number): boolean {
+  return requestGeneration === aiRequestGeneration
+}
 
 export function configureAIService(
   service: IAIService | null,
   metadata?: { model?: string; provider?: AIProvider },
 ) {
+  invalidateAIRequests()
   aiService = service
   useAIStore.setState((state) => ({
     isAvailable: Boolean(service?.isAvailable()),
+    isLoading: false,
     model: metadata?.model ?? state.model,
     provider: metadata?.provider ?? state.provider,
   }))
@@ -185,14 +201,51 @@ async function activeToolInstances(): Promise<ActiveTool[]> {
 
 async function findToolTemplateActivation(
   message: string,
+  recordCreationJourney = false,
 ): Promise<PendingToolTemplateActivation | null> {
   const activeInstances = await allActiveToolInstances()
   const activeSourceToolIds = new Set(activeInstances.map((instance) => instance.sourceToolId))
   const candidates = instantiableToolTemplates().filter(
-    (template) => !activeSourceToolIds.has(template.id),
+    (template) => isReviewFirstTemplate(template.id) && !activeSourceToolIds.has(template.id),
   )
+  const journeyId = globalThis.crypto?.randomUUID?.() ?? `journey-${Date.now()}`
   const match = findToolTemplateIntent(message, candidates)
-  if (!match) return null
+  if (!match) {
+    if (recordCreationJourney) {
+      await Promise.allSettled([
+        goalControlClient.recordFunnelEvent({
+          eventName: 'tool_creation_request_submitted',
+          journeyId,
+          source: 'ai-assistant',
+          templateId: 'unmatched',
+        }),
+        goalControlClient.recordFunnelEvent({
+          errorCategory: 'unknown',
+          eventName: 'journey_failed',
+          journeyId,
+          source: 'ai-assistant',
+          stage: 'matching',
+          templateId: 'unmatched',
+        }),
+      ])
+    }
+    return null
+  }
+
+  await Promise.allSettled([
+    goalControlClient.recordFunnelEvent({
+      eventName: 'tool_creation_request_submitted',
+      journeyId,
+      source: 'ai-assistant',
+      templateId: match.template.id,
+    }),
+    goalControlClient.recordFunnelEvent({
+      eventName: 'template_recommendation_shown',
+      journeyId,
+      source: 'ai-assistant',
+      templateId: match.template.id,
+    }),
+  ])
 
   const activationFormDraft = activationFormDraftForTemplate(match.template, message)
 
@@ -207,46 +260,9 @@ async function findToolTemplateActivation(
     ).map((field) => field.id),
     originalMessage: message,
     reason: match.reason,
+    journeyId,
     template: match.template,
   }
-}
-
-function hasOwnRecordValue(record: Record<string, string>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(record, key)
-}
-
-function mergeActivationForm(
-  template: ToolTemplateMetadata,
-  resultForm: Record<string, string>,
-  draftForm: Record<string, string>,
-): Record<string, string> {
-  const fields = template.activationFields ?? []
-  if (!fields.length) return { ...resultForm, ...draftForm }
-
-  return {
-    ...resultForm,
-    ...Object.fromEntries(
-      fields.map((field) => {
-        if (hasOwnRecordValue(draftForm, field.id)) return [field.id, draftForm[field.id] ?? '']
-        return [field.id, resultForm[field.id] ?? field.defaultValue ?? '']
-      }),
-    ),
-  }
-}
-
-function uniqueNonEmpty(values: string[]): string[] {
-  const seen = new Set<string>()
-  const output: string[] = []
-
-  for (const value of values) {
-    const trimmed = value.trim()
-    const key = trimmed.toLowerCase()
-    if (!trimmed || seen.has(key)) continue
-    seen.add(key)
-    output.push(trimmed)
-  }
-
-  return output
 }
 
 async function findEnabledToolRoute(
@@ -489,19 +505,23 @@ export const useAIStore = create<AIStore>((set, get) => ({
   clearActionPlan: () => set({ pendingActionPlan: null }),
   clearEnabledToolRoute: () => set({ pendingEnabledToolRoute: null }),
   clearToolTemplateActivation: () => set({ pendingToolTemplateActivation: null }),
-  clearHistory: () =>
+  clearHistory: () => {
+    invalidateAIRequests()
     set({
       conversationContext: null,
       error: null,
+      isLoading: false,
       messages: [],
       pendingActionPlan: null,
       pendingEnabledToolRoute: null,
       pendingSuggestion: null,
       pendingToolTemplateActivation: null,
-    }),
+    })
+  },
   dismissSuggestion: () => set({ pendingSuggestion: null }),
   markActionPlanApplied: () => set({ pendingActionPlan: null }),
-  reset: () =>
+  reset: () => {
+    invalidateAIRequests()
     set({
       error: null,
       isAvailable: Boolean(aiService?.isAvailable()),
@@ -514,10 +534,12 @@ export const useAIStore = create<AIStore>((set, get) => ({
       pendingSuggestion: null,
       pendingToolTemplateActivation: null,
       provider: 'api',
-    }),
+    })
+  },
   setModel: (model) => set({ model }),
   setProvider: (provider) => set({ provider }),
   startTodoStepConversation: (context) => {
+    invalidateAIRequests()
     const contextMessage = createMessage('user', selectedTodoStepsMessage(context))
     const assistantMessage = createMessage(
       'assistant',
@@ -527,6 +549,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
     set({
       conversationContext: context,
       error: null,
+      isLoading: false,
       messages: [contextMessage, assistantMessage],
       pendingActionPlan: null,
       pendingEnabledToolRoute: null,
@@ -537,15 +560,21 @@ export const useAIStore = create<AIStore>((set, get) => ({
   confirmEnabledToolRoute: async (context) => {
     const route = get().pendingEnabledToolRoute
     if (!route) return
+    const requestGeneration = beginAIRequest()
 
     if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
+      set({
+        error: 'Selected AI provider is not configured.',
+        isAvailable: false,
+        isLoading: false,
+      })
       return
     }
 
     set({ error: null, isLoading: true })
     try {
       const result = await dispatchRoute(route, context, aiService)
+      if (!isCurrentAIRequest(requestGeneration)) return
       const assistantMessage = createMessage(
         'assistant',
         `${result.assistantReply}${
@@ -562,107 +591,23 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingToolTemplateActivation: null,
       }))
     } catch (error) {
+      if (!isCurrentAIRequest(requestGeneration)) return
       const message =
         error instanceof Error ? error.message : 'Unable to dispatch active tool route'
-      set({ error: message, isLoading: false })
-    }
-  },
-  confirmToolTemplateActivation: async (formDraft = {}) => {
-    const pending = get().pendingToolTemplateActivation
-    if (!pending) return
-
-    if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
-      return
-    }
-
-    set({ error: null, isLoading: true })
-    try {
-      const memory = useLongTermMemoryStore.getState()
-      await memory.loadOverview().catch(() => undefined)
-      const latest = useLongTermMemoryStore.getState()
-      const existingAliases = activeToolsFromProjects(latest.projects, latest.goals).map(
-        (instance) => instance.instanceAlias,
-      )
-      const activationFormDraft = { ...pending.activationFormDraft, ...formDraft }
-      const result = await aiService.runToolActivation({
-        activationFields: pending.activationFields,
-        activationFormDraft,
-        capabilityTags: pending.template.capabilityTags ?? [],
-        existingInstanceAliases: existingAliases,
-        messages: [{ content: pending.originalMessage, role: 'user' }],
-        routeTags: pending.template.routeTags ?? [],
-        sourceToolId: pending.template.id,
-        templateDescription: pending.template.description ?? '',
-        templateId: pending.template.id,
-        templateLabel: pending.template.label,
-        toolName: templateToolName(pending.template),
-      })
-      const activationForm = mergeActivationForm(
-        pending.template,
-        result.activationForm,
-        activationFormDraft,
-      )
-      const warnings = uniqueNonEmpty([
-        ...result.warnings,
-        ...activationAccuracyWarnings(pending.template, activationForm),
-      ])
-      const activationSummary = warnings.length
-        ? `${result.activationSummary}\n\nAccuracy notes:\n${warnings.map((warning) => `- ${warning}`).join('\n')}`
-        : result.activationSummary
-      const alias = result.suggestedInstanceAlias.trim() || pending.template.label
-      const metadata = createActiveToolMetadata({
-        activationForm,
-        activationSummary,
-        adapterId: pending.template.adapterId ?? 'generic',
-        instanceAlias: alias,
-        parentTemplateId: pending.template.id,
-        parentTemplateLabel: pending.template.label,
-        parentTemplateToolName: templateToolName(pending.template),
-        routeTags: result.routeTags.length ? result.routeTags : (pending.template.routeTags ?? []),
-        routingEnabled: true,
-        sourceToolId: pending.template.id,
-        templateId: pending.template.id,
-        toolFeatures: pending.template.capabilityTags ?? [],
-        toolKind: pending.template.toolKind,
-        toolName: templateToolName(pending.template),
-      })
-      const goal = await memory.createGoal({
-        description: activationSummary,
-        metadata,
-        title: alias,
-      })
-      const project = await memory.createProject({
-        description: activationSummary,
-        goal_id: goal.goal_id,
-        metadata,
-        title: alias,
-      })
-      await memory.loadOverview().catch(() => undefined)
-      useUIStore.getState().openEnabledToolsPanel(project.project_id)
-      const assistantMessage = createMessage(
-        'assistant',
-        `Registered "${alias}" from ${pending.template.label}. Opened Active Tools.${
-          warnings.length ? ` ${warnings[0]}` : ''
-        }`,
-      )
-      set((state) => ({
-        isLoading: false,
-        messages: [...state.messages, assistantMessage],
-        pendingToolTemplateActivation: null,
-      }))
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to enable this tool template'
       set({ error: message, isLoading: false })
     }
   },
   continueWithoutToolTemplateActivation: async (context) => {
     const pending = get().pendingToolTemplateActivation
     if (!pending) return
+    const requestGeneration = beginAIRequest()
 
     if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
+      set({
+        error: 'Selected AI provider is not configured.',
+        isAvailable: false,
+        isLoading: false,
+      })
       return
     }
 
@@ -679,6 +624,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         context,
         conversationContext,
       )
+      if (!isCurrentAIRequest(requestGeneration)) return
       const assistantMessage = createMessage('assistant', result.reply)
       const actionPlan = result.actionPlan
         ? withTimeQualityWarnings(result.actionPlan, context)
@@ -692,6 +638,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingSuggestion: actionPlan ? null : state.pendingSuggestion,
       }))
     } catch (error) {
+      if (!isCurrentAIRequest(requestGeneration)) return
       const errorMessage =
         error instanceof Error ? error.message : 'Unable to continue conversation'
       set({ error: errorMessage, isLoading: false })
@@ -701,9 +648,14 @@ export const useAIStore = create<AIStore>((set, get) => ({
     const trimmedMessage = message.trim()
 
     if (!trimmedMessage) return
+    const requestGeneration = beginAIRequest()
 
     if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
+      set({
+        error: 'Selected AI provider is not configured.',
+        isAvailable: false,
+        isLoading: false,
+      })
       return
     }
 
@@ -734,6 +686,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
       const routeMatch = canRouteToEnabledTool
         ? await findEnabledToolRoute(aiService, trimmedMessage, context)
         : null
+      if (!isCurrentAIRequest(requestGeneration)) return
 
       if (routeMatch) {
         if (options.confirmEnabledToolRouting !== false) {
@@ -751,6 +704,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         }
 
         const dispatchResult = await dispatchRoute(routeMatch.route, context, aiService)
+        if (!isCurrentAIRequest(requestGeneration)) return
         useUIStore.getState().openEnabledToolsPanel(routeMatch.route.projectId)
         const assistantMessage = createMessage(
           'assistant',
@@ -772,8 +726,9 @@ export const useAIStore = create<AIStore>((set, get) => ({
       }
 
       const templateMatch = canRouteToEnabledTool
-        ? await findToolTemplateActivation(trimmedMessage)
+        ? await findToolTemplateActivation(trimmedMessage, options.recordToolCreationJourney)
         : null
+      if (!isCurrentAIRequest(requestGeneration)) return
 
       if (templateMatch) {
         set({
@@ -788,6 +743,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         context,
         conversationContext,
       )
+      if (!isCurrentAIRequest(requestGeneration)) return
       const assistantMessage = createMessage('assistant', result.reply)
       const actionPlan = result.actionPlan
         ? withTimeQualityWarnings(result.actionPlan, context)
@@ -803,6 +759,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingToolTemplateActivation: null,
       }))
     } catch (error) {
+      if (!isCurrentAIRequest(requestGeneration)) return
       const errorMessage =
         error instanceof Error ? error.message : 'Unable to continue conversation'
       set({ error: errorMessage, isLoading: false })
@@ -812,9 +769,14 @@ export const useAIStore = create<AIStore>((set, get) => ({
     const trimmedCommand = command.trim()
 
     if (!trimmedCommand) return
+    const requestGeneration = beginAIRequest()
 
     if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
+      set({
+        error: 'Selected AI provider is not configured.',
+        isAvailable: false,
+        isLoading: false,
+      })
       return
     }
 
@@ -834,6 +796,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         options.allowEnabledToolRouting === false
           ? null
           : await findEnabledToolRoute(aiService, trimmedCommand, context)
+      if (!isCurrentAIRequest(requestGeneration)) return
       if (routeMatch) {
         if (options.confirmEnabledToolRouting !== false) {
           const assistantMessage = createMessage(
@@ -852,6 +815,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         }
 
         const dispatchResult = await dispatchRoute(routeMatch.route, context, aiService)
+        if (!isCurrentAIRequest(requestGeneration)) return
         useUIStore.getState().openEnabledToolsPanel(routeMatch.route.projectId)
         const assistantMessage = createMessage(
           'assistant',
@@ -878,6 +842,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         await aiService.planCalendarActions(trimmedCommand, context),
         context,
       )
+      if (!isCurrentAIRequest(requestGeneration)) return
       const assistantMessage = createMessage(
         'assistant',
         `Planned ${result.actions.length} action${result.actions.length === 1 ? '' : 's'}.`,
@@ -892,6 +857,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingToolTemplateActivation: null,
       }))
     } catch (error) {
+      if (!isCurrentAIRequest(requestGeneration)) return
       const message = error instanceof Error ? error.message : 'Unable to plan calendar actions'
       set({ error: message, isLoading: false })
     }
@@ -900,9 +866,14 @@ export const useAIStore = create<AIStore>((set, get) => ({
     const trimmedGoal = goal.trim()
 
     if (!trimmedGoal) return
+    const requestGeneration = beginAIRequest()
 
     if (!aiService?.isAvailable()) {
-      set({ error: 'Selected AI provider is not configured.', isAvailable: false })
+      set({
+        error: 'Selected AI provider is not configured.',
+        isAvailable: false,
+        isLoading: false,
+      })
       return
     }
 
@@ -919,6 +890,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
 
     try {
       const result = await aiService.breakdownGoal(trimmedGoal)
+      if (!isCurrentAIRequest(requestGeneration)) return
       const assistantMessage = createMessage(
         'assistant',
         `Created ${result.steps.length} schedulable steps.`,
@@ -931,6 +903,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
         pendingToolTemplateActivation: null,
       }))
     } catch (error) {
+      if (!isCurrentAIRequest(requestGeneration)) return
       const message = error instanceof Error ? error.message : 'Unable to generate schedule'
       set({ error: message, isLoading: false })
     }

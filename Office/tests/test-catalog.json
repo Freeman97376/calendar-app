@@ -1,0 +1,534 @@
+{
+  "$schema": "../schemas/test-catalog-v1.schema.json",
+  "defaultQuickSuiteIds": [
+    "format-check",
+    "lint",
+    "frontend-vitest",
+    "frontend-build",
+    "openapi-check",
+    "python-backend",
+    "rust-check",
+    "version-check"
+  ],
+  "diagnostics": [],
+  "schemaVersion": 1,
+  "sourceSnapshot": {
+    "headCommit": "019148deda49",
+    "worktreeHash": "5894c9b2ca840895ab3d4d89567f12dc53b8bb119959600b62befbd27c70d28b"
+  },
+  "suites": [
+    {
+      "expectedBehaviors": ["Desktop E2E passes without login or cloud synchronization."],
+      "id": "desktop-e2e",
+      "kind": "e2e",
+      "label": "Desktop browser E2E",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        },
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        }
+      ],
+      "purpose": "Runs the real desktop-mode browser workflow with isolated local data.",
+      "runner": "playwright",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "conditional",
+      "trigger": {
+        "changeTypes": ["e2e", "desktop"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "src/**",
+          "backend/**",
+          "Office/test/e2e/**",
+          "scripts/e2e-launcher.mjs",
+          "scripts/python-executable.mjs"
+        ]
+      },
+      "validationCommandId": "desktop-e2e"
+    },
+    {
+      "expectedBehaviors": ["Prettier reports no formatting drift."],
+      "id": "format-check",
+      "kind": "format",
+      "label": "Prettier format check",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Checks tracked source and governance formatting.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["format"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["src/**", "backend/**", "Office/**", "*.json", "*.ts", "*.tsx"]
+      },
+      "validationCommandId": "format-check"
+    },
+    {
+      "expectedBehaviors": ["TypeScript and Vite production build pass."],
+      "id": "frontend-build",
+      "kind": "build",
+      "label": "Frontend production build",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Compiles TypeScript and produces the browser bundle.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["build"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["src/**", "vite.config.ts", "tsconfig*.json", "package.json"]
+      },
+      "validationCommandId": "frontend-build"
+    },
+    {
+      "expectedBehaviors": ["Vitest unit and integration suites pass."],
+      "id": "frontend-vitest",
+      "kind": "test",
+      "label": "Vitest unit and integration",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Runs deterministic frontend unit and integration coverage.",
+      "runner": "vitest",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["test"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["src/**", "Office/test/unit/**", "Office/test/integration/**"]
+      },
+      "validationCommandId": "frontend-vitest"
+    },
+    {
+      "expectedBehaviors": ["ESLint reports no errors."],
+      "id": "lint",
+      "kind": "lint",
+      "label": "ESLint source checks",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Checks TypeScript and React lint contracts.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["lint"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["src/**", "Office/test/**/*.ts", "Office/test/**/*.tsx", "eslint.config.js"]
+      },
+      "validationCommandId": "lint"
+    },
+    {
+      "expectedBehaviors": ["Migration and contract tests pass only against disposable MySQL."],
+      "id": "mysql-contract",
+      "kind": "integration",
+      "label": "Disposable MySQL contract",
+      "prerequisites": [
+        {
+          "check": "docker info",
+          "kind": "runtime",
+          "name": "Docker Engine",
+          "required": true
+        },
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        },
+        {
+          "check": "The scripts use only the disposable calendar_test database and remove containers and volumes",
+          "kind": "data-boundary",
+          "name": "Disposable MySQL test data",
+          "required": true
+        }
+      ],
+      "purpose": "Starts disposable MySQL, migrates, runs its contract, and removes the volume.",
+      "runner": "powershell",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "conditional",
+      "trigger": {
+        "changeTypes": ["database", "integration"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "backend/calendar/migrations/**",
+          "Office/test/backend/test_mysql_contract.py",
+          "scripts/test-mysql.ps1",
+          "scripts/python-executable.mjs"
+        ]
+      },
+      "validationCommandId": "mysql-contract"
+    },
+    {
+      "expectedBehaviors": ["No high or critical npm vulnerabilities remain."],
+      "id": "npm-audit-full",
+      "kind": "security",
+      "label": "Full npm dependency audit",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Runs the full npm high-severity audit as a release gate.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "release",
+      "trigger": {
+        "changeTypes": ["release", "dependencies"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["package.json", "package-lock.json"]
+      },
+      "validationCommandId": "npm-audit-full"
+    },
+    {
+      "expectedBehaviors": ["Production dependencies have no high or critical findings."],
+      "id": "npm-audit-production",
+      "kind": "security",
+      "label": "Production npm dependency audit",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Audits production npm dependencies as a release gate.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "release",
+      "trigger": {
+        "changeTypes": ["release", "dependencies"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["package.json", "package-lock.json"]
+      },
+      "validationCommandId": "npm-audit-production"
+    },
+    {
+      "expectedBehaviors": ["Generated OpenAPI is byte-compatible with the accepted snapshot."],
+      "id": "openapi-check",
+      "kind": "contract",
+      "label": "OpenAPI snapshot check",
+      "prerequisites": [
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        }
+      ],
+      "purpose": "Confirms backend API behavior matches the accepted OpenAPI snapshot.",
+      "runner": "python",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["contract"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "backend/**",
+          "openapi/calendar-app.openapi.json",
+          "scripts/export-openapi.py",
+          "scripts/python-executable.mjs",
+          "scripts/run-python.mjs"
+        ]
+      },
+      "validationCommandId": "openapi-check"
+    },
+    {
+      "expectedBehaviors": ["Desktop Python lock has no known release-blocking vulnerability."],
+      "id": "python-audit-desktop",
+      "kind": "security",
+      "label": "Desktop Python dependency audit",
+      "prerequisites": [
+        {
+          "check": "uvx --version",
+          "kind": "runtime",
+          "name": "uvx isolated tool runner",
+          "required": true
+        }
+      ],
+      "purpose": "Audits the locked desktop Python dependencies during release validation.",
+      "runner": "uvx",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "release",
+      "trigger": {
+        "changeTypes": ["release", "dependencies"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["requirements-desktop.lock"]
+      },
+      "validationCommandId": "python-audit-desktop"
+    },
+    {
+      "expectedBehaviors": ["Server Python lock has no known release-blocking vulnerability."],
+      "id": "python-audit-server",
+      "kind": "security",
+      "label": "Server Python dependency audit",
+      "prerequisites": [
+        {
+          "check": "uvx --version",
+          "kind": "runtime",
+          "name": "uvx isolated tool runner",
+          "required": true
+        }
+      ],
+      "purpose": "Audits the locked server Python dependencies during release validation.",
+      "runner": "uvx",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "release",
+      "trigger": {
+        "changeTypes": ["release", "dependencies"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["requirements-server.lock"]
+      },
+      "validationCommandId": "python-audit-server"
+    },
+    {
+      "expectedBehaviors": ["Test Python lock has no known release-blocking vulnerability."],
+      "id": "python-audit-test",
+      "kind": "security",
+      "label": "Test Python dependency audit",
+      "prerequisites": [
+        {
+          "check": "uvx --version",
+          "kind": "runtime",
+          "name": "uvx isolated tool runner",
+          "required": true
+        }
+      ],
+      "purpose": "Audits the locked test Python dependencies during release validation.",
+      "runner": "uvx",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "release",
+      "trigger": {
+        "changeTypes": ["release", "dependencies"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["requirements-test.lock"]
+      },
+      "validationCommandId": "python-audit-test"
+    },
+    {
+      "expectedBehaviors": ["Backend unittest discovery passes without production data."],
+      "id": "python-backend",
+      "kind": "test",
+      "label": "Python backend tests",
+      "prerequisites": [
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        }
+      ],
+      "purpose": "Runs backend API, repository, migration, auth, and integrity tests against isolated defaults.",
+      "runner": "unittest",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["test"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "backend/**",
+          "Office/test/backend/**",
+          "requirements-test.lock",
+          "scripts/python-executable.mjs",
+          "scripts/run-python.mjs"
+        ]
+      },
+      "validationCommandId": "python-backend"
+    },
+    {
+      "expectedBehaviors": ["Rust and Tauri checks pass."],
+      "id": "rust-check",
+      "kind": "build",
+      "label": "Rust and Tauri contract check",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Checks Rust sources and desktop runtime contracts without packaging.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["build", "desktop"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": ["src-tauri/**", "scripts/check-rust.mjs"]
+      },
+      "validationCommandId": "rust-check"
+    },
+    {
+      "expectedBehaviors": [
+        "Server login, cookie, CSRF, isolation, and logout pass against test data only."
+      ],
+      "id": "server-e2e-external",
+      "kind": "e2e",
+      "label": "External disposable Server E2E",
+      "prerequisites": [
+        {
+          "check": "CALENDAR_E2E_DATABASE_URL is a disposable mysql+ URL and is never production",
+          "kind": "environment",
+          "name": "Disposable external MySQL URL",
+          "required": true
+        },
+        {
+          "check": "CALENDAR_E2E_WEB_PORT and CALENDAR_E2E_API_PORT are loopback test ports",
+          "kind": "environment",
+          "name": "Isolated local ports",
+          "required": true
+        },
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        }
+      ],
+      "purpose": "Runs server-mode browser tests only against an explicitly supplied disposable MySQL URL.",
+      "runner": "playwright",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "manual",
+      "trigger": {
+        "changeTypes": ["server", "e2e", "manual"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "src/**",
+          "backend/**",
+          "Office/test/e2e/serverAuth.test.ts",
+          "scripts/e2e-launcher.mjs",
+          "scripts/python-executable.mjs"
+        ]
+      },
+      "validationCommandId": "server-e2e-external"
+    },
+    {
+      "expectedBehaviors": [
+        "Local Server acceptance passes and cleanup removes the disposable volume."
+      ],
+      "id": "server-local",
+      "kind": "e2e",
+      "label": "Disposable local Server acceptance",
+      "prerequisites": [
+        {
+          "check": "docker info",
+          "kind": "runtime",
+          "name": "Docker Engine",
+          "required": true
+        },
+        {
+          "check": "PYTHON_EXECUTABLE points to a file, or .venv-test/Scripts/python.exe / .venv-test/bin/python exists",
+          "kind": "runtime",
+          "name": "Fail-closed locked test Python resolver",
+          "required": true
+        },
+        {
+          "check": "The scripts use only the disposable calendar_test database and remove containers and volumes",
+          "kind": "data-boundary",
+          "name": "Disposable MySQL test data",
+          "required": true
+        }
+      ],
+      "purpose": "Runs migration, MySQL contract, and Server E2E in one disposable Docker lifecycle.",
+      "runner": "powershell",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "conditional",
+      "trigger": {
+        "changeTypes": ["server", "e2e"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "src/**",
+          "backend/**",
+          "Office/test/e2e/**",
+          "scripts/test-mysql.ps1",
+          "scripts/python-executable.mjs"
+        ]
+      },
+      "validationCommandId": "server-local"
+    },
+    {
+      "expectedBehaviors": ["All version declarations are aligned."],
+      "id": "version-check",
+      "kind": "release",
+      "label": "Cross-package version check",
+      "prerequisites": [
+        {
+          "check": "npm.cmd --version",
+          "kind": "runtime",
+          "name": "Node.js and npm",
+          "required": true
+        }
+      ],
+      "purpose": "Confirms desktop and application versions are aligned.",
+      "runner": "npm",
+      "sourceFiles": ["Office/goose.yaml", "Office/test/README.md"],
+      "status": "confirmed-command",
+      "trigger": {
+        "changeTypes": ["release"],
+        "componentIds": [],
+        "includeOneHopDependents": true,
+        "paths": [
+          "package.json",
+          "package-lock.json",
+          "src-tauri/Cargo.toml",
+          "src-tauri/Cargo.lock",
+          "src-tauri/tauri.conf.json",
+          "scripts/check-version.ps1"
+        ]
+      },
+      "validationCommandId": "version-check"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { toISODate } from '../domain/logic/dateHelpers'
 import { getEventsInRange, groupEventsByDate, type EventDraft } from '../domain/logic/eventUtils'
 import type { DateRange, Event, RecurrenceRule } from '../domain/types'
 import { type RecurrenceEditScope, useEventStore } from '../store/eventStore'
@@ -39,6 +40,13 @@ function toEventDraft(values: EventFormValues): EventDraft {
   }
 }
 
+function timeRangeForHour(hour: number): { startTime: string; endTime: string } {
+  const startTime = `${String(hour).padStart(2, '0')}:00`
+  const endTime = hour === 23 ? '23:59' : `${String(hour + 1).padStart(2, '0')}:00`
+
+  return { startTime, endTime }
+}
+
 export function useEvents(range?: DateRange) {
   const [sessionRefresh, setSessionRefresh] = useState(0)
   const events = useEventStore((state) => state.events)
@@ -53,6 +61,8 @@ export function useEvents(range?: DateRange) {
   const editingEventId = useUIStore((state) => state.editingEventId)
   const editingEventSnapshot = useUIStore((state) => state.editingEventSnapshot)
   const selectedDate = useUIStore((state) => state.selectedDate)
+  const selectedEndTime = useUIStore((state) => state.selectedEndTime)
+  const selectedStartTime = useUIStore((state) => state.selectedStartTime)
   const openCreateEventModal = useUIStore((state) => state.openCreateEventModal)
   const openEditEventModal = useUIStore((state) => state.openEditEventModal)
   const closeEventModal = useUIStore((state) => state.closeEventModal)
@@ -94,7 +104,7 @@ export function useEvents(range?: DateRange) {
       await updateEvent(editingEvent.id, draft, {
         recurrenceScope: isRecurringEdit ? (values.recurrenceScope ?? 'all') : undefined,
         masterId: editingEvent.masterId ?? editingEvent.id,
-        occurrenceDate: editingEvent.startAt.slice(0, 10),
+        occurrenceDate: toISODate(new Date(editingEvent.startAt)),
       })
     } else {
       await createEvent(draft)
@@ -110,7 +120,7 @@ export function useEvents(range?: DateRange) {
     await deleteEvent(editingEvent.id, {
       recurrenceScope: isRecurringEdit ? recurrenceScope : undefined,
       masterId: editingEvent.masterId ?? editingEvent.id,
-      occurrenceDate: editingEvent.startAt.slice(0, 10),
+      occurrenceDate: toISODate(new Date(editingEvent.startAt)),
     })
     closeEventModal()
   }
@@ -124,7 +134,11 @@ export function useEvents(range?: DateRange) {
     eventModalOpen,
     editingEvent,
     selectedDate,
+    selectedEndTime,
+    selectedStartTime,
     openCreateEvent: openCreateEventModal,
+    openCreateEventAtHour: (isoDate: string, hour: number) =>
+      openCreateEventModal(isoDate, timeRangeForHour(hour)),
     openEditEvent: (event: Event) => openEditEventModal(event.id, event),
     closeEventModal,
     saveEvent,

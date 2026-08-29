@@ -30,6 +30,7 @@ export type AIComposerOptions = {
   confirmActiveToolRouting?: boolean
   includeCalendarContext?: boolean
   includeTodoContext?: boolean
+  recordToolCreationJourney?: boolean
 }
 
 function scheduledStart(focusedDate: string, step: AIStep): Date {
@@ -301,9 +302,7 @@ export function useAI() {
   const messages = useAIStore((state) => state.messages)
   const pendingActionPlan = useAIStore((state) => state.pendingActionPlan)
   const pendingEnabledToolRoute = useAIStore((state) => state.pendingEnabledToolRoute)
-  const pendingToolTemplateActivation = useAIStore(
-    (state) => state.pendingToolTemplateActivation,
-  )
+  const pendingToolTemplateActivation = useAIStore((state) => state.pendingToolTemplateActivation)
   const pendingSuggestion = useAIStore((state) => state.pendingSuggestion)
   const provider = useAIStore((state) => state.provider)
   const clearActionPlan = useAIStore((state) => state.clearActionPlan)
@@ -311,9 +310,6 @@ export function useAI() {
   const clearHistory = useAIStore((state) => state.clearHistory)
   const clearToolTemplateActivation = useAIStore((state) => state.clearToolTemplateActivation)
   const confirmEnabledToolRouteInStore = useAIStore((state) => state.confirmEnabledToolRoute)
-  const confirmToolTemplateActivationInStore = useAIStore(
-    (state) => state.confirmToolTemplateActivation,
-  )
   const continueWithoutToolTemplateActivationInStore = useAIStore(
     (state) => state.continueWithoutToolTemplateActivation,
   )
@@ -425,6 +421,7 @@ export function useAI() {
   async function sendConversationMessage(message: string, options: AIComposerOptions = {}) {
     await sendConversationMessageToStore(message, buildContext(options), {
       allowEnabledToolRouting: options.allowActiveToolRouting,
+      recordToolCreationJourney: options.recordToolCreationJourney,
       confirmEnabledToolRouting:
         options.confirmActiveToolRouting ?? config.confirmEnabledToolRouting,
     })
@@ -432,10 +429,6 @@ export function useAI() {
 
   async function confirmEnabledToolRoute() {
     await confirmEnabledToolRouteInStore(buildContext())
-  }
-
-  async function confirmToolTemplateActivation(formDraft?: Record<string, string>) {
-    await confirmToolTemplateActivationInStore(formDraft)
   }
 
   async function continueWithoutToolTemplateActivation() {
@@ -575,7 +568,6 @@ export function useAI() {
     clearHistory,
     clearToolTemplateActivation,
     confirmEnabledToolRoute,
-    confirmToolTemplateActivation,
     continueWithoutToolTemplateActivation,
     currentModel: model,
     currentProvider: provider,

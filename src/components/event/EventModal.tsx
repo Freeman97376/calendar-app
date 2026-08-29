@@ -8,6 +8,8 @@ export default function EventModal() {
     eventModalOpen,
     editingEvent,
     selectedDate,
+    selectedEndTime,
+    selectedStartTime,
     closeEventModal,
     saveEvent,
     deleteEditingEvent,
@@ -30,6 +32,8 @@ export default function EventModal() {
         onDelete={editingEvent ? handleDelete : undefined}
         onSubmit={saveEvent}
         selectedDate={selectedDate}
+        selectedEndTime={selectedEndTime}
+        selectedStartTime={selectedStartTime}
       />
     </Modal>
   )

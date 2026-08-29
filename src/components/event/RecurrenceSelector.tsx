@@ -37,7 +37,12 @@ function defaultRule(startDate: string): RecurrenceRule {
 
 function toUntilDate(rule: RecurrenceRule | undefined): string {
   if (!rule || rule.endCondition.type !== 'date') return ''
-  return rule.endCondition.until.slice(0, 10)
+  const date = new Date(rule.endCondition.until)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function withEndDate(date: string): RecurrenceRule['endCondition'] {

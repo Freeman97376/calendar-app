@@ -3,7 +3,6 @@ import {
   addMonths,
   differenceInCalendarWeeks,
   endOfMonth,
-  format,
   isBefore,
   isSameDay,
   parseISO,
@@ -12,6 +11,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 
+import { toISODate } from './dateHelpers'
 import type { DateRange, Event, RecurrenceRule, Weekday } from '../types'
 
 const WEEK_STARTS_ON = 1
@@ -31,7 +31,7 @@ function eventDurationMs(event: Event): number {
 }
 
 function occurrenceDate(date: Date): string {
-  return format(date, 'yyyy-MM-dd')
+  return toISODate(date)
 }
 
 function isDeletedOccurrence(event: Event, date: Date): boolean {

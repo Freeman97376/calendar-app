@@ -62,7 +62,7 @@
 - Created complete `Office/` management structure.
 - Authored 4 Architecture Decision Records.
 - Created 5-layer `src/` architecture skeleton.
-- Created full `tests/` skeleton.
+- Created full `Office/test/` skeleton.
 
 **Decisions made:**
 
@@ -79,7 +79,7 @@
 - Added Vite, TypeScript, Vitest, Playwright, ESLint, Prettier, Tailwind, and PostCSS config files.
 - Added `index.html`, `src/index.css`, and wired the React entry point.
 - Replaced the placeholder `App` with a minimal accessible app shell.
-- Added `tests/setupTests.ts` and `tests/unit/app.smoke.test.tsx`.
+- Added `Office/test/setupTests.ts` and `Office/test/unit/app.smoke.test.tsx`.
 - Replaced MSW placeholders with a real Node server setup and Anthropic mock handler.
 
 ### 2026-05-25 - Session 3
@@ -280,7 +280,7 @@
 
 - ESLint: passing for `src/services/ai`.
 - TypeScript build: passing.
-- Targeted Vitest: `tests/unit/services/anthropicService.test.ts` passing, 7 tests.
+- Targeted Vitest: `Office/test/unit/services/anthropicService.test.ts` passing, 7 tests.
 - Live browser check: AI assistant submitted a local Ollama goal and completed without console errors.
 
 **Next session should start with:** run the remaining Phase 7 Playwright E2E and production build verification.
@@ -301,7 +301,7 @@
 **Verification:**
 
 - Python compile: passing for `backend/`.
-- Backend unit tests: `python -m unittest discover tests/backend` passing, 9 tests.
+- Backend unit tests: `python -m unittest discover Office/test/backend` passing, 9 tests.
 - ESLint: passing.
 - TypeScript build: passing.
 - Full Vitest regression: passing, 121 tests.
@@ -325,7 +325,7 @@
 **Verification:**
 
 - Python compile: passing for `backend/`.
-- Backend unit tests: `python -m unittest discover tests/backend` passing, 15 tests.
+- Backend unit tests: `python -m unittest discover Office/test/backend` passing, 15 tests.
 - ESLint: passing.
 - TypeScript build: passing.
 - Full Vitest regression: passing, 121 tests.
@@ -346,8 +346,8 @@
 **Verification:**
 
 - TypeScript build: passing.
-- Backend unit tests: `python -m unittest discover tests/backend` passing, 15 tests.
-- Targeted frontend tests: `tests/unit/services/fridgeApiService.test.ts` and `tests/integration/fridgePanel.test.tsx` passing, 6 tests.
+- Backend unit tests: `python -m unittest discover Office/test/backend` passing, 15 tests.
+- Targeted frontend tests: `Office/test/unit/services/fridgeApiService.test.ts` and `Office/test/integration/fridgePanel.test.tsx` passing, 6 tests.
 - ESLint: passing.
 - Full Vitest regression: passing, 127 tests.
 - Vite production build: passing with existing large vendor chunk warning.
@@ -374,7 +374,7 @@
 - ESLint: passing.
 - Full Vitest regression: passing, 136 tests.
 - Vite production build: passing with existing large vendor chunk warning.
-- Backend unit tests: `python -m unittest discover tests\backend` passing, 15 tests, with `PYTHONPATH` set to the repo root.
+- Backend unit tests: `python -m unittest discover Office\test\backend` passing, 15 tests, with `PYTHONPATH` set to the repo root.
 
 **Next session should start with:** browser/manual QA for the Todos panel and then optional Playwright E2E coverage for to-do scheduling.
 
@@ -424,7 +424,7 @@
 - Targeted Settings/Fridge Vitest: passing, 5 tests.
 - Full Vitest regression: passing, 140 tests.
 - Python backend compile: passing.
-- Backend unit tests: `python -m unittest discover tests\backend` passing, 15 tests.
+- Backend unit tests: `python -m unittest discover Office\test\backend` passing, 15 tests.
 - Vite production build: passing with existing large vendor chunk warning.
 
 **Next session should start with:** live local Settings test with a real DeepSeek key, then a receipt analysis that requires DeepSeek fallback.
@@ -445,7 +445,7 @@
 
 - `npm.cmd run lint`: passing.
 - `npm.cmd run test:run`: 45 files and 229 tests passing.
-- `python -m unittest discover -s tests\backend`: 29 tests passing with one conditional MySQL skip.
+- `python -m unittest discover -s Office\test\backend`: 29 tests passing with one conditional MySQL skip.
 - `npm.cmd run test:mysql`: MySQL 8.0 empty-database Alembic upgrade and two-user repository isolation passing; container/network removed afterward.
 - Vite production build and Tauri release compile: passing; frontend artifact scan found no MySQL URL, VITE AI-key entry, DeepSeek key assignment, or fixed development API URL.
 - Final packaged sidecar: invalid launch token returns 401, desktop bootstrap is login-free, SQLite data survives restart, and bundled Tesseract 5.5 runs.

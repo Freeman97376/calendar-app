@@ -53,6 +53,7 @@ export default function GoalControlDashboardPanel({ projectId }: { projectId: st
     <div
       className="space-y-5 rounded-lg bg-slate-50 p-3 sm:p-5"
       data-testid="goal-control-dashboard"
+      id={`active-tool-dashboard-${projectId}`}
     >
       <section className="grid gap-3 md:grid-cols-4">
         <Kpi

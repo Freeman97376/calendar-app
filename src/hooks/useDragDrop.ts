@@ -10,6 +10,7 @@ import {
 } from '@dnd-kit/core'
 import { useMemo, useState } from 'react'
 
+import { toISODate } from '../domain/logic/dateHelpers'
 import type { Event } from '../domain/types'
 import { type RecurrenceEditScope, useEventStore } from '../store/eventStore'
 
@@ -43,13 +44,6 @@ const recurrenceScopeLabels: Record<RecurrenceEditScope, string> = {
 function parseLocalDate(isoDate: string): { year: number; monthIndex: number; day: number } {
   const [year, month, day] = isoDate.split('-').map(Number)
   return { year, monthIndex: month - 1, day }
-}
-
-function toLocalISODate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function eventFromDragData(data: unknown): Event | null {
@@ -125,7 +119,7 @@ export function isRecurringDragEvent(event: Event): boolean {
 }
 
 export function getEventLocalDate(event: Event): string {
-  return toLocalISODate(new Date(event.startAt))
+  return toISODate(new Date(event.startAt))
 }
 
 export function promptForRecurrenceEditScope(): RecurrenceEditScope | null {

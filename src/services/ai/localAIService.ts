@@ -6,6 +6,7 @@ import {
   AIToolActivationResultSchema,
 } from '../../domain/schemas/ai.schema'
 import { ToolSessionResultSchema } from '../../domain/schemas/toolSession.schema'
+import { isValidTimezone, localDateTimeInTimezoneToISOString } from '../../domain/logic/timeContext'
 import type {
   AIBreakdownResult,
   AICalendarActionPlan,
@@ -40,12 +41,22 @@ function toISODate(date: Date): string {
 type TimezoneContext = {
   currentDate?: string
   currentLocalDateTime?: string
+  timezone?: string
   timezoneOffsetMinutes?: number
   today?: string
 }
 
 function toISODateTime(date: string, hour: number, minute = 0, context?: TimezoneContext): string {
   const [year, month, day] = date.split('-').map(Number)
+  if (context?.timezone) {
+    const zonedDateTime = localDateTimeInTimezoneToISOString(date, hour, minute, context.timezone)
+    if (zonedDateTime) return zonedDateTime
+    if (context.timezone !== 'local' && isValidTimezone(context.timezone)) {
+      throw new Error(
+        `The local time ${date} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} does not exist in ${context.timezone}. Choose a different time.`,
+      )
+    }
+  }
   if (typeof context?.timezoneOffsetMinutes === 'number') {
     const utcTime =
       Date.UTC(year, month - 1, day, hour, minute, 0, 0) - context.timezoneOffsetMinutes * 60_000
@@ -788,14 +799,18 @@ function routeScore(
 
   if (
     (/\b(workout|fitness|training|exercise|gym|run)\b/i.test(lower) ||
-      /\u5065\u8eab|\u8bad\u7ec3|\u8dd1\u6b65|\u953b\u70bc|\u8fd0\u52a8|\u529b\u91cf/.test(lower)) &&
+      /\u5065\u8eab|\u8bad\u7ec3|\u8dd1\u6b65|\u953b\u70bc|\u8fd0\u52a8|\u529b\u91cf/.test(
+        lower,
+      )) &&
     tool.sourceToolId.includes('fitness')
   ) {
     score += 3
   }
   if (
     (/\b(seo|keyword|ranking|search engine|content)\b/i.test(lower) ||
-      /\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d|\u5185\u5bb9|\u6d41\u91cf/.test(lower)) &&
+      /\u641c\u7d22\u4f18\u5316|\u5173\u952e\u8bcd|\u6392\u540d|\u5185\u5bb9|\u6d41\u91cf/.test(
+        lower,
+      )) &&
     tool.sourceToolId.includes('seo')
   ) {
     score += 3

@@ -2,38 +2,555 @@
   "schemaVersion": 1,
   "findings": [
     {
-      "id": "AUD-0001",
-      "title": "客户端信任服务端价格回显",
-      "type": "correctness",
-      "severity": "medium",
-      "priority": "P2",
-      "status": "open",
-      "confidence": "medium",
-      "componentIds": [
-        "web",
-        "api"
-      ],
+      "id": "AUD-20260810-001",
+      "title": "Runtime databases and caches were tracked by Git",
+      "type": "security",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["repository", "backend"],
       "locations": [
         {
-          "file": "src/web/cart.tsx",
-          "startLine": 122,
-          "endLine": null
+          "file": ".gitignore",
+          "startLine": 38,
+          "endLine": 41
+        },
+        {
+          "file": "backend/data/long_term_memory.sqlite3",
+          "startLine": 1,
+          "endLine": 1
         }
       ],
-      "evidence": "提交订单时客户端价格被重新发送，服务端处理路径尚未明确忽略该字段。",
-      "recommendation": "服务端只根据商品和促销规则重新计算价格。",
+      "evidence": "Git tracked local SQLite snapshots, long-term-memory data, fridge inventory, and runtime cache files.",
+      "recommendation": "Keep runtime data local and ignored; retain only the static shelf-life defaults resource.",
       "acceptanceCriteria": [
-        "篡改请求价格不会改变订单金额"
+        "Runtime files remain on local disk",
+        "git ls-files no longer returns the runtime files",
+        "git check-ignore identifies an explicit rule for each file"
       ],
       "source": {
         "kind": "codex",
-        "auditRunId": "RUN-DEMO"
+        "auditRunId": "calendar-full-audit-2026-08-10"
       },
-      "firstSeenCommit": null,
-      "lastVerifiedCommit": null,
-      "fingerprint": "correctness-8f02a114",
-      "verificationPending": null,
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-10",
+      "fingerprint": "calendar-runtime-data-git-tracking",
+      "verificationPending": false,
+      "custom": {
+        "localFilesPreserved": true
+      }
+    },
+    {
+      "id": "AUD-20260810-002",
+      "title": "Development dependency audit failed on newly disclosed vulnerabilities",
+      "type": "security",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "ci"],
+      "locations": [
+        {
+          "file": "package.json",
+          "startLine": 75,
+          "endLine": 79
+        },
+        {
+          "file": "package-lock.json",
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "evidence": "The baseline full npm audit reported four high and one moderate development dependency vulnerabilities; the production-only audit was clean.",
+      "recommendation": "Apply non-forced patch updates and keep protobufjs on the patched 7.6.x line.",
+      "acceptanceCriteria": [
+        "npm audit --audit-level=high exits zero",
+        "npm audit --omit=dev --audit-level=high reports zero vulnerabilities",
+        "No forced major upgrade is introduced"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-10",
+      "fingerprint": "calendar-npm-audit-2026-08",
+      "verificationPending": false,
+      "custom": {
+        "productionAuditWasClean": true
+      }
+    },
+    {
+      "id": "AUD-20260810-003",
+      "title": "Formatting gate was blocked by generated architecture output and source drift",
+      "type": "maintainability",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["repository", "ci", "office"],
+      "locations": [
+        {
+          "file": ".prettierignore",
+          "startLine": 1,
+          "endLine": 12
+        },
+        {
+          "file": "scripts/run-prettier.mjs",
+          "startLine": 1,
+          "endLine": 60
+        }
+      ],
+      "evidence": "The baseline formatting check failed for 49 files, including multi-megabyte Golden Goose generated artifacts and hand-maintained source files.",
+      "recommendation": "Exclude immutable generated snapshots and format all hand-maintained source, tests, configuration, and documentation.",
+      "acceptanceCriteria": ["npm run format:check exits zero", "git diff --check exits zero"],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-10",
+      "fingerprint": "calendar-format-gate-generated-output",
+      "verificationPending": false,
+      "custom": {
+        "generatedSnapshotPreserved": true
+      }
+    },
+    {
+      "id": "AUD-20260810-004",
+      "title": "Human architecture documentation described obsolete persistence paths",
+      "type": "documentation",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "backend", "office"],
+      "locations": [
+        {
+          "file": "Office/planning/architecture.md",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "Office/docs/input-output-flow.md",
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "evidence": "The prior documents still presented Firebase/localStorage as the primary production flow even though startup configures authenticated FastAPI API adapters.",
+      "recommendation": "Use current source, OpenAPI, migrations, and the dual-runtime contract as the documentation source of truth.",
+      "acceptanceCriteria": [
+        "Server MySQL/manual-account behavior is documented",
+        "Desktop SQLite/no-login behavior is documented",
+        "Legacy adapters are identified as non-production"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-10",
+      "fingerprint": "calendar-office-runtime-documentation-drift",
+      "verificationPending": false,
       "custom": {}
+    },
+    {
+      "id": "AUD-20260810-005",
+      "title": "Audit findings catalog contained a non-existent demo source",
+      "type": "documentation",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["office"],
+      "locations": [
+        {
+          "file": "Office/audits/findings.json",
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "evidence": "The baseline findings catalog referenced the non-existent example path src/web/cart.tsx instead of repository evidence.",
+      "recommendation": "Replace example findings with evidence-backed audit records and keep Markdown and JSON identifiers aligned.",
+      "acceptanceCriteria": [
+        "Every finding references repository evidence",
+        "Markdown and JSON finding identifiers match"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-11",
+      "fingerprint": "calendar-audit-demo-finding-data",
+      "verificationPending": false,
+      "custom": {
+        "removedExampleFile": "src/web/cart.tsx"
+      }
+    },
+    {
+      "id": "AUD-20260810-006",
+      "title": "Generated architecture snapshot is partial and not current",
+      "type": "maintainability",
+      "severity": "low",
+      "priority": "P3",
+      "status": "open",
+      "confidence": "high",
+      "componentIds": ["office"],
+      "locations": [
+        {
+          "file": "Office/architecture.json",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "Office/architecture.yaml",
+          "startLine": 1,
+          "endLine": 3
+        }
+      ],
+      "evidence": "The Golden Goose snapshot records source commit 0122bc and completeness=partial; generated JSON files add roughly 34 MB to the checkout.",
+      "recommendation": "Treat the snapshot as historical until regenerated at the current commit; evaluate external artifact storage separately.",
+      "acceptanceCriteria": [
+        "Human documentation labels the snapshot historical and partial",
+        "No current architecture claim relies solely on the generated snapshot"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-10",
+      "fingerprint": "calendar-golden-goose-partial-snapshot",
+      "verificationPending": true,
+      "custom": {
+        "sourceSnapshot": "0122bc61764c",
+        "retainedByDecision": true,
+        "releaseBlocking": false
+      }
+    },
+    {
+      "id": "AUD-20260810-007",
+      "title": "Real MySQL and server E2E validation passed in disposable local Docker",
+      "type": "testing",
+      "severity": "info",
+      "priority": "P3",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["backend", "ci"],
+      "locations": [
+        {
+          "file": "docker-compose.mysql-test.yml",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": ".github/workflows/validate.yml",
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "evidence": "Docker Desktop 29.5.3 ran MySQL 8.0.46 (mysql:8.0) in the repository disposable compose stack; a fresh database migrated to 20260719_0008, one MySQL contract test passed, and two server authentication/isolation E2E tests passed in the final 31.297-second run.",
+      "recommendation": "Keep npm run test:server:local as the repeatable local acceptance gate and retain CI MySQL validation; never point these commands at production or real user data.",
+      "acceptanceCriteria": [
+        "Fresh MySQL migrates to Alembic head",
+        "MySQL contract test passes",
+        "Server authentication/isolation E2E passes"
+      ],
+      "source": {
+        "kind": "codex",
+        "auditRunId": "calendar-full-audit-2026-08-10"
+      },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-11",
+      "fingerprint": "calendar-local-docker-daemon-unavailable",
+      "verificationPending": false,
+      "custom": {
+        "ciGatePresent": true,
+        "localGate": "npm run test:server:local",
+        "dockerVersion": "29.5.3",
+        "mysqlImage": "mysql:8.0",
+        "migrationHead": "20260719_0008",
+        "mysqlContractTests": 1,
+        "serverE2ETests": 2,
+        "elapsedSeconds": 31.297,
+        "cleanupVerified": true,
+        "mysqlVersion": "8.0.46-1.el9"
+      }
+    },
+    {
+      "id": "AUD-20260812-001",
+      "title": "Runtime schema creation could mask an incomplete database at the recorded migration head",
+      "type": "reliability",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["backend", "database"],
+      "locations": [{ "file": "backend/database.py", "startLine": 1, "endLine": 1 }],
+      "evidence": "Service constructors could call create_all after the Alembic revision check, allowing a partial schema with a forged head to start and mutate in place.",
+      "recommendation": "Keep runtime schema creation disabled and require both Alembic head and a read-only schema fingerprint before serving requests.",
+      "acceptanceCriteria": [
+        "A partial database at the expected head fails closed",
+        "The failed startup does not change database bytes or tables"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-runtime-schema-fingerprint",
+      "verificationPending": true,
+      "custom": { "realMysqlNotRunThisPass": true }
+    },
+    {
+      "id": "AUD-20260812-002",
+      "title": "Server Fridge cache and provider accounting could cross tenant boundaries",
+      "type": "security",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["backend", "fridge", "ai"],
+      "locations": [{ "file": "backend/fridge/shelf_life_cache.py", "startLine": 1, "endLine": 1 }],
+      "evidence": "Provider notes were stored in a shared runtime cache and receipt provider calls bypassed per-user AI rate, budget, and usage accounting.",
+      "recommendation": "Keep server runtime cache disabled and route every real receipt provider call through a request-scoped metered client.",
+      "acceptanceCriteria": [
+        "One user cannot receive another user's cached provider notes",
+        "Blocked receipt calls do not invoke the provider and attempted provider calls are metered"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-fridge-tenant-cache-accounting",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-003",
+      "title": "E2E tooling could target an ordinary database and hide cleanup failure",
+      "type": "security",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["testing", "release"],
+      "locations": [{ "file": "scripts/e2e-launcher.mjs", "startLine": 1, "endLine": 1 }],
+      "evidence": "Server E2E accepted an ordinary application database fallback and the MySQL aggregate script could warn yet exit successfully when final Docker cleanup failed.",
+      "recommendation": "Require an explicit dedicated test URL at launcher and seed boundaries, isolate desktop environment variables, and propagate cleanup failure.",
+      "acceptanceCriteria": [
+        "Only an explicit MySQL test/e2e database is accepted",
+        "Desktop E2E strips inherited database and seed variables",
+        "Cleanup failure makes the aggregate gate fail"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-e2e-database-cleanup-safety",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-004",
+      "title": "Calendar imports and references could leave partial or orphaned state",
+      "type": "reliability",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["backend", "calendar", "backup"],
+      "locations": [{ "file": "backend/calendar/repository.py", "startLine": 1, "endLine": 1 }],
+      "evidence": "Local snapshot import committed entities independently and CRUD accepted missing or cross-tenant calendar relationships.",
+      "recommendation": "Keep strict nested DTO prevalidation, same-tenant reference checks, one import transaction, delete cleanup, backup validation, and integrity repair as defense in depth.",
+      "acceptanceCriteria": [
+        "Late import failure rolls back every entity",
+        "Missing and cross-tenant references return 422 without writes",
+        "Integrity repair nulls nullable orphan links without deleting business records"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-import-reference-atomicity",
+      "verificationPending": true,
+      "custom": { "realMysqlNotRunThisPass": true }
+    },
+    {
+      "id": "AUD-20260812-005",
+      "title": "Tool activation created goal and project in two non-atomic writes",
+      "type": "reliability",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "backend", "memory"],
+      "locations": [{ "file": "backend/memory/repository.py", "startLine": 1, "endLine": 1 }],
+      "evidence": "A successful goal request followed by a failed project request left a durable orphan and retry could duplicate the goal.",
+      "recommendation": "Keep goal and project creation in one backend transaction and add durable idempotency before supporting automatic retries.",
+      "acceptanceCriteria": [
+        "Project insertion failure leaves no goal",
+        "Every production activation path calls the compound endpoint"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-atomic-goal-project-create",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-006",
+      "title": "Obsolete asynchronous reads and AI results could overwrite current state",
+      "type": "reliability",
+      "severity": "high",
+      "priority": "P1",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "calendar", "memory", "ai"],
+      "locations": [{ "file": "src/store/eventStore.ts", "startLine": 1, "endLine": 1 }],
+      "evidence": "Out-of-order calendar ranges, memory overview/details, cross-conversation AI responses, and reads completing after successful writes could replace newer user state.",
+      "recommendation": "Invalidate request generations on new loads, resets, account changes, selection changes, new conversations, and successful writes.",
+      "acceptanceCriteria": [
+        "Older deferred results never replace the latest selection or write",
+        "Obsolete failures do not set current error/loading state"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-async-generation-boundaries",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-007",
+      "title": "Recurrence and local AI date conversion drifted across timezone and DST boundaries",
+      "type": "correctness",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "calendar", "ai"],
+      "locations": [{ "file": "src/domain/logic/timeContext.ts", "startLine": 1, "endLine": 1 }],
+      "evidence": "Recurrence occurrence/until dates used UTC slices, future AI dates reused the current offset, and a nonexistent spring-forward local time silently shifted by one hour.",
+      "recommendation": "Use local calendar dates, resolve target wall-clock time with an IANA timezone, and reject nonexistent local times explicitly.",
+      "acceptanceCriteria": [
+        "Recurrence this/following targets the local occurrence date",
+        "Future dates use the target date offset",
+        "Spring-forward nonexistent times are rejected"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-local-date-dst-correctness",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-008",
+      "title": "Calendar hour intent and modal keyboard focus were incomplete",
+      "type": "accessibility",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "ui"],
+      "locations": [{ "file": "src/components/ui/Modal.tsx", "startLine": 1, "endLine": 1 }],
+      "evidence": "The TimeGrid add control ignored the clicked hour and remained visually hidden on keyboard focus; the shared modal lacked initial focus, a trap, and focus restoration.",
+      "recommendation": "Preserve the clicked time range through the creation intent and keep the shared modal keyboard contract covered by component tests.",
+      "acceptanceCriteria": [
+        "Clicking or focusing a 3 PM slot prefills 15:00",
+        "Modal focus is trapped and restored after Escape"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-timegrid-modal-accessibility",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-009",
+      "title": "Public write endpoints accepted loose types and could surface database errors as 500",
+      "type": "correctness",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["backend", "api"],
+      "locations": [{ "file": "backend/server.py", "startLine": 1, "endLine": 1 }],
+      "evidence": "Preferences, Fridge, Memory, Goal Control, AI context, calendar, and tool preset payloads included raw dictionary or coercive numeric/text paths; tool preset PATCH also replaced complete records with partial JSON.",
+      "recommendation": "Keep strict DTO or explicit allowlist validation aligned with database limits and merge partial preset updates into the stored complete record.",
+      "acceptanceCriteria": [
+        "Wrong types, unknown fields, invalid dates, non-finite values, and empty patches return 422",
+        "Rejected payloads do not write",
+        "Tool preset PATCH preserves required fields"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-strict-write-contracts",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-010",
+      "title": "Tauri discarded structured backend recovery handshakes",
+      "type": "reliability",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["desktop", "backend"],
+      "locations": [{ "file": "src-tauri/src/lib.rs", "startLine": 1, "endLine": 1 }],
+      "evidence": "The sidecar emitted CALENDAR_BACKEND_RECOVERY JSON but the Tauri startup parser only recognized READY and reduced recovery to a generic exit message.",
+      "recommendation": "Preserve typed recovery code, message, database, backup, diagnostic paths, and extra payload through the desktop startup error.",
+      "acceptanceCriteria": [
+        "READY and RECOVERY are parsed independently",
+        "Malformed handshakes fail explicitly",
+        "Recovery paths remain available to the UI/error surface"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-tauri-recovery-handshake",
+      "verificationPending": true,
+      "custom": { "packagedSmokeNotRun": true }
+    },
+    {
+      "id": "AUD-20260812-011",
+      "title": "Python and test catalog gates could validate a different environment or stale source",
+      "type": "testing",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["ci", "office", "testing"],
+      "locations": [{ "file": "scripts/python-executable.mjs", "startLine": 1, "endLine": 1 }],
+      "evidence": "Backend, OpenAPI, audit, MySQL, and E2E commands could use PATH Python; the catalog referenced a missing schema and stale or incorrect trigger paths without an exact current-content provenance gate.",
+      "recommendation": "Use the fail-closed repository test interpreter, validate catalog schema and Goose mappings, and bind clean checkouts to the exact Git-filtered worktree hash.",
+      "acceptanceCriteria": [
+        "No Python validation command silently falls back to PATH",
+        "Every catalog suite maps to one Goose command",
+        "Exact worktree hash drift fails"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-python-catalog-determinism",
+      "verificationPending": false
+    },
+    {
+      "id": "AUD-20260812-012",
+      "title": "Unbounded Vitest workers made the full suite flaky under contention",
+      "type": "testing",
+      "severity": "medium",
+      "priority": "P2",
+      "status": "resolved",
+      "confidence": "high",
+      "componentIds": ["frontend", "testing"],
+      "locations": [{ "file": "vitest.config.ts", "startLine": 1, "endLine": 1 }],
+      "evidence": "A Goal Planner integration case timed out only in the full suite while passing in isolation, consistent with worker/resource contention.",
+      "recommendation": "Keep a bounded worker count and optimize individual slow cases before raising timeouts broadly.",
+      "acceptanceCriteria": [
+        "The complete Vitest suite passes with the bounded worker setting",
+        "Focused Goal Planner behavior remains covered"
+      ],
+      "source": { "kind": "codex", "auditRunId": "calendar-full-audit-2026-08-12" },
+      "firstSeenCommit": "019148deda493a0135a4438da9087fda7169046d",
+      "lastVerifiedCommit": "working-tree-2026-08-12",
+      "fingerprint": "calendar-vitest-worker-contention",
+      "verificationPending": false
     }
   ]
 }

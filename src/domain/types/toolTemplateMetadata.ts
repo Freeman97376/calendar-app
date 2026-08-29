@@ -231,7 +231,8 @@ export const seoLearningToolMetadata: ToolTemplateMetadata = {
   label: 'SEO Learning',
   category: 'ai-demo',
   description: 'Learning Assistant alias for SEO learning milestones.',
-  activationPrompt: 'Describe the SEO learning goal, current level, weekly time, and target outcome.',
+  activationPrompt:
+    'Describe the SEO learning goal, current level, weekly time, and target outcome.',
   activationFields: learningActivationFields,
   adapterId: 'ai-progress',
   capabilityTags: ['memory', 'learning', 'progress', 'seo'],

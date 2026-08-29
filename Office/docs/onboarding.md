@@ -156,7 +156,7 @@ curl.exe -X POST "http://127.0.0.1:8787/api/fridge/receipt/analyze" `
 
 ```powershell
 & "C:\Program Files\nodejs\npm.cmd" run test:run
-$env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discover tests\backend
+$env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discover Office\test\backend
 ```
 
 ---
@@ -176,7 +176,7 @@ $env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discov
 Office/          <- project management, planning, docs, testing notes
 src/             <- React/Vite frontend
 backend/         <- FastAPI, auth, SQL repositories, migrations and integrity tools
-tests/           <- automated tests
+Office/test/           <- automated tests
 scratch/         <- temporary files and one-off/manual test scripts
 ```
 
@@ -186,15 +186,15 @@ Full architecture: [planning/architecture.md](../planning/architecture.md)
 
 ## Common Commands
 
-| Command                                                                                            | What it does                              |
-| -------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `& "C:\Program Files\nodejs\npm.cmd" run dev`                                                      | Start Vite dev server                     |
-| `python -m backend.server`                                                                         | Start local backend on `127.0.0.1:8787`   |
-| `tesseract --version`                                                                              | Confirm OCR executable is visible on PATH |
-| `& "C:\Program Files\nodejs\npm.cmd" run test:run`                                                 | Run frontend tests once                   |
-| `$env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discover tests\backend` | Run backend tests                         |
-| `& "C:\Program Files\nodejs\npm.cmd" run lint`                                                     | Run ESLint                                |
-| `& "C:\Program Files\nodejs\npm.cmd" run build`                                                    | Production build                          |
+| Command                                                                                                  | What it does                              |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `& "C:\Program Files\nodejs\npm.cmd" run dev`                                                            | Start Vite dev server                     |
+| `python -m backend.server`                                                                               | Start local backend on `127.0.0.1:8787`   |
+| `tesseract --version`                                                                                    | Confirm OCR executable is visible on PATH |
+| `& "C:\Program Files\nodejs\npm.cmd" run test:run`                                                       | Run frontend tests once                   |
+| `$env:PYTHONPATH="C:\Users\Zheng\Desktop\calendar app"; python -m unittest discover Office\test\backend` | Run backend tests                         |
+| `& "C:\Program Files\nodejs\npm.cmd" run lint`                                                           | Run ESLint                                |
+| `& "C:\Program Files\nodejs\npm.cmd" run build`                                                          | Production build                          |
 
 ---
 

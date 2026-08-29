@@ -18,6 +18,7 @@ from sqlalchemy.engine import Engine
 from .database import (
     AIUsageEventRecord,
     AIUsageMonthlyRecord,
+    ActivationFunnelEventRecord,
     ActionEventLinkRecord,
     ActionItemRecord,
     CheckInRecord,
@@ -50,6 +51,52 @@ THREAD_STATUSES = ("draft", "active", "archived")
 PROPOSAL_STATUSES = ("pending", "accepted", "rejected")
 AI_OPERATION_ALIASES = {"planning": "goal_plan"}
 AI_PLANNING_OPERATIONS = frozenset({"goal_plan", "calendar_plan", "activation", "replan", "weekly_review"})
+ACTIVATION_FUNNEL_EVENTS = frozenset({
+    "tool_creation_request_submitted",
+    "template_recommendation_shown",
+    "template_recommendation_accepted",
+    "clarification_shown",
+    "clarification_completed",
+    "clarification_skipped",
+    "initial_plan_generated",
+    "initial_plan_structured_edit",
+    "initial_plan_ai_revision",
+    "initial_plan_approved",
+    "active_tool_created",
+    "active_tool_workspace_opened",
+    "journey_failed",
+})
+REPEATABLE_ACTIVATION_FUNNEL_EVENTS = frozenset({
+    "initial_plan_structured_edit",
+    "initial_plan_ai_revision",
+    "journey_failed",
+})
+ACTIVATION_FUNNEL_STAGES = frozenset({
+    "matching",
+    "recommendation",
+    "clarification",
+    "generation",
+    "revision",
+    "activation",
+    "workspace_open",
+})
+ACTIVATION_FUNNEL_ERROR_CATEGORIES = frozenset({
+    "network",
+    "provider",
+    "validation",
+    "conflict",
+    "persistence",
+    "workspace",
+    "unknown",
+})
+ACTIVATION_FUNNEL_METADATA_KEYS = frozenset({
+    "questionCount",
+    "skippedCount",
+    "editCount",
+    "revisionCount",
+    "blockingCount",
+    "matchedExisting",
+})
 
 DEFAULT_REPLAN_THRESHOLDS = {
     "consecutiveOffTrackReviews": 2,
@@ -122,12 +169,29 @@ def clamp_mode(requested: str, maximum: str) -> str:
     return USAGE_MODES[min(USAGE_MODES.index(clean_mode(requested)), USAGE_MODES.index(clean_mode(maximum)))]
 
 
-def optional_float(value: object) -> float | None:
-    if value is None or value == "":
+def validated_float(value: object, field: str = 'value') -> float:
+    if isinstance(value, bool):
+        raise GoalControlValidationError(field + ' must be a finite number.')
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise GoalControlValidationError(field + ' must be a finite number.') from error
+    if not math.isfinite(number):
+        raise GoalControlValidationError(field + ' must be a finite number.')
+    return number
+
+
+def validated_int(value: object, field: str = 'value') -> int:
+    number = validated_float(value, field)
+    if not number.is_integer():
+        raise GoalControlValidationError(field + ' must be an integer.')
+    return int(number)
+
+
+def optional_float(value: object, field: str = 'value') -> float | None:
+    if value is None or value == '':
         return None
-    number = float(value)
-    if number != number:
-        raise GoalControlValidationError("Numeric values cannot be NaN.")
+    number = validated_float(value, field)
     return number
 
 
@@ -138,6 +202,176 @@ def require_text(payload: dict[str, Any], key: str, maximum: int = 500) -> str:
     if len(value) > maximum:
         raise GoalControlValidationError(f"{key} is too long.")
     return value
+
+
+def _strict_object(value: object, field: str, allowed: set[str]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise GoalControlValidationError(f"{field} must be an object.")
+    unknown = set(value) - allowed
+    if unknown:
+        raise GoalControlValidationError(f"{field} contains unsupported fields: {', '.join(sorted(unknown))}.")
+    return value
+
+
+def _strict_object_list(
+    payload: dict[str, Any],
+    key: str,
+    *,
+    minimum: int,
+    maximum: int,
+    allowed: set[str],
+) -> list[dict[str, Any]]:
+    value = payload.get(key, [])
+    if not isinstance(value, list) or not minimum <= len(value) <= maximum:
+        raise GoalControlValidationError(f"{key} must contain between {minimum} and {maximum} items.")
+    return [_strict_object(item, f"{key}[{index}]", allowed) for index, item in enumerate(value)]
+
+
+def _bounded_text(value: object, field: str, maximum: int, *, required: bool = False) -> str:
+    if value is None and not required:
+        return ""
+    if not isinstance(value, str):
+        raise GoalControlValidationError(f"{field} must be text.")
+    cleaned = value.strip()
+    if required and not cleaned:
+        raise GoalControlValidationError(f"{field} is required.")
+    if len(cleaned) > maximum:
+        raise GoalControlValidationError(f"{field} is too long.")
+    return cleaned
+
+
+def _activation_date(value: object, field: str) -> None:
+    if value in (None, ""):
+        return
+    text = _bounded_text(value, field, 10, required=True)
+    try:
+        if date.fromisoformat(text).isoformat() != text:
+            raise ValueError(text)
+    except ValueError as error:
+        raise GoalControlValidationError(f"{field} must use YYYY-MM-DD.") from error
+
+
+def validate_activation_plan_payload(payload: dict[str, Any]) -> None:
+    allowed_root = {
+        "title", "summary", "rollingSummary", "target_date", "goal_id", "project_id",
+        "template_id", "template_label", "tool_name", "tool_kind", "adapter_id",
+        "activation_form", "activation_journey_id", "source", "tool_features", "route_tags",
+        "assumptions", "missing_information", "constraints", "risks", "review_cadence",
+        "confidence", "safety_confirmation", "metrics", "milestones", "actions",
+        "dependencies", "policy", "implementation_path", "check_in",
+    }
+    _strict_object(payload, "activation plan", allowed_root)
+    require_text(payload, "title", 200)
+    require_text(payload, "summary", 2_000)
+    _activation_date(payload.get("target_date"), "target_date")
+    for key, maximum in (
+        ("rollingSummary", 12_000), ("goal_id", 80), ("project_id", 80),
+        ("template_id", 80), ("template_label", 120), ("tool_name", 120),
+        ("adapter_id", 80), ("activation_journey_id", 80),
+    ):
+        if key in payload:
+            _bounded_text(payload.get(key), key, maximum)
+    if payload.get("tool_kind") not in (None, "fitness", "agent-learning"):
+        raise GoalControlValidationError("Invalid tool_kind.")
+    if payload.get("source") not in (None, "ai-assistant", "template-library"):
+        raise GoalControlValidationError("Invalid activation source.")
+    if "safety_confirmation" in payload and not isinstance(payload["safety_confirmation"], bool):
+        raise GoalControlValidationError("safety_confirmation must be a boolean.")
+
+    activation_form = payload.get("activation_form", {})
+    if not isinstance(activation_form, dict) or any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in activation_form.items()
+    ):
+        raise GoalControlValidationError("activation_form must contain text values only.")
+    for key, maximum in (("tool_features", 16), ("route_tags", 24)):
+        value = payload.get(key, [])
+        if not isinstance(value, list) or len(value) > maximum:
+            raise GoalControlValidationError(f"{key} must be a bounded list.")
+        for index, item in enumerate(value):
+            _bounded_text(item, f"{key}[{index}]", 80, required=True)
+    for key, maximum, item_maximum in (
+        ("assumptions", 8, 500), ("constraints", 12, 500),
+    ):
+        value = payload.get(key, [])
+        if not isinstance(value, list) or len(value) > maximum:
+            raise GoalControlValidationError(f"{key} must be a bounded list.")
+        for index, item in enumerate(value):
+            _bounded_text(item, f"{key}[{index}]", item_maximum, required=True)
+
+    milestones = _strict_object_list(payload, "milestones", minimum=1, maximum=12, allowed={
+        "milestone_id", "title", "description", "due_date", "status", "metadata",
+    })
+    actions = _strict_object_list(payload, "actions", minimum=1, maximum=40, allowed={
+        "action_id", "title", "description", "milestone_id", "milestone_title", "due_date",
+        "estimated_minutes", "priority", "energy_needed", "execution_tier", "status", "metadata",
+    })
+    for index, item in enumerate(milestones):
+        _bounded_text(item.get("title"), f"milestones[{index}].title", 200, required=True)
+        _bounded_text(item.get("description", ""), f"milestones[{index}].description", 1_000)
+        _activation_date(item.get("due_date"), f"milestones[{index}].due_date")
+        if item.get("status") not in (None, "not_started", "in_progress", "blocked", "done"):
+            raise GoalControlValidationError("Invalid milestone status.")
+    for index, item in enumerate(actions):
+        _bounded_text(item.get("title"), f"actions[{index}].title", 200, required=True)
+        _bounded_text(item.get("description", ""), f"actions[{index}].description", 1_000)
+        _activation_date(item.get("due_date"), f"actions[{index}].due_date")
+        minutes = validated_int(item.get("estimated_minutes", 30), f"actions[{index}].estimated_minutes")
+        if not 5 <= minutes <= 10_080:
+            raise GoalControlValidationError("Action estimated_minutes must be between 5 and 10080.")
+        if item.get("priority", "medium") not in ("high", "medium", "low"):
+            raise GoalControlValidationError("Invalid action priority.")
+        if item.get("energy_needed", "medium") not in ("high", "medium", "low"):
+            raise GoalControlValidationError("Invalid action energy_needed.")
+        if item.get("execution_tier", "standard") not in EXECUTION_TIERS:
+            raise GoalControlValidationError("Invalid action execution tier.")
+        if item.get("status") not in (None, "todo", "in_progress", "blocked", "done", "skipped"):
+            raise GoalControlValidationError("Invalid action status.")
+
+    risks = _strict_object_list(payload, "risks", minimum=0, maximum=12, allowed={
+        "label", "severity", "mitigation",
+    })
+    for index, item in enumerate(risks):
+        _bounded_text(item.get("label"), f"risks[{index}].label", 300, required=True)
+        if item.get("severity", "medium") not in ("low", "medium", "high"):
+            raise GoalControlValidationError("Invalid risk severity.")
+        _bounded_text(item.get("mitigation", ""), f"risks[{index}].mitigation", 500)
+    missing = _strict_object_list(payload, "missing_information", minimum=0, maximum=8, allowed={
+        "id", "label", "impact", "blocking",
+    })
+    for index, item in enumerate(missing):
+        _bounded_text(item.get("id"), f"missing_information[{index}].id", 80, required=True)
+        _bounded_text(item.get("label"), f"missing_information[{index}].label", 200, required=True)
+        _bounded_text(item.get("impact"), f"missing_information[{index}].impact", 500, required=True)
+        if not isinstance(item.get("blocking", False), bool):
+            raise GoalControlValidationError("missing_information.blocking must be a boolean.")
+
+    _strict_object_list(payload, "metrics", minimum=0, maximum=12, allowed={
+        "metric_id", "name", "role", "value_type", "unit", "direction", "baseline_value",
+        "target_value", "ideal_value", "acceptable_min", "acceptable_max", "safety_min",
+        "safety_max", "target_date", "cadence", "is_required", "is_active", "metadata",
+    })
+    _strict_object_list(payload, "dependencies", minimum=0, maximum=40, allowed={
+        "dependency_id", "predecessor_action_id", "successor_action_id",
+        "predecessor_title", "successor_title",
+    })
+    review = _strict_object(payload.get("review_cadence", {}), "review_cadence", {"frequency", "local_time", "timezone"})
+    if review.get("frequency", "weekly") not in ("daily", "weekly", "biweekly", "monthly"):
+        raise GoalControlValidationError("Invalid review cadence frequency.")
+    confidence = _strict_object(payload.get("confidence", {}), "confidence", {"level", "reasons"})
+    if confidence.get("level", "medium") not in ("low", "medium", "high"):
+        raise GoalControlValidationError("Invalid confidence level.")
+    reasons = confidence.get("reasons", [])
+    if not isinstance(reasons, list) or len(reasons) > 8:
+        raise GoalControlValidationError("confidence.reasons must be a bounded list.")
+    policy = _strict_object(payload.get("policy", {}), "policy", {
+        "policy_id", "weekly_capacity_minutes", "buffer_percent", "active_tier", "ai_usage_mode",
+        "available_days", "replan_thresholds", "stop_rules", "planning_brief",
+    })
+    if policy.get("active_tier", "standard") not in EXECUTION_TIERS:
+        raise GoalControlValidationError("Invalid execution tier.")
+    if policy.get("ai_usage_mode") not in (None, "inherit", *USAGE_MODES):
+        raise GoalControlValidationError("Invalid AI usage mode.")
 
 
 def record_dict(record: Any, mapping: dict[str, str] | None = None) -> dict[str, Any]:
@@ -160,6 +394,10 @@ def thread_dict(record: ConversationThreadRecord) -> dict[str, Any]:
 
 def message_dict(record: ConversationMessageRecord) -> dict[str, Any]:
     return record_dict(record, {"structured_json": "structured"})
+
+
+def activation_event_dict(record: ActivationFunnelEventRecord) -> dict[str, Any]:
+    return record_dict(record, {"metadata_json": "metadata"})
 
 
 def metric_dict(record: MetricDefinitionRecord) -> dict[str, Any]:
@@ -282,9 +520,12 @@ class GoalControlService:
         db_path: str | os.PathLike[str] | None = None,
         app_mode: str = "desktop",
         client_timezone: str | None = None,
+        initialize: bool | None = None,
     ) -> None:
+        owns_engine = engine is None
         self.engine = engine or create_database_engine(db_path=db_path)
-        initialize_schema(self.engine)
+        if initialize if initialize is not None else owns_engine:
+            initialize_schema(self.engine)
         self.session_factory = create_session_factory(self.engine)
         self.user_id = user_id
         self.app_mode = "desktop" if app_mode == "desktop" else "server"
@@ -339,7 +580,31 @@ class GoalControlService:
             raise GoalControlValidationError("Invalid conversation status.")
         project_id = str(payload.get("project_id") or "").strip() or None
         requested_goal_id = str(payload.get("goal_id") or "").strip() or None
+        metadata = copy.deepcopy(payload.get("metadata") or {})
+        if not isinstance(metadata, dict):
+            raise GoalControlValidationError("metadata must be an object.")
+        journey_id = str(metadata.get("journeyId") or "").strip()
         with self.session_factory.begin() as session:
+            if journey_id:
+                candidates = session.scalars(
+                    select(ConversationThreadRecord).where(
+                        ConversationThreadRecord.user_id == self.user_id,
+                        ConversationThreadRecord.status == "draft",
+                        ConversationThreadRecord.template_id
+                        == (str(payload.get("template_id") or "").strip() or None),
+                    )
+                ).all()
+                existing = next(
+                    (
+                        item
+                        for item in candidates
+                        if isinstance(item.metadata_json, dict)
+                        and str(item.metadata_json.get("journeyId") or "") == journey_id
+                    ),
+                    None,
+                )
+                if existing is not None:
+                    return thread_dict(existing)
             if project_id:
                 project = self._project(session, project_id)
                 if requested_goal_id and requested_goal_id != project.goal_id:
@@ -360,7 +625,7 @@ class GoalControlService:
                 status=status,
                 rolling_summary=str(payload.get("rolling_summary") or ""),
                 summary_through_message_id=None,
-                metadata_json=copy.deepcopy(payload.get("metadata") or {}),
+                metadata_json=metadata,
                 created_at=timestamp,
                 updated_at=timestamp,
             )
@@ -457,6 +722,179 @@ class GoalControlService:
                 thread.summary_through_message_id = record.message_id
         return message_dict(record)
 
+    def record_funnel_event(
+        self,
+        thread_id: str | None,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        event_name = str(payload.get("eventName") or "").strip()
+        if event_name not in ACTIVATION_FUNNEL_EVENTS:
+            raise GoalControlValidationError("Invalid activation funnel event.")
+        journey_id = str(payload.get("journeyId") or "").strip()
+        template_id = str(payload.get("templateId") or "").strip()
+        source = str(payload.get("source") or "").strip()
+        resolved_thread_id = str(thread_id or payload.get("threadId") or "").strip() or None
+        project_id = str(payload.get("projectId") or "").strip() or None
+        stage = str(payload.get("stage") or "").strip() or None
+        error_category = str(payload.get("errorCategory") or "").strip() or None
+        metadata_value = copy.deepcopy(payload.get("metadata") or {})
+        if not journey_id or len(journey_id) > 80:
+            raise GoalControlValidationError("journeyId is required and must be at most 80 characters.")
+        if not template_id or len(template_id) > 80:
+            raise GoalControlValidationError("templateId is required and must be at most 80 characters.")
+        if source not in {"ai-assistant", "template-library"}:
+            raise GoalControlValidationError("Invalid activation funnel source.")
+        if stage and stage not in ACTIVATION_FUNNEL_STAGES:
+            raise GoalControlValidationError("Invalid activation funnel stage.")
+        if event_name == "journey_failed":
+            if not stage:
+                raise GoalControlValidationError("journey_failed requires a bounded stage.")
+            error_category = error_category or "unknown"
+        if error_category and error_category not in ACTIVATION_FUNNEL_ERROR_CATEGORIES:
+            raise GoalControlValidationError("Invalid activation funnel error category.")
+        if not isinstance(metadata_value, dict):
+            raise GoalControlValidationError("Activation funnel metadata must be an object.")
+        unknown_metadata = set(metadata_value) - ACTIVATION_FUNNEL_METADATA_KEYS
+        if unknown_metadata:
+            raise GoalControlValidationError("Activation funnel metadata contains an unsupported field.")
+        metadata: dict[str, bool | int] = {}
+        for key, value in metadata_value.items():
+            if isinstance(value, bool):
+                metadata[key] = value
+            elif isinstance(value, int) and 0 <= value <= 10_000:
+                metadata[key] = value
+            else:
+                raise GoalControlValidationError(
+                    "Activation funnel metadata values must be bounded booleans or integers."
+                )
+        dedupe_key = event_name if event_name != "journey_failed" else f"{event_name}:{stage}"
+        timestamp = now_iso()
+
+        with self.session_factory.begin() as session:
+            if resolved_thread_id:
+                self._thread(session, resolved_thread_id)
+            if project_id:
+                self._project(session, project_id)
+            existing = session.scalar(
+                select(ActivationFunnelEventRecord).where(
+                    ActivationFunnelEventRecord.user_id == self.user_id,
+                    ActivationFunnelEventRecord.journey_id == journey_id,
+                    ActivationFunnelEventRecord.dedupe_key == dedupe_key,
+                )
+            )
+            if existing is not None:
+                if event_name in REPEATABLE_ACTIVATION_FUNNEL_EVENTS:
+                    current_metadata = copy.deepcopy(existing.metadata_json or {})
+                    current_count = int(current_metadata.get("count") or 1)
+                    existing.metadata_json = {
+                        **current_metadata,
+                        **metadata,
+                        "count": min(10_000, current_count + 1),
+                    }
+                    existing.thread_id = resolved_thread_id or existing.thread_id
+                    existing.project_id = project_id or existing.project_id
+                    existing.stage = stage or existing.stage
+                    existing.error_category = error_category or existing.error_category
+                    existing.updated_at = timestamp
+                return activation_event_dict(existing)
+
+            values = {
+                "event_id": new_id("activation_event"),
+                "user_id": self.user_id,
+                "journey_id": journey_id,
+                "thread_id": resolved_thread_id,
+                "project_id": project_id,
+                "template_id": template_id,
+                "source": source,
+                "event_name": event_name,
+                "dedupe_key": dedupe_key,
+                "stage": stage,
+                "error_category": error_category,
+                "metadata_json": {
+                    **metadata,
+                    **({"count": 1} if event_name in REPEATABLE_ACTIVATION_FUNNEL_EVENTS else {}),
+                },
+                "created_at": timestamp,
+                "updated_at": timestamp,
+            }
+            if self.engine.dialect.name == "sqlite":
+                session.execute(
+                    sqlite_insert(ActivationFunnelEventRecord)
+                    .values(**values)
+                    .on_conflict_do_nothing(
+                        index_elements=["user_id", "journey_id", "dedupe_key"]
+                    )
+                )
+            elif self.engine.dialect.name == "mysql":
+                session.execute(
+                    mysql_insert(ActivationFunnelEventRecord).values(**values).prefix_with("IGNORE")
+                )
+            else:
+                session.add(ActivationFunnelEventRecord(**values))
+                session.flush()
+            record = session.scalar(
+                select(ActivationFunnelEventRecord).where(
+                    ActivationFunnelEventRecord.user_id == self.user_id,
+                    ActivationFunnelEventRecord.journey_id == journey_id,
+                    ActivationFunnelEventRecord.dedupe_key == dedupe_key,
+                )
+            )
+            if record is None:
+                raise RuntimeError("Activation funnel event could not be persisted.")
+        return activation_event_dict(record)
+
+    def activation_funnel_baseline(self, template_id: str | None = None) -> dict[str, Any]:
+        with self.session_factory() as session:
+            query = select(ActivationFunnelEventRecord).where(
+                ActivationFunnelEventRecord.user_id == self.user_id
+            )
+            if template_id:
+                query = query.where(ActivationFunnelEventRecord.template_id == template_id)
+            records = session.scalars(query).all()
+
+        def journeys(event_name: str) -> set[str]:
+            return {
+                record.journey_id
+                for record in records
+                if record.event_name == event_name
+            }
+
+        submitted = journeys("tool_creation_request_submitted")
+        recommendations = journeys("template_recommendation_shown")
+        accepted = journeys("template_recommendation_accepted")
+        opened = journeys("active_tool_workspace_opened")
+        event_counts = {
+            event_name: sum(1 for record in records if record.event_name == event_name)
+            for event_name in sorted(ACTIVATION_FUNNEL_EVENTS)
+        }
+        failure_counts_by_stage = {
+            stage: sum(
+                1
+                for record in records
+                if record.event_name == "journey_failed" and record.stage == stage
+            )
+            for stage in sorted(ACTIVATION_FUNNEL_STAGES)
+        }
+
+        def ratio(numerator: int, denominator: int) -> float | None:
+            return round(numerator / denominator, 4) if denominator else None
+
+        return {
+            "template_id": template_id,
+            "submitted_journeys": len(submitted),
+            "recommendation_journeys": len(recommendations),
+            "accepted_recommendation_journeys": len(accepted),
+            "opened_workspace_journeys": len(opened),
+            "event_counts": event_counts,
+            "failure_counts_by_stage": failure_counts_by_stage,
+            "completion_rate": ratio(len(opened & submitted), len(submitted)),
+            "match_coverage": ratio(len(recommendations & submitted), len(submitted)),
+            "post_recommendation_completion_rate": ratio(
+                len(opened & recommendations), len(recommendations)
+            ),
+        }
+
+
     def list_metrics(self, project_id: str, *, include_entries: bool = True) -> list[dict[str, Any]]:
         with self.session_factory() as session:
             self._project(session, project_id)
@@ -547,7 +985,7 @@ class GoalControlService:
         return metric_dict(record)
 
     def add_metric_entry(self, metric_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        confidence = float(payload.get("confidence", 1.0))
+        confidence = validated_float(payload.get("confidence", 1.0), 'confidence')
         if not 0 <= confidence <= 1:
             raise GoalControlValidationError("confidence must be between 0 and 1.")
         timestamp = now_iso()
@@ -560,7 +998,7 @@ class GoalControlService:
             )
             if metric is None:
                 raise GoalControlNotFoundError(metric_id)
-            numeric_value = optional_float(payload.get("numeric_value"))
+            numeric_value = optional_float(payload.get("numeric_value"), 'numeric_value')
             text_value = str(payload.get("text_value") or "").strip() or None
             if numeric_value is None and text_value is None:
                 raise GoalControlValidationError("A metric entry needs numeric_value or text_value.")
@@ -611,14 +1049,23 @@ class GoalControlService:
             raise GoalControlValidationError("Invalid execution tier.")
         mode_value = payload.get("ai_usage_mode")
         mode = None if mode_value in {None, "", "inherit"} else clean_mode(mode_value)
-        buffer_percent = float(payload.get("buffer_percent", 20))
+        buffer_percent = validated_float(
+            payload.get("buffer_percent", 20),
+            'buffer_percent',
+        )
         if not 0 <= buffer_percent <= 80:
             raise GoalControlValidationError("buffer_percent must be between 0 and 80.")
         return GoalControlPolicyRecord(
             policy_id=str(payload.get("policy_id") or new_id("policy")),
             user_id=self.user_id,
             project_id=project_id,
-            weekly_capacity_minutes=max(0, int(payload.get("weekly_capacity_minutes", 300))),
+            weekly_capacity_minutes=max(
+                0,
+                validated_int(
+                    payload.get("weekly_capacity_minutes", 300),
+                    'weekly_capacity_minutes',
+                ),
+            ),
             buffer_percent=buffer_percent,
             active_tier=tier,
             ai_usage_mode=mode,
@@ -645,9 +1092,18 @@ class GoalControlService:
                 session.add(record)
             else:
                 if "weekly_capacity_minutes" in payload:
-                    record.weekly_capacity_minutes = max(0, int(payload["weekly_capacity_minutes"]))
+                    record.weekly_capacity_minutes = max(
+                        0,
+                        validated_int(
+                            payload["weekly_capacity_minutes"],
+                            'weekly_capacity_minutes',
+                        ),
+                    )
                 if "buffer_percent" in payload:
-                    value = float(payload["buffer_percent"])
+                    value = validated_float(
+                        payload["buffer_percent"],
+                        'buffer_percent',
+                    )
                     if not 0 <= value <= 80:
                         raise GoalControlValidationError("buffer_percent must be between 0 and 80.")
                     record.buffer_percent = value
@@ -773,9 +1229,12 @@ class GoalControlService:
             session.delete(record)
 
     def add_effort(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        minutes = int(payload.get("minutes", 0))
+        minutes = validated_int(payload.get("minutes", 0), 'minutes')
         if minutes <= 0 or minutes > 7 * 24 * 60:
             raise GoalControlValidationError("minutes must be between 1 and 10080.")
+        confidence = validated_float(payload.get("confidence", 1.0), 'confidence')
+        if not 0 <= confidence <= 1:
+            raise GoalControlValidationError("confidence must be between 0 and 1.")
         timestamp = now_iso()
         with self.session_factory.begin() as session:
             self._project(session, project_id)
@@ -798,7 +1257,7 @@ class GoalControlService:
                 occurred_on=str(payload.get("occurred_on") or self._user_today(session).isoformat()),
                 minutes=minutes,
                 source=str(payload.get("source") or "manual")[:24],
-                confidence=min(1.0, max(0.0, float(payload.get("confidence", 1.0)))),
+                confidence=confidence,
                 notes=str(payload.get("notes") or ""),
                 created_at=timestamp,
                 updated_at=timestamp,
@@ -1875,12 +2334,15 @@ class GoalControlService:
         return record
 
     def activate_thread(self, thread_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        validate_activation_plan_payload(payload)
         timestamp = now_iso()
         title = require_text(payload, "title", 200)
         summary = str(payload.get("summary") or title)
         goal_id = str(payload.get("goal_id") or new_id("goal"))
         project_id = str(payload.get("project_id") or new_id("project"))
         template_id = str(payload.get("template_id") or "goal-planner")
+        if template_id == "fitness-ai" and payload.get("safety_confirmation") is not True:
+            raise GoalControlValidationError("Fitness safety constraints require explicit confirmation.")
         template_label = str(payload.get("template_label") or "Goal Planner")
         tool_name = str(payload.get("tool_name") or "Goal Planner")
         tool_kind = payload.get("tool_kind")
@@ -1907,10 +2369,40 @@ class GoalControlService:
             "toolFeatures": copy.deepcopy(payload.get("tool_features") or []), "routingEnabled": True,
             "roadmapFormatVersion": 1, "implementationPath": implementation_path, "longTermGoalLabel": title,
             "targetDate": target_date,
+            "activationJourneyId": str(payload.get("activation_journey_id") or "")[:80] or None,
+            "activationSource": str(payload.get("source") or "")[:32] or None,
+            "assumptions": copy.deepcopy(payload.get("assumptions") or []),
+            "constraints": copy.deepcopy(payload.get("constraints") or []),
+            "risks": copy.deepcopy(payload.get("risks") or []),
+            "reviewCadence": copy.deepcopy(payload.get("review_cadence") or {}),
+            "confidence": copy.deepcopy(payload.get("confidence") or {}),
+            "missingInformation": copy.deepcopy(payload.get("missing_information") or []),
         }
         with self.session_factory.begin() as session:
             thread = self._thread(session, thread_id)
             if thread.status != "draft":
+                if (
+                    thread.status == "active"
+                    and thread.goal_id
+                    and thread.project_id
+                ):
+                    goal = self._goal(session, thread.goal_id)
+                    project = self._project(session, thread.project_id)
+                    version = session.scalar(
+                        select(PlanVersionRecord)
+                        .where(
+                            PlanVersionRecord.user_id == self.user_id,
+                            PlanVersionRecord.project_id == thread.project_id,
+                        )
+                        .order_by(PlanVersionRecord.version_number.desc())
+                    )
+                    if version is None:
+                        raise GoalControlConflictError("The activated plan version is missing.")
+                    return {
+                        "goal": goal_dict(goal), "project": project_dict(project),
+                        "thread": thread_dict(thread),
+                        "version": record_dict(version, {"snapshot_json": "snapshot", "diff_json": "diff"}),
+                    }
                 raise GoalControlConflictError("Only a draft conversation can be activated.")
             goal = GoalRecord(
                 goal_id=goal_id, user_id=self.user_id, title=title, description=summary, status="active",
@@ -1977,6 +2469,18 @@ class GoalControlService:
                     created_at=timestamp, updated_at=timestamp,
                 ))
             schedule_value = payload.get("check_in") or {}
+            if not isinstance(schedule_value, dict):
+                raise GoalControlValidationError("check_in must be an object.")
+            schedule_value = copy.deepcopy(schedule_value)
+            review_cadence = payload.get("review_cadence") or {}
+            if not isinstance(review_cadence, dict):
+                raise GoalControlValidationError("review_cadence must be an object.")
+            review_intervals = {"daily": 1, "weekly": 7, "biweekly": 14, "monthly": 30}
+            review_frequency = str(review_cadence.get("frequency") or "weekly")
+            if review_frequency not in review_intervals:
+                raise GoalControlValidationError("Invalid review cadence frequency.")
+            schedule_value.setdefault("review_interval_days", review_intervals[review_frequency])
+            schedule_value.setdefault("local_time", review_cadence.get("local_time") or "20:00")
             preferences = session.scalar(
                 select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == self.user_id)
             )

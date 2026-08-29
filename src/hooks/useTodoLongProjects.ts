@@ -16,9 +16,8 @@ const TODO_LONG_PROJECT_SOURCE = 'todo-long-project'
 export function useTodoLongProjects() {
   const actions = useLongTermMemoryStore((state) => state.actions)
   const createAction = useLongTermMemoryStore((state) => state.createAction)
-  const createGoal = useLongTermMemoryStore((state) => state.createGoal)
+  const createGoalProject = useLongTermMemoryStore((state) => state.createGoalProject)
   const createMilestone = useLongTermMemoryStore((state) => state.createMilestone)
-  const createProject = useLongTermMemoryStore((state) => state.createProject)
   const error = useLongTermMemoryStore((state) => state.error)
   const isDetailLoading = useLongTermMemoryStore((state) => state.isDetailLoading)
   const loadProjectDetails = useLongTermMemoryStore((state) => state.loadProjectDetails)
@@ -33,16 +32,17 @@ export function useTodoLongProjects() {
 
   async function createLink(title: string, description?: string): Promise<TodoLongProject> {
     const metadata = toolMetadata('todo-long-project', TODO_LONG_PROJECT_SOURCE)
-    const goal = await createGoal({
-      description: description || `Long project linked from todo "${title}".`,
-      metadata,
-      title,
-    })
-    const project = await createProject({
-      description: description || `Long project linked from todo "${title}".`,
-      goal_id: goal.goal_id,
-      metadata,
-      title,
+    const { goal, project } = await createGoalProject({
+      goal: {
+        description: description || `Long project linked from todo "${title}".`,
+        metadata,
+        title,
+      },
+      project: {
+        description: description || `Long project linked from todo "${title}".`,
+        metadata,
+        title,
+      },
     })
     const milestone = await createMilestone({
       description: 'Define the first meaningful milestone and expected outcome.',

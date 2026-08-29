@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calendar-app.local/schemas/test-catalog-v1.schema.json",
+  "title": "Calendar App Test Catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "defaultQuickSuiteIds",
+    "diagnostics",
+    "schemaVersion",
+    "sourceSnapshot",
+    "suites"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/test-catalog-v1.schema.json"
+    },
+    "defaultQuickSuiteIds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": ["object", "string"]
+      }
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "sourceSnapshot": {
+      "$ref": "#/$defs/sourceSnapshot"
+    },
+    "suites": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/suite"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "sourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headCommit", "worktreeHash"],
+      "properties": {
+        "headCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{12}$"
+        },
+        "worktreeHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "prerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check", "kind", "name", "required"],
+      "properties": {
+        "check": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "kind": {
+          "enum": ["data-boundary", "environment", "runtime"]
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "changeTypes",
+        "componentIds",
+        "includeOneHopDependents",
+        "paths"
+      ],
+      "properties": {
+        "changeTypes": {
+          "$ref": "#/$defs/stringList"
+        },
+        "componentIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "uniqueItems": true
+        },
+        "includeOneHopDependents": {
+          "type": "boolean"
+        },
+        "paths": {
+          "$ref": "#/$defs/stringList"
+        }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expectedBehaviors",
+        "id",
+        "kind",
+        "label",
+        "prerequisites",
+        "purpose",
+        "runner",
+        "sourceFiles",
+        "status",
+        "trigger",
+        "validationCommandId"
+      ],
+      "properties": {
+        "expectedBehaviors": {
+          "$ref": "#/$defs/stringList"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "build",
+            "contract",
+            "e2e",
+            "format",
+            "integration",
+            "lint",
+            "release",
+            "security",
+            "test"
+          ]
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prerequisite"
+          },
+          "minItems": 1
+        },
+        "purpose": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "runner": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sourceFiles": {
+          "$ref": "#/$defs/stringList"
+        },
+        "status": {
+          "enum": ["conditional", "confirmed-command", "manual", "release"]
+        },
+        "trigger": {
+          "$ref": "#/$defs/trigger"
+        },
+        "validationCommandId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  }
+}

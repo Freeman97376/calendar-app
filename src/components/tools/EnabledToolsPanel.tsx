@@ -14,6 +14,7 @@ import Button from '../ui/Button'
 import ToolPlanEditorDialog from './ToolPlanEditorDialog'
 import ToolRoadmapPanel from './ToolRoadmapPanel'
 import GoalControlDashboardPanel from './GoalControlDashboard'
+import ActiveToolResumeSummary from './ActiveToolResumeSummary'
 
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
 const milestoneStatuses: MilestoneStatus[] = [
@@ -205,6 +206,9 @@ export default function EnabledToolsPanel() {
 
         {activeInstance ? (
           <section className="space-y-4 border-t border-slate-200 pt-4">
+            {summaries[activeInstance.projectId] ? (
+              <ActiveToolResumeSummary dashboard={summaries[activeInstance.projectId]} />
+            ) : null}
             <GoalControlDashboardPanel projectId={activeInstance.projectId} />
             <details
               className="rounded-md border border-slate-200 bg-white p-3"

@@ -1,4 +1,5 @@
 import type {
+  ActivationFunnelEventInput,
   AIUsageSummary,
   GoalActivationPlan,
   GoalControlDashboard,
@@ -27,7 +28,11 @@ export const goalControlClient = {
     const payload = await request<{ threads: GoalConversationThread[] }>('/api/goal-conversations')
     return payload.threads
   },
-  async createThread(input: { title: string; template_id?: string }) {
+  async createThread(input: {
+    title: string
+    template_id?: string
+    metadata?: Record<string, unknown>
+  }) {
     const payload = await request<{ thread: GoalConversationThread }>(
       '/api/goal-conversations',
       json('POST', input),
@@ -54,6 +59,31 @@ export const goalControlClient = {
       json('POST', input),
     )
     return payload.message
+  },
+  async recordFunnelEvent(input: ActivationFunnelEventInput) {
+    const { journeyId, ...body } = input
+    const payload = await request<{ event: Record<string, unknown> }>(
+      '/api/active-tool-journeys/' + encodeURIComponent(journeyId) + '/events',
+      json('POST', body),
+    )
+    return payload.event
+  },
+  async activationFunnelBaseline(templateId?: string) {
+    const query = templateId ? '?template_id=' + encodeURIComponent(templateId) : ''
+    const payload = await request<{
+      funnel: {
+        submitted_journeys: number
+        recommendation_journeys: number
+        accepted_recommendation_journeys: number
+        opened_workspace_journeys: number
+        event_counts: Record<string, number>
+        failure_counts_by_stage: Record<string, number>
+        completion_rate: number | null
+        match_coverage: number | null
+        post_recommendation_completion_rate: number | null
+      }
+    }>('/api/active-tool-journeys/funnel' + query)
+    return payload.funnel
   },
   async activate(threadId: string, plan: GoalActivationPlan) {
     return request<{ project: { project_id: string } }>(

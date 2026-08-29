@@ -32,6 +32,10 @@ class DeepSeekRateLimitError(DeepSeekError):
     pass
 
 
+class DeepSeekBudgetExceededError(DeepSeekError):
+    pass
+
+
 class DeepSeekInvalidResponseError(DeepSeekError):
     pass
 
@@ -211,4 +215,3 @@ class DeepSeekClient:
         if not isinstance(parsed, dict):
             raise DeepSeekInvalidResponseError("DeepSeek HTTP response JSON was not an object")
         return parsed
-

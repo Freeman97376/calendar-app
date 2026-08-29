@@ -1,5 +1,58 @@
+import type { ToolTemplateMetadata } from './toolTemplateMetadata'
+
 export type AIUsageMode = 'economy' | 'balanced' | 'quality'
 export type AIUsageModeSelection = AIUsageMode | 'inherit'
+
+export type ActivationFunnelEventName =
+  | 'tool_creation_request_submitted'
+  | 'template_recommendation_shown'
+  | 'template_recommendation_accepted'
+  | 'clarification_shown'
+  | 'clarification_completed'
+  | 'clarification_skipped'
+  | 'initial_plan_generated'
+  | 'initial_plan_structured_edit'
+  | 'initial_plan_ai_revision'
+  | 'initial_plan_approved'
+  | 'active_tool_created'
+  | 'active_tool_workspace_opened'
+  | 'journey_failed'
+
+export type ActivationFunnelEventInput = {
+  eventName: ActivationFunnelEventName
+  journeyId: string
+  templateId: string
+  source: 'ai-assistant' | 'template-library'
+  threadId?: string
+  projectId?: string
+  stage?:
+    | 'matching'
+    | 'recommendation'
+    | 'clarification'
+    | 'generation'
+    | 'revision'
+    | 'activation'
+    | 'workspace_open'
+  errorCategory?:
+    | 'network'
+    | 'provider'
+    | 'validation'
+    | 'conflict'
+    | 'persistence'
+    | 'workspace'
+    | 'unknown'
+  metadata?: Partial<
+    Record<
+      | 'questionCount'
+      | 'skippedCount'
+      | 'editCount'
+      | 'revisionCount'
+      | 'blockingCount'
+      | 'matchedExisting',
+      boolean | number
+    >
+  >
+}
 
 export type QuestionChoice = {
   id: string
@@ -13,6 +66,8 @@ export type QuestionBatchItem = {
   selectionMode: 'single' | 'multiple'
   choices: QuestionChoice[]
   allowCustom: boolean
+  required?: boolean
+  accuracyImpact?: string
 }
 
 export type QuestionBatchValue = {
@@ -211,18 +266,86 @@ export type AIUsageSummary = {
   reset_at?: string
 }
 
+export type GoalPlanMissingInformation = {
+  id: string
+  label: string
+  impact: string
+  blocking: boolean
+}
+
+export type GoalPlanRisk = {
+  label: string
+  severity: 'low' | 'medium' | 'high'
+  mitigation?: string
+}
+
+export type GoalPlanMilestone = {
+  milestone_id?: string
+  title: string
+  description: string
+  due_date?: string | null
+  status?: 'not_started' | 'in_progress' | 'blocked' | 'done'
+  metadata?: Record<string, unknown>
+}
+
+export type GoalPlanAction = {
+  action_id?: string
+  title: string
+  description: string
+  milestone_id?: string | null
+  milestone_title?: string | null
+  due_date?: string | null
+  estimated_minutes: number
+  priority: 'high' | 'medium' | 'low'
+  energy_needed: 'high' | 'medium' | 'low'
+  execution_tier: 'minimum' | 'standard' | 'stretch'
+  status?: 'todo' | 'in_progress' | 'blocked' | 'done' | 'skipped'
+  metadata?: Record<string, unknown>
+}
+
 export type GoalActivationPlan = {
   title: string
   summary: string
   rollingSummary?: string
-  target_date?: string
+  target_date?: string | null
   template_id?: string
   template_label?: string
+  tool_name?: string
+  tool_kind?: 'fitness' | 'agent-learning' | null
+  adapter_id?: string
+  activation_form?: Record<string, string>
+  activation_journey_id?: string
+  source?: 'ai-assistant' | 'template-library'
   tool_features?: string[]
   route_tags?: string[]
+  assumptions: string[]
+  missing_information: GoalPlanMissingInformation[]
+  constraints: string[]
+  risks: GoalPlanRisk[]
+  review_cadence: {
+    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+    local_time?: string
+    timezone?: string
+  }
+  confidence: {
+    level: 'low' | 'medium' | 'high'
+    reasons: string[]
+  }
+  safety_confirmation: boolean
   metrics: Array<Record<string, unknown> & { name: string }>
-  milestones: Array<Record<string, unknown> & { title: string }>
-  actions: Array<Record<string, unknown> & { title: string }>
+  milestones: GoalPlanMilestone[]
+  actions: GoalPlanAction[]
   dependencies?: Array<Record<string, unknown>>
   policy: Record<string, unknown>
+}
+
+export type ActiveToolOnboardingSeed = {
+  activationForm: Record<string, string>
+  activationSummary?: string
+  journeyId: string
+  originalRequest: string
+  routeTags?: string[]
+  source: 'ai-assistant' | 'template-library'
+  suggestedInstanceAlias?: string
+  template: ToolTemplateMetadata
 }

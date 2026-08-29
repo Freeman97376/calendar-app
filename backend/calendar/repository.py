@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypeVar
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,10 @@ from ..database import (
 
 
 class CalendarRowNotFoundError(KeyError):
+    pass
+
+
+class CalendarReferenceError(ValueError):
     pass
 
 
@@ -107,9 +111,12 @@ class CalendarRepository:
         db_path: Path | str | None = None,
         *,
         engine: Engine | None = None,
+        initialize: bool | None = None,
     ) -> None:
+        owns_engine = engine is None
         self.engine = engine or create_database_engine(db_path=db_path)
-        initialize_schema(self.engine)
+        if initialize if initialize is not None else owns_engine:
+            initialize_schema(self.engine)
         self.session_factory = create_session_factory(self.engine)
 
     def list_todos(self, user_id: str = "local") -> list[dict[str, Any]]:
@@ -122,6 +129,167 @@ class CalendarRepository:
             return [todo_from_record(record) for record in records]
 
     def create_todo(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory.begin() as session:
+            record = self._create_todo_in_session(session, payload, user_id)
+        return todo_from_record(record)
+
+    def get_todo(self, todo_id: str, user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory() as session:
+            return todo_from_record(self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo"))
+
+    def update_todo(self, todo_id: str, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory.begin() as session:
+            record = self._update_todo_in_session(session, todo_id, payload, user_id)
+        return todo_from_record(record)
+
+    def delete_todo(self, todo_id: str, user_id: str = "local") -> None:
+        with self.session_factory.begin() as session:
+            record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
+            session.execute(
+                update(EventRecord)
+                .where(
+                    EventRecord.user_id == user_id,
+                    EventRecord.linked_todo_id == todo_id,
+                )
+                .values(linked_todo_id=None, updated_at=now_iso())
+            )
+            session.delete(record)
+
+    def list_events(self, start: str, end: str, user_id: str = "local") -> list[dict[str, Any]]:
+        with self.session_factory() as session:
+            records = session.scalars(
+                select(EventRecord)
+                .where(
+                    EventRecord.user_id == user_id,
+                    EventRecord.end_at >= start,
+                    EventRecord.start_at <= end,
+                )
+                .order_by(EventRecord.start_at.asc(), EventRecord.title.asc())
+            ).all()
+            return [event_from_record(record) for record in records]
+
+    def create_event(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory.begin() as session:
+            record = self._create_event_in_session(session, payload, user_id)
+        return event_from_record(record)
+
+    def get_event(self, event_id: str, user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory() as session:
+            return event_from_record(
+                self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
+            )
+
+    def update_event(self, event_id: str, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+        with self.session_factory.begin() as session:
+            record = self._update_event_in_session(session, event_id, payload, user_id)
+        return event_from_record(record)
+
+    def delete_event(self, event_id: str, user_id: str = "local") -> None:
+        with self.session_factory.begin() as session:
+            record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
+            timestamp = now_iso()
+            session.execute(
+                update(TodoRecord)
+                .where(
+                    TodoRecord.user_id == user_id,
+                    TodoRecord.linked_event_id == event_id,
+                )
+                .values(linked_event_id=None, updated_at=timestamp)
+            )
+            session.execute(
+                update(EventRecord)
+                .where(
+                    EventRecord.user_id == user_id,
+                    EventRecord.master_id == event_id,
+                )
+                .values(master_id=None, updated_at=timestamp)
+            )
+            session.execute(
+                update(EventRecord)
+                .where(
+                    EventRecord.user_id == user_id,
+                    EventRecord.exception_for == event_id,
+                )
+                .values(exception_for=None, updated_at=timestamp)
+            )
+            session.delete(record)
+
+    def list_event_types(self, user_id: str = "local") -> list[dict[str, Any]]:
+        with self.session_factory() as session:
+            records = session.scalars(
+                select(EventTypeRecord)
+                .where(EventTypeRecord.user_id == user_id)
+                .order_by(EventTypeRecord.is_archived.asc(), EventTypeRecord.label.asc())
+            ).all()
+            return [event_type_from_record(record) for record in records]
+
+    def upsert_event_type(
+        self,
+        payload: dict[str, Any],
+        user_id: str = "local",
+        *,
+        create_missing: bool = True,
+    ) -> dict[str, Any]:
+        with self.session_factory.begin() as session:
+            record = self._upsert_event_type_in_session(
+                session,
+                payload,
+                user_id,
+                create_missing=create_missing,
+            )
+        return event_type_from_record(record)
+
+    def import_local_snapshot(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, int]:
+        counts = {"eventTypes": 0, "events": 0, "todos": 0}
+        event_types = payload.get("eventTypes", [])
+        todos = payload.get("todos", [])
+        events = payload.get("events", [])
+        with self.session_factory.begin() as session:
+            references = self._snapshot_reference_sets(session, user_id, event_types, todos, events)
+            self._validate_snapshot_references(todos, events, references)
+
+            for event_type in event_types:
+                self._upsert_event_type_in_session(session, event_type, user_id)
+                counts["eventTypes"] += 1
+            for todo in todos:
+                todo_id = str(todo["id"])
+                record = self._find(session, TodoRecord, TodoRecord.id, todo_id, user_id)
+                if record is None:
+                    self._create_todo_in_session(session, todo, user_id, references=references)
+                else:
+                    self._update_todo_in_session(
+                        session,
+                        todo_id,
+                        todo,
+                        user_id,
+                        references=references,
+                    )
+                counts["todos"] += 1
+            for event in events:
+                event_id = str(event["id"])
+                record = self._find(session, EventRecord, EventRecord.id, event_id, user_id)
+                if record is None:
+                    self._create_event_in_session(session, event, user_id, references=references)
+                else:
+                    self._update_event_in_session(
+                        session,
+                        event_id,
+                        event,
+                        user_id,
+                        references=references,
+                    )
+                counts["events"] += 1
+        return counts
+
+    def _create_todo_in_session(
+        self,
+        session: Session,
+        payload: dict[str, Any],
+        user_id: str,
+        *,
+        references: dict[str, set[str]] | None = None,
+    ) -> TodoRecord:
+        self._validate_todo_references(session, payload, user_id, references)
         timestamp = now_iso()
         record = TodoRecord(
             id=str(payload.get("id") or new_id("todo")),
@@ -140,15 +308,20 @@ class CalendarRepository:
             updated_at=str(payload.get("updatedAt", timestamp)),
             completed_at=payload.get("completedAt"),
         )
-        with self.session_factory.begin() as session:
-            session.add(record)
-        return todo_from_record(record)
+        session.add(record)
+        return record
 
-    def get_todo(self, todo_id: str, user_id: str = "local") -> dict[str, Any]:
-        with self.session_factory() as session:
-            return todo_from_record(self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo"))
-
-    def update_todo(self, todo_id: str, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+    def _update_todo_in_session(
+        self,
+        session: Session,
+        todo_id: str,
+        payload: dict[str, Any],
+        user_id: str,
+        *,
+        references: dict[str, set[str]] | None = None,
+    ) -> TodoRecord:
+        self._validate_todo_references(session, payload, user_id, references)
+        record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
         mapping = {
             "title": "title",
             "notes": "notes",
@@ -162,31 +335,19 @@ class CalendarRepository:
             "priority": "priority",
             "completedAt": "completed_at",
         }
-        with self.session_factory.begin() as session:
-            record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
-            self._apply_patch(record, payload, mapping)
-            record.updated_at = str(payload.get("updatedAt", now_iso()))
-        return todo_from_record(record)
+        self._apply_patch(record, payload, mapping)
+        record.updated_at = str(payload.get("updatedAt", now_iso()))
+        return record
 
-    def delete_todo(self, todo_id: str, user_id: str = "local") -> None:
-        with self.session_factory.begin() as session:
-            record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
-            session.delete(record)
-
-    def list_events(self, start: str, end: str, user_id: str = "local") -> list[dict[str, Any]]:
-        with self.session_factory() as session:
-            records = session.scalars(
-                select(EventRecord)
-                .where(
-                    EventRecord.user_id == user_id,
-                    EventRecord.end_at >= start,
-                    EventRecord.start_at <= end,
-                )
-                .order_by(EventRecord.start_at.asc(), EventRecord.title.asc())
-            ).all()
-            return [event_from_record(record) for record in records]
-
-    def create_event(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+    def _create_event_in_session(
+        self,
+        session: Session,
+        payload: dict[str, Any],
+        user_id: str,
+        *,
+        references: dict[str, set[str]] | None = None,
+    ) -> EventRecord:
+        self._validate_event_references(session, payload, user_id, references)
         timestamp = now_iso()
         record = EventRecord(
             id=str(payload.get("id") or new_id("event")),
@@ -209,17 +370,20 @@ class CalendarRepository:
             created_at=str(payload.get("createdAt", timestamp)),
             updated_at=str(payload.get("updatedAt", timestamp)),
         )
-        with self.session_factory.begin() as session:
-            session.add(record)
-        return event_from_record(record)
+        session.add(record)
+        return record
 
-    def get_event(self, event_id: str, user_id: str = "local") -> dict[str, Any]:
-        with self.session_factory() as session:
-            return event_from_record(
-                self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
-            )
-
-    def update_event(self, event_id: str, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+    def _update_event_in_session(
+        self,
+        session: Session,
+        event_id: str,
+        payload: dict[str, Any],
+        user_id: str,
+        *,
+        references: dict[str, set[str]] | None = None,
+    ) -> EventRecord:
+        self._validate_event_references(session, payload, user_id, references)
+        record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
         mapping = {
             "title": "title",
             "description": "description",
@@ -237,82 +401,244 @@ class CalendarRepository:
             "deletedOccurrences": "deleted_occurrences_json",
             "syncStatus": "sync_status",
         }
-        with self.session_factory.begin() as session:
-            record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
-            self._apply_patch(record, payload, mapping)
-            record.updated_at = str(payload.get("updatedAt", now_iso()))
-        return event_from_record(record)
+        self._apply_patch(record, payload, mapping)
+        record.updated_at = str(payload.get("updatedAt", now_iso()))
+        return record
 
-    def delete_event(self, event_id: str, user_id: str = "local") -> None:
-        with self.session_factory.begin() as session:
-            record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
-            session.delete(record)
-
-    def list_event_types(self, user_id: str = "local") -> list[dict[str, Any]]:
-        with self.session_factory() as session:
-            records = session.scalars(
-                select(EventTypeRecord)
-                .where(EventTypeRecord.user_id == user_id)
-                .order_by(EventTypeRecord.is_archived.asc(), EventTypeRecord.label.asc())
-            ).all()
-            return [event_type_from_record(record) for record in records]
-
-    def upsert_event_type(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+    def _upsert_event_type_in_session(
+        self,
+        session: Session,
+        payload: dict[str, Any],
+        user_id: str,
+        *,
+        create_missing: bool = True,
+    ) -> EventTypeRecord:
         timestamp = now_iso()
         external_id = str(payload["id"])
-        with self.session_factory.begin() as session:
-            record = session.scalar(
-                select(EventTypeRecord).where(
-                    EventTypeRecord.user_id == user_id,
-                    EventTypeRecord.id == external_id,
-                )
+        record = self._find(session, EventTypeRecord, EventTypeRecord.id, external_id, user_id)
+        if record is None:
+            if not create_missing:
+                raise CalendarRowNotFoundError(f"event type not found: {external_id}")
+            record = EventTypeRecord(
+                id=external_id,
+                user_id=user_id,
+                label=str(payload["label"]),
+                color=str(payload.get("color", "#047857")),
+                applies_to=str(payload.get("appliesTo", "both")),
+                is_archived=bool(payload.get("isArchived", False)),
+                created_at=str(payload.get("createdAt", timestamp)),
+                updated_at=str(payload.get("updatedAt", timestamp)),
             )
-            if record is None:
-                record = EventTypeRecord(
-                    id=external_id,
-                    user_id=user_id,
-                    label=str(payload["label"]),
-                    color=str(payload.get("color", "#047857")),
-                    applies_to=str(payload.get("appliesTo", "both")),
-                    is_archived=bool(payload.get("isArchived", False)),
-                    created_at=str(payload.get("createdAt", timestamp)),
-                    updated_at=str(payload.get("updatedAt", timestamp)),
-                )
-                session.add(record)
-            else:
-                if "label" in payload:
-                    record.label = str(payload["label"])
-                if "color" in payload:
-                    record.color = str(payload["color"])
-                if "appliesTo" in payload:
-                    record.applies_to = str(payload["appliesTo"])
-                if "isArchived" in payload:
-                    record.is_archived = bool(payload["isArchived"])
-                record.updated_at = str(payload.get("updatedAt", timestamp))
-        return event_type_from_record(record)
+            session.add(record)
+        else:
+            if "label" in payload:
+                record.label = str(payload["label"])
+            if "color" in payload:
+                record.color = str(payload["color"])
+            if "appliesTo" in payload:
+                record.applies_to = str(payload["appliesTo"])
+            if "isArchived" in payload:
+                record.is_archived = bool(payload["isArchived"])
+            record.updated_at = str(payload.get("updatedAt", timestamp))
+        return record
 
-    def import_local_snapshot(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, int]:
-        counts = {"eventTypes": 0, "events": 0, "todos": 0}
-        for event_type in payload.get("eventTypes", []):
-            self.upsert_event_type(event_type, user_id)
-            counts["eventTypes"] += 1
-        for todo in payload.get("todos", []):
-            try:
-                self.get_todo(str(todo["id"]), user_id)
-            except CalendarRowNotFoundError:
-                self.create_todo(todo, user_id)
-            else:
-                self.update_todo(str(todo["id"]), todo, user_id)
-            counts["todos"] += 1
-        for event in payload.get("events", []):
-            try:
-                self.get_event(str(event["id"]), user_id)
-            except CalendarRowNotFoundError:
-                self.create_event(event, user_id)
-            else:
-                self.update_event(str(event["id"]), event, user_id)
-            counts["events"] += 1
-        return counts
+    def _validate_todo_references(
+        self,
+        session: Session,
+        payload: dict[str, Any],
+        user_id: str,
+        references: dict[str, set[str]] | None,
+    ) -> None:
+        event_type_id = str(payload.get("eventTypeId", "general"))
+        self._require_reference(
+            session,
+            EventTypeRecord,
+            EventTypeRecord.id,
+            event_type_id,
+            user_id,
+            "eventTypeId",
+            references["eventTypes"] if references else None,
+            allow_general=True,
+        )
+        linked_event_id = payload.get("linkedEventId")
+        if linked_event_id is not None:
+            self._require_reference(
+                session,
+                EventRecord,
+                EventRecord.id,
+                str(linked_event_id),
+                user_id,
+                "linkedEventId",
+                references["events"] if references else None,
+            )
+
+    def _validate_event_references(
+        self,
+        session: Session,
+        payload: dict[str, Any],
+        user_id: str,
+        references: dict[str, set[str]] | None,
+    ) -> None:
+        event_type_id = str(payload.get("eventTypeId", "general"))
+        self._require_reference(
+            session,
+            EventTypeRecord,
+            EventTypeRecord.id,
+            event_type_id,
+            user_id,
+            "eventTypeId",
+            references["eventTypes"] if references else None,
+            allow_general=True,
+        )
+        linked_todo_id = payload.get("linkedTodoId")
+        if linked_todo_id is not None:
+            self._require_reference(
+                session,
+                TodoRecord,
+                TodoRecord.id,
+                str(linked_todo_id),
+                user_id,
+                "linkedTodoId",
+                references["todos"] if references else None,
+            )
+        for field_name in ("masterId", "exceptionFor"):
+            event_id = payload.get(field_name)
+            if event_id is not None:
+                self._require_reference(
+                    session,
+                    EventRecord,
+                    EventRecord.id,
+                    str(event_id),
+                    user_id,
+                    field_name,
+                    references["events"] if references else None,
+                )
+
+    def _snapshot_reference_sets(
+        self,
+        session: Session,
+        user_id: str,
+        event_types: list[dict[str, Any]],
+        todos: list[dict[str, Any]],
+        events: list[dict[str, Any]],
+    ) -> dict[str, set[str]]:
+        snapshot_ids = {
+            "eventTypes": self._unique_snapshot_ids("eventTypes", event_types),
+            "todos": self._unique_snapshot_ids("todos", todos),
+            "events": self._unique_snapshot_ids("events", events),
+        }
+        snapshot_ids["eventTypes"].add("general")
+        snapshot_ids["eventTypes"].update(
+            str(value)
+            for value in session.scalars(
+                select(EventTypeRecord.id).where(EventTypeRecord.user_id == user_id)
+            )
+        )
+        snapshot_ids["todos"].update(
+            str(value)
+            for value in session.scalars(select(TodoRecord.id).where(TodoRecord.user_id == user_id))
+        )
+        snapshot_ids["events"].update(
+            str(value)
+            for value in session.scalars(select(EventRecord.id).where(EventRecord.user_id == user_id))
+        )
+        return snapshot_ids
+
+    def _validate_snapshot_references(
+        self,
+        todos: list[dict[str, Any]],
+        events: list[dict[str, Any]],
+        references: dict[str, set[str]],
+    ) -> None:
+        for index, todo in enumerate(todos):
+            event_type_id = str(todo.get("eventTypeId", "general"))
+            self._require_snapshot_reference(
+                "todos",
+                index,
+                "eventTypeId",
+                event_type_id,
+                references["eventTypes"],
+            )
+            linked_event_id = todo.get("linkedEventId")
+            if linked_event_id is not None:
+                self._require_snapshot_reference(
+                    "todos",
+                    index,
+                    "linkedEventId",
+                    str(linked_event_id),
+                    references["events"],
+                )
+        for index, event in enumerate(events):
+            event_type_id = str(event.get("eventTypeId", "general"))
+            self._require_snapshot_reference(
+                "events",
+                index,
+                "eventTypeId",
+                event_type_id,
+                references["eventTypes"],
+            )
+            linked_todo_id = event.get("linkedTodoId")
+            if linked_todo_id is not None:
+                self._require_snapshot_reference(
+                    "events",
+                    index,
+                    "linkedTodoId",
+                    str(linked_todo_id),
+                    references["todos"],
+                )
+            for field_name in ("masterId", "exceptionFor"):
+                referenced_event_id = event.get(field_name)
+                if referenced_event_id is not None:
+                    self._require_snapshot_reference(
+                        "events",
+                        index,
+                        field_name,
+                        str(referenced_event_id),
+                        references["events"],
+                    )
+
+    @staticmethod
+    def _unique_snapshot_ids(label: str, items: list[dict[str, Any]]) -> set[str]:
+        identifiers = [str(item["id"]) for item in items]
+        if len(identifiers) != len(set(identifiers)):
+            raise CalendarReferenceError(f"{label} must not contain duplicate ids.")
+        return set(identifiers)
+
+    @staticmethod
+    def _require_snapshot_reference(
+        collection: str,
+        index: int,
+        field_name: str,
+        external_id: str,
+        allowed_ids: set[str],
+    ) -> None:
+        if external_id not in allowed_ids:
+            raise CalendarReferenceError(
+                f"{collection}[{index}].{field_name} references a missing calendar item: {external_id}"
+            )
+
+    @classmethod
+    def _require_reference(
+        cls,
+        session: Session,
+        model: type[RecordT],
+        id_column: Any,
+        external_id: str,
+        user_id: str,
+        field_name: str,
+        allowed_ids: set[str] | None,
+        *,
+        allow_general: bool = False,
+    ) -> None:
+        if allow_general and external_id == "general":
+            return
+        exists = external_id in allowed_ids if allowed_ids is not None else (
+            cls._find(session, model, id_column, external_id, user_id) is not None
+        )
+        if not exists:
+            raise CalendarReferenceError(
+                f"{field_name} references a missing calendar item: {external_id}"
+            )
 
     def clear_user(self, user_id: str) -> None:
         with self.session_factory.begin() as session:
@@ -327,6 +653,18 @@ class CalendarRepository:
                 setattr(record, column, payload[public_key])
 
     @staticmethod
+    def _find(
+        session: Session,
+        model: type[RecordT],
+        id_column: Any,
+        external_id: str,
+        user_id: str,
+    ) -> RecordT | None:
+        return session.scalar(
+            select(model).where(model.user_id == user_id, id_column == external_id)
+        )
+
+    @staticmethod
     def _required(
         session: Session,
         model: type[RecordT],
@@ -335,9 +673,7 @@ class CalendarRepository:
         user_id: str,
         label: str,
     ) -> RecordT:
-        record = session.scalar(
-            select(model).where(model.user_id == user_id, id_column == external_id)
-        )
+        record = CalendarRepository._find(session, model, id_column, external_id, user_id)
         if record is None:
             raise CalendarRowNotFoundError(f"{label} not found: {external_id}")
         return record

@@ -203,6 +203,23 @@ export default function ToolsPanel() {
 
               {activation.activationResult ? (
                 <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
+                  {activation.reviewFirst && activation.matchingActiveTool ? (
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+                      <p>
+                        {t('tools.existingActiveToolFound', {
+                          name: activation.matchingActiveTool.instanceAlias,
+                        })}
+                      </p>
+                      <label className="mt-2 flex items-center gap-2 text-xs">
+                        <input
+                          checked={activation.createAnother}
+                          onChange={(event) => activation.setCreateAnother(event.target.checked)}
+                          type="checkbox"
+                        />
+                        {t('tools.createAnotherExplicit')}
+                      </label>
+                    </div>
+                  ) : null}
                   <div>
                     <label
                       className="block text-sm font-medium text-slate-700"
@@ -257,7 +274,13 @@ export default function ToolsPanel() {
                     onClick={() => void activation.createEnabledTool()}
                     variant="primary"
                   >
-                    {t('tools.createEnabledTool')}
+                    {activation.reviewFirst &&
+                    activation.matchingActiveTool &&
+                    !activation.createAnother
+                      ? t('tools.openExistingActiveTool')
+                      : activation.reviewFirst
+                        ? t('ai.reviewInitialPlan')
+                        : t('tools.createEnabledTool')}
                   </Button>
                 </div>
               ) : null}

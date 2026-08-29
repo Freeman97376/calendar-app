@@ -122,6 +122,16 @@ export type CreateProjectInput = {
   title: string
 }
 
+export type CreateGoalProjectInput = {
+  goal: CreateGoalInput
+  project: Omit<CreateProjectInput, 'goal_id'>
+}
+
+export type CreateGoalProjectResult = {
+  goal: LongTermGoal
+  project: LongTermProject
+}
+
 export type CreateMilestoneInput = {
   description?: string
   due_date?: string

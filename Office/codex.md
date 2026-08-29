@@ -1,114 +1,41 @@
 # Codex Working Brief
 
-> Prepared: 2026-05-25
-> Role: core implementation engineer for this calendar app
-> Supervisor reference: `CLAUDE.md` and `Office/claude.md`
+> Updated: 2026-08-10
 
-## Operating Role
+## Product contract
 
-Codex is responsible for writing the core application code for this project, while using the Office folder as the source of truth for planning, architecture, tasks, testing expectations, and project history.
+Calendar App uses one shared React/FastAPI source tree with two runtime surfaces:
 
-Claude Code is the project supervisor and project manager. Its files define the current technical direction:
+- Server: MySQL-only, operator-created accounts, no public registration, same-origin API.
+- Desktop: Tauri + PyInstaller sidecar + local SQLite, no login, no automatic server sync.
 
-- Keep the app in a flat, monorepo-ready structure for now.
-- Preserve the strict 5-layer source architecture.
-- Keep production code changes focused and test-backed.
-- Treat `Office/` as the project management hub.
+Do not weaken these boundaries without an explicit product decision.
 
-## Current Repo Reality
+## Source layout
 
-The repository currently contains:
+- `src/domain`: schemas and deterministic logic.
+- `src/services`: API and external-I/O adapters.
+- `src/store`: Zustand state and service orchestration.
+- `src/hooks`: React view models and asynchronous glue.
+- `src/components`: UI and approval surfaces.
+- `backend`: FastAPI, SQLAlchemy repositories, auth, Goal Control, Fridge/OCR, migrations and backup.
+- `src-tauri`: desktop shell, sidecar lifecycle, updater and notifications.
+- `Office/test`: the only stable automated test suite.
+- `scratch/test-scripts`: ignored one-off/manual diagnostics.
 
-- `CLAUDE.md`: root supervisor loader.
-- `Office/`: full project office with architecture, specs, ADRs, tasks, testing plan, progress, and error tracking.
-- `src/`: a 5-layer skeleton with schemas, interfaces, placeholder components, and unimplemented services/stores/hooks.
-- `tests/`: a test skeleton with placeholder/todo tests and mock setup stubs.
-- `scratch/`: ignored scratch workspace for temporary files and one-off/manual test scripts.
-- `.env.example`: expected environment variable names.
+## Sources of truth
 
-Important gap: there is currently no `package.json`, no Vite config, no TypeScript config, no Tailwind config, and no installed dependency tree. The Office tracker marks Phase 0 Bootstrap as not started, even though `src/` and `tests/` skeletons already exist.
+1. Current code, Alembic migrations, OpenAPI snapshot and CI configuration.
+2. `Office/planning/architecture.md`, `Office/docs/input-output-flow.md`, `Office/docs/algorithms.md`.
+3. `Office/test/README.md` and `CURRENT_STATUS.md`.
+4. Golden Goose architecture output is a partial historical snapshot, not the current contract.
 
-## Architecture Commitments
+## Working rules
 
-The application source is organized into five layers:
-
-1. `src/domain/`: Zod schemas, derived TypeScript types, and pure logic.
-2. `src/services/`: storage, sync, Firebase, and AI adapters.
-3. `src/store/`: Zustand stores.
-4. `src/hooks/`: React orchestration and glue.
-5. `src/components/`: presentational UI.
-
-Layer import rules are strict:
-
-- `components/` may import from `hooks/`, `domain/types`, and `components/ui/`.
-- `hooks/` may import from `store/`, `domain/logic`, and `domain/types`.
-- `store/` may import from `services/` and `domain/types`.
-- `services/` may import from `domain/schemas`, `domain/types`, and Firebase config.
-- `domain/` may import only from `zod` and `date-fns`.
-
-## Accepted Technical Decisions
-
-- ADR-001: stay flat now, but keep `src/domain/` and `src/components/ui/` extractable later.
-- ADR-002: all storage access goes through `IStorageAdapter`.
-- ADR-003: AI responses must be structured through Claude tool use and validated with Zod.
-- ADR-004: use Zustand, split across calendar, event, UI, and AI stores.
-
-## Implementation Priorities
-
-The next practical work is Phase 0 Bootstrap:
-
-1. Add project tooling: `package.json`, Vite, TypeScript, React, Vitest, ESLint, Prettier, Tailwind.
-2. Make the existing skeleton compile.
-3. Add or activate the smoke test.
-4. Verify `npm run dev`, `npm run test:run`, `npm run lint`, and `npm run build`.
-5. Then move into Phase 1 calendar views.
-
-After bootstrap, build phase-by-phase:
-
-- Phase 1: calendar view state, date helpers, Month/Week/Day UI.
-- Phase 2: event schema, CRUD store, modal/form/card flow.
-- Phase 3: recurrence schema and expansion logic.
-- Phase 4: drag and drop with `@dnd-kit`.
-- Phase 5: localStorage, Firestore, and sync manager.
-- Phase 6: AI assistant and structured scheduling suggestions.
-- Phase 7: accessibility, responsive QA, E2E coverage, polish.
-
-## Coding Principles
-
-- Prefer the existing architecture over new abstractions.
-- Start in the lowest layer that can solve the problem.
-- Keep schemas as the single source of truth for runtime validation and derived types.
-- Use `date-fns` for date math; avoid raw date arithmetic where library helpers fit.
-- Validate all persisted or AI-provided data through Zod.
-- Keep adapters swappable and testable behind interfaces.
-- Keep components thin; put orchestration in hooks and state in stores.
-- Add tests proportional to the implementation risk and the Office test plan.
-- Put all temporary files under `scratch/`.
-- Put one-off/manual test scripts under `scratch/test-scripts/`; promote stable coverage into `tests/`.
-
-## Office Files Checked
-
-Read and incorporated:
-
-- `Office/claude.md`
-- `Office/docs/onboarding.md`
-- `Office/docs/feature-specs/ai-assistant.md`
-- `Office/docs/feature-specs/recurring-events.md`
-- `Office/docs/feature-specs/sync-strategy.md`
-- `Office/extensions/future-backlog.md`
-- `Office/planning/architecture.md`
-- `Office/planning/roadmap.md`
-- `Office/planning/decisions/adr-001-monorepo-strategy.md`
-- `Office/planning/decisions/adr-002-storage-adapter-pattern.md`
-- `Office/planning/decisions/adr-003-ai-structured-output.md`
-- `Office/planning/decisions/adr-004-zustand-over-redux.md`
-- `Office/tasks/active-sprint.md`
-- `Office/tasks/backlog.md`
-- `Office/tasks/done.md`
-- `Office/testing/test-plan.md`
-- `Office/tracking/errors.md`
-- `Office/tracking/progress.md`
-
-## Next Move
-
-When asked to start implementation, begin with Phase 0 Bootstrap unless the user explicitly points to a later feature. The first concrete coding move should be to create the missing project tooling and make the current skeleton buildable.
+- Preserve user work; never reset or overwrite unrelated changes.
+- Keep components on hook/view-model boundaries and stores on service/domain boundaries.
+- All personal SQL reads and writes must remain scoped by authenticated `user_id`.
+- AI output is preview/proposal data until the user explicitly approves it.
+- Tests never use production databases, real user backups, paid AI keys or signing keys.
+- Put stable tests in `Office/test/<category>` and update `TEST_MATRIX.md`.
+- Validate changes with the repo commands documented in `Office/test/README.md`.

@@ -1,141 +1,176 @@
-# Calendar App 输入输出流程说明
+# Calendar App 输入、处理与输出数据流
 
-> Last updated: 2026-06-18
+> 基准：2026-08-10 当前代码
+> 本文描述生产主链路；旧 localStorage/Firestore adapter 仅用于兼容测试。
 
-本文说明用户输入如何经过前端、状态层、服务层、校验层和后端，最终变成日历、任务、冰箱库存或文档化输出。
+## 1. 通用请求链
 
-## 1. 普通日历事件
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as React Component
+    participant H as Hook
+    participant S as Zustand Store
+    participant A as API Service
+    participant F as FastAPI
+    participant R as SQL Repository
+    participant D as MySQL / SQLite
+    U->>C: input / click / drag
+    C->>H: intent
+    H->>S: validated command
+    S->>A: DTO request
+    A->>F: credentialed /api request
+    F->>R: authenticated user_id + transaction
+    R->>D: read or write
+    D-->>R: records
+    R-->>F: domain result
+    F-->>A: camelCase JSON
+    A-->>S: Zod-validated data
+    S-->>C: observable state
+    C-->>U: render / approval / error
+```
 
-输入：
+共同边界：
 
-- 用户在月/周/日视图点击日期或时间格。
-- 用户在事件表单输入标题、时间、类型、颜色、循环规则等。
+- Server 使用 session cookie 与 CSRF；Desktop 使用只存在于 Tauri 启动握手中的 loopback token。
+- 后端从认证上下文取得 `user_id`，不接受客户端指定数据所有者。
+- 前端和后端均校验输入；SQL transaction 是多记录写入的最终原子边界。
+- 401 会触发会话失效与用户态 store 清理，避免旧账号数据留在界面。
 
-处理：
+## 2. 启动、bootstrap 与登录
 
-- `CalendarShell` 将点击传给 `useEvents`。
-- `useEvents` 调用 `eventStore` 的创建或更新动作。
-- `eventStore` 使用 `EventSchema` 校验事件形状，并通过 sync service 写入本地存储。
-- 如果远程 Firebase 可用，`SyncManager` 会同步；离线时保留本地队列。
+**输入**：运行模式、数据库 URL、桌面 data dir/令牌或服务端 cookie。
 
-输出：
+**处理**：
 
-- 校验通过的 `Event` 存入 store。
-- Calendar views 重新按日期分组渲染事件卡片。
+1. 桌面壳启动 sidecar，读取随机端口和一次性令牌；Web 版直接使用同 origin `/api`。
+2. 前端调用 `/api/bootstrap`。
+3. 后端返回 `mode`、`authRequired`、能力、用户与偏好。
+4. Server 未登录时只显示登录页面；账号只能由 `python -m backend.manage_users` 创建。
+5. Desktop 验证启动令牌后返回本地主体，无注册和登录交互。
+6. 认证成功后并行加载事件、Todo、Event Type、Memory、Tool Preset 和 Fridge inventory。
 
-## 2. AI Break Down Goal
+**输出**：已认证工作区、登录页或带诊断的启动恢复页。
 
-输入：
+**失败边界**：错误数据库方言、无效令牌、sidecar 超时、数据库需要恢复、会话过期均 fail closed。
 
-- 用户在 AI Assistant 的 `Goal` 输入框写目标。
-- 用户选择 `api` 或 `local` provider。
+## 3. 日历事件 CRUD 与循环实例
 
-处理：
+**输入**：标题、开始/结束时间、全天标记、类型、循环规则或拖放目标。
 
-- `AIAssistantPanel` 调用 `useAI.sendGoal`。
-- `useAI` 读取 focused date、配置和当前 store 状态。
-- `aiStore` 调用已配置的 `IAIService.breakdownGoal`。
-- `api` provider 通过 `ApiAIService` 调用 OpenAI-compatible chat completions endpoint，默认 DeepSeek。
-- `local` provider 通过 `LocalAIService` 直接生成确定性计划。
-- 返回值必须通过 `AIBreakdownResultSchema`。
+**处理**：
 
-输出：
+1. `EventForm`/拖放 hook 生成 Event draft。
+2. Zod 校验时间范围和字段形状。
+3. Store 通过 `ApiCalendarStorageAdapter` 调用 `/api/calendar/events`。
+4. 后端仓储在当前 `user_id` 下写入事件。
+5. 读取视图时，前端在选定范围内展开 daily/weekly/custom/monthly 循环实例。
+6. “仅本次”以 exception/deleted occurrence 表达；“本次及以后”切分系列；“全部”更新 master。
 
-- UI 展示可审阅的步骤卡片。
-- 用户点击 `Schedule All` 后，`useAI.acceptSuggestion` 将每个 step 转成 calendar event。
+**输出**：月/周/日视图中的排序事件卡，或明确的校验/冲突错误。
 
-## 3. AI Action Plan
+**真实场景**：创建会议、修改重复锻炼、本周拖动某个实例而不改变历史实例。
 
-输入：
+## 4. Todo 创建与确定性排程
 
-- 用户在 `Calendar or task command` 输入自然语言命令，例如创建会议、删除事件、创建任务、安排任务。
+**输入**：Todo 标题、状态、类型、截止日期、`etaMinutes`、priority、energyNeeded 和可排时间范围。
 
-处理：
+**处理**：
 
-- `useAI.buildContext` 通过浏览器 `new Date()` 和 `Intl.DateTimeFormat().resolvedOptions()` 读取本机当前日期/时间、IANA timezone、timezone name、UTC offset、locale；如果 Settings 里配置了 `timezoneOverride`，则使用该 IANA 时区生成 `currentLocalDateTime` 和展示 label。它同时收集当前日历焦点日期、events、todos、event types。
-- `aiStore.sendActionCommand` 调用 `IAIService.planCalendarActions`。
-- `api` 或 `local` provider 返回 action plan。
-- 48 小时内开始的 event create/update 动作会追加确认时间 warning；重复或重叠的 event 时间段会追加阻塞 warning。
-- 返回值必须通过 `AICalendarActionPlanSchema`，并且时间范围必须有效。
+1. Todo 作为日历前的任务事实保存，不强迫立即生成 Event。
+2. 本地排程器过滤已完成或已链接任务，按优先级、截止时间、能量、创建时间排序。
+3. 在默认 09:00–17:00 或调用方指定窗口中，按天扫描现有事件和已分配任务之间的首个可容纳空档。
+4. 用户确认 `schedule_todo` 动作后创建 Event，并双向写入 `todo.linkedEventId` / event link。
 
-输出：
+**输出**：可审阅的排程动作、无法放入范围的 warning、已链接日历事件。
 
-- UI 以 action cards 展示待执行动作、可读时间和原因。
-- 需要确认的近期时间必须勾选确认后才能点击 `Apply Actions`；重复或重叠的时间段必须先调整，不能直接 apply。
-- 用户点击 `Apply Actions` 后，`useAI.applyActionPlan` 调用对应 store：
-  - event create/update/delete -> `eventStore`
-  - todo create/update/delete -> `todoStore`
-  - schedule todo -> 创建 linked event，并回写 todo 的 `linkedEventId`
+**边界**：确定性排程不预测通勤、休息偏好或隐含资源；这些需要用户或 AI 提供额外约束。
 
-## 4. Tools Panel
+## 5. AI 对话、动作计划与审批
 
-输入：
+**输入**：自然语言目标/命令、当前日期时间、时区、日历焦点、事件、Todo、Event Type、Active Tools 和 AI usage mode。
 
-- 用户点击顶部 `Tools`，再选择 Settings、Tool Sessions 或 Fridge。
+**处理**：
 
-处理：
+1. `useAI` 构造明确区分“真实当前时间”和“日历焦点日期”的上下文。
+2. API provider 通过后端 `/api/ai/chat/completions` 代理；密钥不进入浏览器 bundle。
+3. 无 API key 或选择 local 时，`LocalAIService` 提供确定性有限能力。
+4. 返回内容必须通过 `AIBreakdownResultSchema`、`AICalendarActionPlanSchema` 等 Zod schema。
+5. 近期时间需确认；重叠或重复事件会阻塞直接应用。
+6. AI 结果进入 `ApprovalDrawer`；只有用户确认后才调用事件/Todo store。
 
-- `ToolsPanel` 只读取 `TOOL_DEFINITIONS` registry。
-- 每个 tool 有自己的目录和 `{ id, label, Component }` 注册入口。
+**输出**：对话消息、可编辑动作卡、warning、批准后写入的 Event/Todo，或不改变数据的拒绝结果。
 
-输出：
+**失败边界**：无效 JSON、错误 schema、HTML/截断响应、预算 hard limit、超时和上游错误不会直接写业务数据。
 
-- 选中的 tool component 渲染到右侧面板。
-- 新 tool 只需新增目录并加入 registry。
+## 6. 长期目标、Goal Control 与 Active Tools
 
-## 5. Tool Sessions
+**输入**：目标陈述、当前情况、指标、里程碑、行动、容量、Check-in 回答和 AI 使用偏好。
 
-输入：
+**处理**：
 
-- 用户选择 built-in preset 或 custom preset。
-- 用户填写 preset fields，并选择 `global`、`api` 或 `local` provider。
+1. Goal Conversation 每轮提出 1–3 个可回答问题，先锚定当前情况，再形成可测量预览。
+2. 激活时在一个 transaction 中创建 Goal、Project、Metric、Milestone、Action、依赖、控制策略、Check-in schedule 和首个版本。
+3. 手工结构修改立即保存，并在编辑窗口内合并版本；AI 修改保存为 `PlanChangeProposal`。
+4. 用户可接受全部/部分或拒绝提案；未接受内容不改变项目结构。
+5. Dashboard 聚合容量、行动状态、指标趋势、关键路径、版本和 Check-in。
+6. Active Tool 元数据存放 alias、template、routing flag、implementationPath；AI 只路由到启用且允许 routing 的实例。
 
-处理：
+**输出**：可回滚的计划版本、待审提案、进度、Check-in、日历草稿和工具运行历史。
 
-- Built-in presets 分别由独立目录管理，例如 Dining Planner 和 Workout Planner。
-- `useToolSessions` 将 preset、inputs、本机当前日期/时间、timezone、timezone name、UTC offset、当前日历焦点日期和 llmOptions 组装成 `ToolSessionRequest`，并同样尊重 Settings 中的 `timezoneOverride`。
-- `toolSessionStore` 调用当前 `IAIService.runToolSession`。
-- 返回值必须通过 `ToolSessionResultSchema`。
+**边界**：低置信度、异常或安全边界只请求确认/建议暂停，不自动重排或自动暂停。
 
-输出：
+## 7. 冰箱票据与库存
 
-- UI 展示生成的 calendar event drafts。
-- 用户点击 `Apply events` 后，drafts 写入 `eventStore`。
+**输入**：JPG/JPEG/PNG/WebP 票据、purchase date、timezone、是否生成提醒建议。
 
-## 6. Settings
+**处理**：
 
-输入：
+1. 后端验证扩展名、MIME、magic header 和大小。
+2. Tesseract 本地 OCR 生成文本与置信度。
+3. 规则 parser 清理行、去价格/噪声并提取候选商品；classifier 过滤非冷藏品。
+4. Shelf-life cache 按 exact/normalized/default 匹配。
+5. OCR 或规则结果不足时，且配置允许，才调用 DeepSeek 文本降级。
+6. 预测结果计算到期日、总体置信度和 reminder suggestions。
+7. 用户选择后才把商品写入当前账号库存或把提醒应用到日历。
 
-- Frontend runtime：AI provider、AI API profile、API key、API base URL、model、timezone override、Firebase、Fridge API、默认事件/任务输入值。
-- Backend DeepSeek/Fridge：后端 receipt pipeline 的 DeepSeek key/base URL/model 和 fridge data dir。
+**输出**：结构化 OCR、候选、保质期、到期日、trace、recoverable errors、warnings。
 
-处理：
+**边界**：上传图片只在请求期间处理；默认 text-only DeepSeek 不承诺图像原生识别；付费 AI 不在自动测试中调用。
 
-- Frontend runtime 写入 `RuntimeConfigService` 的 localStorage。
-- `configStore.applyRuntimeConfig` 立即重建 AI service 和 Fridge API service。
-- Backend config 通过 `BackendConfigApiService` PATCH 到 Python backend `/api/config`。
+## 8. 数据导出、预览与导入
 
-输出：
+**输入**：当前账号导出请求，或带版本、校验和、冲突策略的备份文件。
 
-- 前端配置即时影响 AI 和 Fridge service。
-- 后端配置写入 `.env.local` 并重建 receipt analyzer/inventory store。
+**处理**：
 
-## 7. Fridge Receipt Flow
+1. `/api/data/export` 仅导出当前账号的可移植业务数据；密钥和 AI usage events 不进入备份 v2。
+2. `/api/data/import/preview` 解析并校验，不写数据库；返回新增、更新、跳过和冲突。
+3. newer `updatedAt` 默认胜出；同时间不同内容要求明确选择 local/backup。
+4. 执行导入时重验 preview checksum；当前数据已变化则返回 409。
+5. Replace 仅在桌面已有 SQLite snapshot 或服务端已下载账号备份时开放。
 
-输入：
+**输出**：下载文件、预览报告、原子导入统计或可重试冲突。
 
-- 用户上传 receipt image，可选 purchase date。
+**边界**：导入不能跨用户引用对象；关系错误在写入/恢复校验阶段被拒绝或隔离。
 
-处理：
+## 9. 桌面更新与安全迁移
 
-- `FridgePanel` 调用 `useFridge.analyzeReceipt`。
-- `FridgeApiService` 发送 multipart request 到 `/api/fridge/receipt/analyze`。
-- Python backend 验证图片，执行 OCR，本地解析 fridge/freezer candidates。
-- Shelf life 先查 defaults/runtime cache，必要时用 backend DeepSeek fallback。
-- 响应由前端 `FridgeReceiptAnalysisResponseSchema` 校验。
+**输入**：应用版本、分发类型、更新 manifest、SQLite 路径。
 
-输出：
+**处理**：
 
-- UI 展示 receipt items、warnings 和 reminder suggestions。
-- 用户可将分析结果加入 backend inventory。
-- 用户可将 expiration reminders 转成 all-day calendar events。
+1. 安装版检查 GitHub updater；portable 版只提示并打开发布页。
+2. 安装前调用 `/api/data/pre-update-backup` 创建 SQLite online backup 与 SHA-256。
+3. 仅保留最近三份 pre-update backup。
+4. 数据库升级对独立 candidate 执行 Alembic，验证后原子替换；失败保留原库、快照和诊断。
+5. 更新安装必须由用户确认。
+
+**输出**：更新提示、进度、可恢复备份或明确的 migration recovery 状态。
+
+## 10. 可观测性与不进入生产数据的内容
+
+- `/api/health` 和 `/api/bootstrap` 提供运行模式和最小健康信息。
+- E2E 失败的 trace、截图、日志保存在忽略目录 `test-results/` / `playwright-report/`。
+- Sidecar 运行日志保存在用户数据目录，stdout 只用于启动协议。
+- `.env.local`、签名密钥、Credential Manager 密钥、`.secrets/`、测试数据库和构建产物不得签入 Git。

@@ -15,6 +15,7 @@ type TimeGridProps = {
   eventsByDate: Record<string, Event[]>
   onSelectDate: (isoDate: string) => void
   onSelectEvent: (event: Event) => void
+  onSelectTimeSlot: (isoDate: string, hour: number) => void
 }
 
 const hours = Array.from({ length: 24 }, (_, hour) => hour)
@@ -36,6 +37,7 @@ export default function TimeGrid({
   eventsByDate,
   onSelectDate,
   onSelectEvent,
+  onSelectTimeSlot,
 }: TimeGridProps) {
   const gridColumns =
     days.length === 1
@@ -82,8 +84,8 @@ export default function TimeGrid({
               >
                 <button
                   aria-label={`Add event on ${day.monthShort} ${day.dayOfMonth} at ${formatHour(hour)}`}
-                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded text-slate-400 opacity-0 transition hover:bg-emerald-100 hover:text-emerald-700 group-hover:opacity-100"
-                  onClick={() => onSelectDate(day.isoDate)}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded text-slate-400 opacity-0 transition hover:bg-emerald-100 hover:text-emerald-700 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-1 group-hover:opacity-100"
+                  onClick={() => onSelectTimeSlot(day.isoDate, hour)}
                   type="button"
                 >
                   +

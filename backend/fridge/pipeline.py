@@ -7,6 +7,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .deepseek_client import (
+    DeepSeekBudgetExceededError,
     DeepSeekClient,
     DeepSeekError,
     DeepSeekInvalidResponseError,
@@ -57,6 +58,8 @@ def recoverable_error(code: ErrorCode, message: str, stage: str) -> RecoverableE
 
 
 def deepseek_error_code(error: DeepSeekError) -> ErrorCode:
+    if isinstance(error, DeepSeekBudgetExceededError):
+        return 'ai_monthly_hard_limit'
     if isinstance(error, MissingDeepSeekAPIKeyError):
         return "deepseek_missing_api_key"
     if isinstance(error, DeepSeekTimeoutError):
@@ -152,10 +155,12 @@ class ReceiptAnalyzer:
         ocr_engine: object | None = None,
         deepseek_client: object | None = None,
         cache: ShelfLifeCache | None = None,
+        *,
+        runtime_cache_enabled: bool = True,
     ) -> None:
         self.ocr_engine = ocr_engine or TesseractOCR()
         self.deepseek_client = deepseek_client if deepseek_client is not None else default_deepseek_client_or_none()
-        self.cache = cache or ShelfLifeCache()
+        self.cache = cache or ShelfLifeCache(runtime_enabled=runtime_cache_enabled)
 
     def analyze(
         self,
@@ -165,6 +170,7 @@ class ReceiptAnalyzer:
         purchase_date: date | None = None,
         timezone: str | None = None,
         create_reminders: bool = False,
+        deepseek_client: object | None = None,
     ) -> dict[str, Any]:
         receipt_id = f"receipt_{uuid.uuid4().hex}"
         warnings: list[str] = []
@@ -211,7 +217,8 @@ class ReceiptAnalyzer:
             )
         )
 
-        predictor = ShelfLifePredictor(self.cache, self.deepseek_client)
+        active_deepseek_client = deepseek_client if deepseek_client is not None else self.deepseek_client
+        predictor = ShelfLifePredictor(self.cache, active_deepseek_client)
         item_map: dict[str, ShelfLifePrediction] = {}
 
         for classification in classifications:
@@ -235,7 +242,7 @@ class ReceiptAnalyzer:
             classification.confidence < 0.5 for classification in classifications
         )
         if needs_deepseek:
-            if self.deepseek_client is None:
+            if active_deepseek_client is None:
                 error = recoverable_error(
                     "deepseek_missing_api_key",
                     "DeepSeek fallback skipped because DEEPSEEK_API_KEY is not configured.",
@@ -255,7 +262,7 @@ class ReceiptAnalyzer:
                 trace_steps.append(PipelineStep(stage="deepseek", status="skipped", source="deepseek", message=error.message))
             else:
                 try:
-                    deepseek_items = self.deepseek_client.extract_fridge_items(
+                    deepseek_items = active_deepseek_client.extract_fridge_items(
                         normalized_text,
                         candidates,
                         parsed_purchase_date,

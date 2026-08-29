@@ -170,7 +170,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         status: 'authenticated',
         user: result.user,
       })
-      if (resumedSameAccount && refreshAccountData) {
+      if (recovering && refreshAccountData) {
         try {
           await refreshAccountData()
         } catch {

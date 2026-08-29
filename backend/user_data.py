@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from decimal import Decimal
 import hashlib
 import json
+import math
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -39,7 +41,6 @@ from .database import (
     ToolRunRecord,
     UserPreferenceRecord,
     create_session_factory,
-    initialize_schema,
 )
 from .fridge.receipt_parser import normalize_item_name
 from .memory.repository import (
@@ -147,8 +148,42 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def checksum_entities(entities: dict[str, Any]) -> str:
+def _legacy_checksum_entities(entities: dict[str, Any]) -> str:
     canonical = json.dumps(entities, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _canonical_checksum_value(value: Any) -> list[Any]:
+    if value is None:
+        return ["null"]
+    if isinstance(value, bool):
+        return ["boolean", value]
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            raise BackupValidationError("Backup entities contain a non-finite number.")
+        normalized = Decimal(str(value)).normalize()
+        number = "0" if normalized.is_zero() else format(normalized, "f")
+        return ["number", number]
+    if isinstance(value, str):
+        return ["string", value]
+    if isinstance(value, list):
+        return ["array", [_canonical_checksum_value(item) for item in value]]
+    if isinstance(value, dict):
+        if not all(isinstance(key, str) for key in value):
+            raise BackupValidationError("Backup entity keys must be strings.")
+        return [
+            "object",
+            [[key, _canonical_checksum_value(value[key])] for key in sorted(value)],
+        ]
+    raise BackupValidationError("Backup entities contain an unsupported value.")
+
+
+def checksum_entities(entities: dict[str, Any]) -> str:
+    canonical = json.dumps(
+        _canonical_checksum_value(entities),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -192,7 +227,6 @@ def personal_record_payload(record: Any) -> dict[str, Any]:
 
 class FridgeRepository:
     def __init__(self, engine: Engine, user_id: str) -> None:
-        initialize_schema(engine)
         self.session_factory = create_session_factory(engine)
         self.user_id = user_id
 
@@ -281,7 +315,6 @@ class FridgeRepository:
 
 class ToolPresetRepository:
     def __init__(self, engine: Engine, user_id: str) -> None:
-        initialize_schema(engine)
         self.session_factory = create_session_factory(engine)
         self.user_id = user_id
 
@@ -323,6 +356,29 @@ class ToolPresetRepository:
                 record.updated_at = timestamp
         return clean
 
+    def update_preset(self, preset_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+        timestamp = now_iso()
+        with self.session_factory.begin() as session:
+            record = session.scalar(
+                select(ToolPresetRecord).where(
+                    ToolPresetRecord.user_id == self.user_id,
+                    ToolPresetRecord.preset_id == preset_id,
+                )
+            )
+            if record is None:
+                raise UserDataNotFoundError(preset_id)
+            clean = {
+                **dict(record.preset_json),
+                **patch,
+                "id": preset_id,
+                "isBuiltIn": False,
+                "updatedAt": timestamp,
+            }
+            clean.setdefault("createdAt", record.created_at)
+            record.preset_json = clean
+            record.updated_at = timestamp
+        return clean
+
     def delete_preset(self, preset_id: str) -> None:
         with self.session_factory.begin() as session:
             record = session.scalar(
@@ -338,7 +394,6 @@ class ToolPresetRepository:
 
 class PreferenceRepository:
     def __init__(self, engine: Engine, user_id: str) -> None:
-        initialize_schema(engine)
         self.session_factory = create_session_factory(engine)
         self.user_id = user_id
 
@@ -371,7 +426,6 @@ class PreferenceRepository:
 
 class DataPortabilityService:
     def __init__(self, engine: Engine, *, app_mode: str = "server") -> None:
-        initialize_schema(engine)
         self.engine = engine
         self.session_factory = create_session_factory(engine)
         self.app_mode = "desktop" if app_mode == "desktop" else "server"
@@ -417,10 +471,11 @@ class DataPortabilityService:
         entities = payload.get("entities")
         if not isinstance(entities, dict):
             raise BackupValidationError("Backup entities must be an object.")
-        checksum = checksum_entities(entities)
-        if not payload.get("checksum") or payload.get("checksum") != checksum:
+        supplied_checksum = payload.get("checksum")
+        accepted_checksums = {checksum_entities(entities), _legacy_checksum_entities(entities)}
+        if not isinstance(supplied_checksum, str) or supplied_checksum not in accepted_checksums:
             raise BackupValidationError("Backup checksum does not match its contents.")
-        return entities, checksum
+        return entities, supplied_checksum
 
     @staticmethod
     def _entity_id(key: str, item: dict[str, Any]) -> str:
@@ -693,6 +748,9 @@ class DataPortabilityService:
         events = identifiers("events", "id", EventRecord, EventRecord.id)
         threads = identifiers("conversationThreads", "thread_id", ConversationThreadRecord, ConversationThreadRecord.thread_id)
         metrics = identifiers("metricDefinitions", "metric_id", MetricDefinitionRecord, MetricDefinitionRecord.metric_id)
+        event_types = identifiers('eventTypes', 'id', EventTypeRecord, EventTypeRecord.id)
+        event_types.add('general')
+        todos = identifiers('todos', 'id', TodoRecord, TodoRecord.id)
         failures: list[str] = []
 
         def item_value(item: dict[str, Any], field: str, aliases: tuple[str, ...] = ()) -> str:
@@ -807,6 +865,39 @@ class DataPortabilityService:
             same_project("effortEntries", index, "action_id", item_value(item, "action_id"), item_value(item, "project_id"), action_map)
         for index, item in enumerate(items("actionEventLinks")):
             same_project("actionEventLinks", index, "action_id", item_value(item, "action_id"), item_value(item, "project_id"), action_map)
+        for key in ('todos', 'events'):
+            for index, item in enumerate(items(key)):
+                event_type_id = item_value(item, 'event_type_id', ('eventTypeId',)) or 'general'
+                if event_type_id not in event_types:
+                    failures.append(f'{key}[{index}].event_type_id={event_type_id}')
+        require_reference(
+            'todos',
+            'linked_event_id',
+            events,
+            optional=True,
+            aliases=('linkedEventId',),
+        )
+        require_reference(
+            'events',
+            'linked_todo_id',
+            todos,
+            optional=True,
+            aliases=('linkedTodoId',),
+        )
+        require_reference(
+            'events',
+            'master_id',
+            events,
+            optional=True,
+            aliases=('masterId',),
+        )
+        require_reference(
+            'events',
+            'exception_for',
+            events,
+            optional=True,
+            aliases=('exceptionFor',),
+        )
         if failures:
             raise BackupValidationError(
                 "Backup relationship validation failed: " + "; ".join(failures[:10])

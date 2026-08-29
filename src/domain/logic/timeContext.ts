@@ -59,7 +59,7 @@ function normalizeTimezoneOverride(timezoneOverride?: string): string | null {
   return timezoneAliases[trimmed.toLowerCase()] ?? trimmed
 }
 
-function isValidTimezone(timezone: string): boolean {
+export function isValidTimezone(timezone: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date())
     return true
@@ -112,6 +112,56 @@ function offsetMinutesForTimezone(date: Date, timezone: string): number {
   )
 
   return Math.round((zonedUtcTime - date.getTime()) / 60_000)
+}
+
+export function localDateTimeInTimezoneToISOString(
+  date: string,
+  hour: number,
+  minute: number,
+  timezone: string,
+): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  if (!match || timezone === 'local' || !isValidTimezone(timezone)) return null
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null
+  }
+
+  const wallClockUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0)
+  const targetOffset = offsetMinutesForTimezone(new Date(wallClockUtc), timezone)
+  let candidate = wallClockUtc - targetOffset * 60_000
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const candidateOffset = offsetMinutesForTimezone(new Date(candidate), timezone)
+    const adjusted = wallClockUtc - candidateOffset * 60_000
+    if (adjusted === candidate) break
+    candidate = adjusted
+  }
+
+  const resolved = dateTimeParts(new Date(candidate), timezone)
+  if (
+    resolved.year !== year ||
+    resolved.month !== month ||
+    resolved.day !== day ||
+    resolved.hour !== hour ||
+    resolved.minute !== minute
+  ) {
+    return null
+  }
+
+  return new Date(candidate).toISOString()
 }
 
 function formattedTimeLabel(date: Date, timezone: string): string {

@@ -3,6 +3,8 @@ import { create } from 'zustand'
 import type {
   ActionItemStatus,
   CreateActionItemInput,
+  CreateGoalProjectInput,
+  CreateGoalProjectResult,
   CreateGoalInput,
   CreateMilestoneInput,
   CreateProgressLogInput,
@@ -24,6 +26,7 @@ import { LongTermMemoryClient } from '../services/longTermMemoryClient'
 export type LongTermMemoryClientContract = {
   createAction: (input: CreateActionItemInput) => Promise<LongTermActionItem>
   createGoal: (input: CreateGoalInput) => Promise<LongTermGoal>
+  createGoalProject: (input: CreateGoalProjectInput) => Promise<CreateGoalProjectResult>
   createMilestone: (input: CreateMilestoneInput) => Promise<LongTermMilestone>
   createProgress: (input: CreateProgressLogInput) => Promise<LongTermProgressLog>
   createProject: (input: CreateProjectInput) => Promise<LongTermProject>
@@ -69,6 +72,7 @@ export type LongTermMemoryStore = {
   toolRuns: LongTermToolRun[]
   createAction: (input: CreateActionItemInput) => Promise<LongTermActionItem>
   createGoal: (input: CreateGoalInput) => Promise<LongTermGoal>
+  createGoalProject: (input: CreateGoalProjectInput) => Promise<CreateGoalProjectResult>
   createMilestone: (input: CreateMilestoneInput) => Promise<LongTermMilestone>
   createProgress: (input: CreateProgressLogInput) => Promise<LongTermProgressLog>
   createProject: (input: CreateProjectInput) => Promise<LongTermProject>
@@ -102,8 +106,12 @@ export type LongTermMemoryStore = {
 }
 
 let longTermMemoryClient: LongTermMemoryClientContract | null = null
+let overviewLoadGeneration = 0
+let projectDetailLoadGeneration = 0
 
 export function configureLongTermMemoryClient(client: LongTermMemoryClientContract | null) {
+  overviewLoadGeneration += 1
+  projectDetailLoadGeneration += 1
   longTermMemoryClient = client
 }
 
@@ -138,7 +146,13 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   createAction: async (input) => {
     try {
       const action = await getClient().createAction(input)
-      set((state) => ({ actions: [action, ...state.actions], error: null }))
+      const updatesSelectedProject = action.project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
+      set((state) => ({
+        actions: updatesSelectedProject ? [action, ...state.actions] : state.actions,
+        error: null,
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+      }))
       return action
     } catch (error) {
       set({ error: errorMessage(error, 'Unable to add action item') })
@@ -148,11 +162,19 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   createGoal: async (input) => {
     try {
       const goal = await getClient().createGoal(input)
+      overviewLoadGeneration += 1
+      projectDetailLoadGeneration += 1
       set((state) => ({
+        actions: [],
         error: null,
         goals: [goal, ...state.goals],
+        isDetailLoading: false,
+        isLoading: false,
+        milestones: [],
+        progress: [],
         selectedGoalId: goal.goal_id,
         selectedProjectId: '',
+        toolRuns: [],
       }))
       return goal
     } catch (error) {
@@ -160,10 +182,40 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
       throw error
     }
   },
+  createGoalProject: async (input) => {
+    try {
+      const created = await getClient().createGoalProject(input)
+      overviewLoadGeneration += 1
+      projectDetailLoadGeneration += 1
+      set((state) => ({
+        actions: [],
+        error: null,
+        goals: [created.goal, ...state.goals],
+        isDetailLoading: false,
+        isLoading: false,
+        milestones: [],
+        progress: [],
+        projects: [created.project, ...state.projects],
+        selectedGoalId: created.goal.goal_id,
+        selectedProjectId: created.project.project_id,
+        toolRuns: [],
+      }))
+      return created
+    } catch (error) {
+      set({ error: errorMessage(error, 'Unable to create goal and project') })
+      throw error
+    }
+  },
   createMilestone: async (input) => {
     try {
       const milestone = await getClient().createMilestone(input)
-      set((state) => ({ error: null, milestones: [milestone, ...state.milestones] }))
+      const updatesSelectedProject = milestone.project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
+      set((state) => ({
+        error: null,
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+        milestones: updatesSelectedProject ? [milestone, ...state.milestones] : state.milestones,
+      }))
       return milestone
     } catch (error) {
       set({ error: errorMessage(error, 'Unable to add milestone') })
@@ -173,7 +225,13 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   createProgress: async (input) => {
     try {
       const progress = await getClient().createProgress(input)
-      set((state) => ({ error: null, progress: [progress, ...state.progress] }))
+      const updatesSelectedProject = progress.project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
+      set((state) => ({
+        error: null,
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+        progress: updatesSelectedProject ? [progress, ...state.progress] : state.progress,
+      }))
       return progress
     } catch (error) {
       set({ error: errorMessage(error, 'Unable to add progress log') })
@@ -183,11 +241,19 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   createProject: async (input) => {
     try {
       const project = await getClient().createProject(input)
+      overviewLoadGeneration += 1
+      projectDetailLoadGeneration += 1
       set((state) => ({
+        actions: [],
         error: null,
+        isDetailLoading: false,
+        isLoading: false,
+        milestones: [],
+        progress: [],
         projects: [project, ...state.projects],
         selectedGoalId: project.goal_id,
         selectedProjectId: project.project_id,
+        toolRuns: [],
       }))
       return project
     } catch (error) {
@@ -198,12 +264,13 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   createToolRun: async (input) => {
     try {
       const toolRun = await getClient().createToolRun(input)
+      const updatesSelectedProject =
+        !toolRun.related_project_id || toolRun.related_project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
       set((state) => ({
         error: null,
-        toolRuns:
-          !toolRun.related_project_id || toolRun.related_project_id === state.selectedProjectId
-            ? [toolRun, ...state.toolRuns]
-            : state.toolRuns,
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+        toolRuns: updatesSelectedProject ? [toolRun, ...state.toolRuns] : state.toolRuns,
       }))
       return toolRun
     } catch (error) {
@@ -220,12 +287,15 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
     }
   },
   loadOverview: async () => {
+    const loadGeneration = ++overviewLoadGeneration
     set({ error: null, isLoading: true })
     try {
       const [goals, projects] = await Promise.all([
         getClient().listGoals(),
         getClient().listProjects(),
       ])
+      if (loadGeneration !== overviewLoadGeneration) return
+
       set((state) => {
         const selectedGoalExists = goals.some((goal) => goal.goal_id === state.selectedGoalId)
         const selectedGoalId = selectedGoalExists ? state.selectedGoalId : (goals[0]?.goal_id ?? '')
@@ -246,13 +316,22 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         }
       })
     } catch (error) {
+      if (loadGeneration !== overviewLoadGeneration) return
       set({ error: errorMessage(error, 'Unable to load memory'), isLoading: false })
       throw error
     }
   },
   loadProjectDetails: async (projectId) => {
+    const loadGeneration = ++projectDetailLoadGeneration
     if (!projectId) {
-      set({ actions: [], milestones: [], progress: [], toolRuns: [] })
+      set({
+        actions: [],
+        error: null,
+        isDetailLoading: false,
+        milestones: [],
+        progress: [],
+        toolRuns: [],
+      })
       return
     }
 
@@ -264,13 +343,17 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         getClient().listProgress(projectId),
         getClient().listToolRunsForProject(projectId),
       ])
+      if (loadGeneration !== projectDetailLoadGeneration) return
       set({ actions, error: null, isDetailLoading: false, milestones, progress, toolRuns })
     } catch (error) {
+      if (loadGeneration !== projectDetailLoadGeneration) return
       set({ error: errorMessage(error, 'Unable to load project memory'), isDetailLoading: false })
       throw error
     }
   },
-  reset: () =>
+  reset: () => {
+    overviewLoadGeneration += 1
+    projectDetailLoadGeneration += 1
     set({
       actions: [],
       error: null,
@@ -283,11 +366,14 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
       selectedGoalId: '',
       selectedProjectId: '',
       toolRuns: [],
-    }),
+    })
+  },
   selectGoal: (goalId) => {
     const project = get().projects.find((candidate) => candidate.goal_id === goalId)
+    projectDetailLoadGeneration += 1
     set({
       actions: [],
+      isDetailLoading: false,
       milestones: [],
       progress: [],
       selectedGoalId: goalId,
@@ -295,7 +381,18 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
       toolRuns: [],
     })
   },
-  selectProject: (projectId) => set({ selectedProjectId: projectId }),
+  selectProject: (projectId) => {
+    if (projectId === get().selectedProjectId) return
+    projectDetailLoadGeneration += 1
+    set({
+      actions: [],
+      isDetailLoading: false,
+      milestones: [],
+      progress: [],
+      selectedProjectId: projectId,
+      toolRuns: [],
+    })
+  },
   search: async (query) => {
     try {
       return await getClient().search(query)
@@ -307,9 +404,14 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   updateAction: async (actionId, changes) => {
     try {
       const action = await getClient().updateAction(actionId, changes)
+      const updatesSelectedProject = action.project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
       set((state) => ({
-        actions: replaceById(state.actions, 'action_id', action),
+        actions: updatesSelectedProject
+          ? replaceById(state.actions, 'action_id', action)
+          : state.actions,
         error: null,
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
       }))
       return action
     } catch (error) {
@@ -321,9 +423,11 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   updateGoalStatus: async (goalId, status) => {
     try {
       const goal = await getClient().updateGoal(goalId, { status })
+      overviewLoadGeneration += 1
       set((state) => ({
         error: null,
         goals: replaceById(state.goals, 'goal_id', goal),
+        isLoading: false,
       }))
       return goal
     } catch (error) {
@@ -334,9 +438,14 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   updateMilestone: async (milestoneId, changes) => {
     try {
       const milestone = await getClient().updateMilestone(milestoneId, changes)
+      const updatesSelectedProject = milestone.project_id === get().selectedProjectId
+      if (updatesSelectedProject) projectDetailLoadGeneration += 1
       set((state) => ({
         error: null,
-        milestones: replaceById(state.milestones, 'milestone_id', milestone),
+        isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+        milestones: updatesSelectedProject
+          ? replaceById(state.milestones, 'milestone_id', milestone)
+          : state.milestones,
       }))
       return milestone
     } catch (error) {
@@ -348,8 +457,10 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   updateProject: async (projectId, changes) => {
     try {
       const project = await getClient().updateProject(projectId, changes)
+      overviewLoadGeneration += 1
       set((state) => ({
         error: null,
+        isLoading: false,
         projects: replaceById(state.projects, 'project_id', project),
       }))
       return project
@@ -361,8 +472,10 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   updateProjectStatus: async (projectId, status) => {
     try {
       const project = await getClient().updateProject(projectId, { status })
+      overviewLoadGeneration += 1
       set((state) => ({
         error: null,
+        isLoading: false,
         projects: replaceById(state.projects, 'project_id', project),
       }))
       return project
@@ -378,11 +491,13 @@ export async function recordLongTermToolRun(
 ): Promise<LongTermToolRun | null> {
   try {
     const toolRun = await getClient().createToolRun(input)
+    const updatesSelectedProject =
+      !toolRun.related_project_id ||
+      toolRun.related_project_id === useLongTermMemoryStore.getState().selectedProjectId
+    if (updatesSelectedProject) projectDetailLoadGeneration += 1
     useLongTermMemoryStore.setState((state) => ({
-      toolRuns:
-        !toolRun.related_project_id || toolRun.related_project_id === state.selectedProjectId
-          ? [toolRun, ...state.toolRuns]
-          : state.toolRuns,
+      isDetailLoading: updatesSelectedProject ? false : state.isDetailLoading,
+      toolRuns: updatesSelectedProject ? [toolRun, ...state.toolRuns] : state.toolRuns,
     }))
     return toolRun
   } catch {

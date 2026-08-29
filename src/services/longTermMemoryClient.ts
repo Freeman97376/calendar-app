@@ -1,6 +1,8 @@
 import type {
   ActionItemStatus,
   CreateActionItemInput,
+  CreateGoalProjectInput,
+  CreateGoalProjectResult,
   CreateGoalInput,
   CreateMilestoneInput,
   CreateProgressLogInput,
@@ -70,6 +72,11 @@ export class LongTermMemoryClient {
   async createGoal(input: CreateGoalInput): Promise<LongTermGoal> {
     const payload = (await this.post('/api/memory/goals', input)) as { goal: LongTermGoal }
     return payload.goal
+  }
+
+  async createGoalProject(input: CreateGoalProjectInput): Promise<CreateGoalProjectResult> {
+    const payload = (await this.post('/api/memory/goal-projects', input)) as CreateGoalProjectResult
+    return { goal: payload.goal, project: payload.project }
   }
 
   async updateGoal(goalId: string, changes: Partial<CreateGoalInput> & { status?: GoalStatus }) {

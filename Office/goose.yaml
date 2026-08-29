@@ -3,15 +3,158 @@ documents:
   architecture: architecture.json
   findings: audits/findings.json
 references:
-- ../README.md
-- ../AGENTS.md
+  - ../README.md
+  - ../AGENTS.md
 scan:
   exclude:
-  - .git/**
-  - node_modules/**
-  - target/**
+    - .git/**
+    - node_modules/**
+    - target/**
+    - .venv-test/**
+    - .dev-data/**
+    - dist/**
+    - test-results/**
+    - src-tauri/target/**
 customFields: []
-validationCommands: []
+validationCommands:
+  - id: format-check
+    label: Prettier format check
+    executable: npm.cmd
+    args: [run, format:check]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 300
+  - id: lint
+    label: ESLint source checks
+    executable: npm.cmd
+    args: [run, lint]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 300
+  - id: frontend-vitest
+    label: Vitest unit and integration
+    executable: npm.cmd
+    args: [run, test:run]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 900
+  - id: frontend-build
+    label: Frontend production build
+    executable: npm.cmd
+    args: [run, build]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: openapi-check
+    label: OpenAPI snapshot check
+    executable: npm.cmd
+    args: [run, openapi:check]
+    cwd: .
+    allowedEnv: [PYTHON_EXECUTABLE]
+    timeoutSeconds: 300
+  - id: python-backend
+    label: Python backend tests
+    executable: npm.cmd
+    args: [run, test:backend]
+    cwd: .
+    allowedEnv: [PYTHON_EXECUTABLE]
+    timeoutSeconds: 1200
+  - id: rust-check
+    label: Rust and Tauri contract check
+    executable: npm.cmd
+    args: [run, rust:check]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: version-check
+    label: Cross-package version check
+    executable: npm.cmd
+    args: [run, version:check]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 300
+  - id: desktop-e2e
+    label: Desktop browser E2E
+    executable: npm.cmd
+    args: [run, test:e2e:desktop]
+    cwd: .
+    allowedEnv: [PYTHON_EXECUTABLE, CALENDAR_E2E_WEB_PORT, CALENDAR_E2E_API_PORT]
+    timeoutSeconds: 1800
+  - id: mysql-contract
+    label: Disposable MySQL contract
+    executable: npm.cmd
+    args: [run, test:mysql]
+    cwd: .
+    allowedEnv: [PYTHON_EXECUTABLE]
+    timeoutSeconds: 1800
+  - id: server-local
+    label: Disposable local Server acceptance
+    executable: npm.cmd
+    args: [run, test:server:local]
+    cwd: .
+    allowedEnv:
+      [PYTHON_EXECUTABLE, CALENDAR_E2E_WEB_PORT, CALENDAR_E2E_API_PORT, CALENDAR_E2E_PASSWORD]
+    timeoutSeconds: 2400
+  - id: server-e2e-external
+    label: External disposable Server E2E
+    executable: npm.cmd
+    args: [run, test:e2e:server]
+    cwd: .
+    allowedEnv:
+      [
+        PYTHON_EXECUTABLE,
+        CALENDAR_E2E_DATABASE_URL,
+        CALENDAR_E2E_WEB_PORT,
+        CALENDAR_E2E_API_PORT,
+        CALENDAR_E2E_PASSWORD,
+      ]
+    timeoutSeconds: 1800
+  - id: npm-audit-full
+    label: Full npm dependency audit
+    executable: npm.cmd
+    args: [audit, --audit-level=high]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: npm-audit-production
+    label: Production npm dependency audit
+    executable: npm.cmd
+    args: [audit, --omit=dev, --audit-level=high]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: python-audit-server
+    label: Server Python dependency audit
+    executable: uvx
+    args:
+      [--from, pip-audit==2.10.1, pip-audit, --no-deps, --disable-pip, -r, requirements-server.lock]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: python-audit-desktop
+    label: Desktop Python dependency audit
+    executable: uvx
+    args:
+      [
+        --from,
+        pip-audit==2.10.1,
+        pip-audit,
+        --no-deps,
+        --disable-pip,
+        -r,
+        requirements-desktop.lock,
+      ]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
+  - id: python-audit-test
+    label: Test Python dependency audit
+    executable: uvx
+    args:
+      [--from, pip-audit==2.10.1, pip-audit, --no-deps, --disable-pip, -r, requirements-test.lock]
+    cwd: .
+    allowedEnv: []
+    timeoutSeconds: 600
 project:
   documentationLanguage: en
 analysis:

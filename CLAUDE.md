@@ -4,14 +4,14 @@
 
 ## TL;DR Rules
 
-|                | Action                                                                                       |
-| -------------- | -------------------------------------------------------------------------------------------- |
-| Autonomous     | Planning, reading anything, writing to `Office/`, writing to `tests/`, writing to `scratch/` |
-| Needs approval | Editing `src/`, `package.json`, config files, git ops, destructive commands                  |
+|                | Action                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| Autonomous     | Planning, reading anything, writing to `Office/`, writing to `Office/test/`, writing to `scratch/` |
+| Needs approval | Editing `src/`, `package.json`, config files, git ops, destructive commands                        |
 
 **Approval flow:** Post `APPROVAL REQUIRED` + exact diff, wait for "approved", then act.
 
-**Scratch rule:** Temporary files, generated diagnostics, and one-off/manual test scripts must live under `scratch/`. Put scripts specifically in `scratch/test-scripts/`; do not scatter them through `src/`, `tests/`, `Office/`, or the project root.
+**Scratch rule:** Temporary files, generated diagnostics, and one-off/manual test scripts must live under `scratch/`. Put scripts specifically in `scratch/test-scripts/`; do not scatter them through `src/`, `Office/test/`, `Office/`, or the project root.
 
 ## Quick Structure Map
 
@@ -32,11 +32,11 @@ src/             <- application source (5 layers; approval required to edit)
   hooks/         <- layer 4: React glue
   components/    <- layer 5: presentation
 
-tests/           <- stable automated test suite
+Office/test/           <- stable automated test suite
   unit/
   integration/
   e2e/
 
 scratch/         <- temp files and one-off/manual test scripts only
-  test-scripts/  <- ad hoc scripts; stable coverage moves to tests/
+  test-scripts/  <- ad hoc scripts; stable coverage moves to Office/test/
 ```

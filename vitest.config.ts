@@ -6,16 +6,17 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./tests/setupTests.ts'],
+    maxWorkers: 4,
+    setupFiles: ['./Office/test/support/setupTests.ts'],
     include: [
-      'tests/unit/**/*.{test,spec}.{ts,tsx}',
-      'tests/integration/**/*.{test,spec}.{ts,tsx}',
+      'Office/test/unit/**/*.{test,spec}.{ts,tsx}',
+      'Office/test/integration/**/*.{test,spec}.{ts,tsx}',
     ],
-    exclude: ['tests/e2e/**', 'node_modules/**', 'dist/**', 'scratch/**'],
+    exclude: ['Office/test/e2e/**', 'node_modules/**', 'dist/**', 'scratch/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      exclude: ['tests/**', 'scratch/**', 'dist/**'],
+      exclude: ['Office/test/**', 'scratch/**', 'dist/**'],
     },
   },
 })

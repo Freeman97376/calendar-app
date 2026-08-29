@@ -7,6 +7,7 @@ from typing import Literal
 StorageType = Literal["fridge", "freezer", "room_temp", "unknown"]
 PredictionSource = Literal["local_cache", "local_rule", "deepseek", "unknown"]
 ErrorCode = Literal[
+    'ai_monthly_hard_limit',
     "invalid_image",
     "invalid_request",
     "ocr_unavailable",

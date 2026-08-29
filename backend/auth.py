@@ -98,9 +98,10 @@ def public_user(user: UserRecord) -> dict[str, Any]:
 
 
 class AuthService:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, *, initialize: bool = False) -> None:
         self.engine = engine
-        initialize_schema(engine)
+        if initialize:
+            initialize_schema(engine)
         self.session_factory = create_session_factory(engine)
         self.password_hasher = PasswordHasher()
         self._dummy_password_hash = self.password_hasher.hash("calendar-dummy-password")

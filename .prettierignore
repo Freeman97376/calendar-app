@@ -1,7 +1,13 @@
 node_modules
+.venv
+.venv-test
 dist
 coverage
 playwright-report
 test-results
 scratch
 openapi/calendar-app.openapi.json
+Office/architecture/
+Office/architecture.json
+Office/architecture.yaml
+Office/schemas/

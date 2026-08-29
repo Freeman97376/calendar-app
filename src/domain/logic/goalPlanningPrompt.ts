@@ -1,4 +1,5 @@
 import type { AIUsageMode, GoalActivationPlan, GoalConversationMessage } from '../types/goalControl'
+import { GoalActivationPlanSchema } from '../schemas/goalActivationPlan.schema'
 
 const recentMessageLimit: Record<AIUsageMode, number> = { economy: 2, balanced: 6, quality: 12 }
 
@@ -40,37 +41,108 @@ function confirmedUserContext(messages: GoalConversationMessage[]) {
   }
 }
 
+function onboardingSeed(messages: GoalConversationMessage[]): Record<string, unknown> {
+  const message = messages.find(
+    (entry) => entry.role === 'user' && entry.structured.kind === 'active_tool_onboarding_seed',
+  )
+  return message?.structured ?? {}
+}
+
+function templateDefaults(templateId: string) {
+  if (templateId === 'fitness-ai') {
+    return {
+      adapterId: 'ai-progress',
+      label: 'Fitness AI',
+      toolKind: 'fitness' as const,
+      toolName: 'Fitness AI',
+    }
+  }
+  return {
+    adapterId: 'generic',
+    label: 'Goal Planner',
+    toolKind: null,
+    toolName: 'Goal Planner',
+  }
+}
+
 export function buildGoalPlanningPrompt(input: {
   mode: AIUsageMode
   threadTitle: string
   rollingSummary?: string
   messages: GoalConversationMessage[]
+  templateId?: string | null
 }): Array<{ role: 'system' | 'user'; content: string }> {
   const recent = input.messages.slice(-recentMessageLimit[input.mode]).map((message) => ({
     role: message.role,
     content: message.content,
     structured: message.structured,
   }))
+  const onboarding = onboardingSeed(input.messages)
+  const templateId =
+    input.templateId ||
+    (typeof onboarding.templateId === 'string' ? onboarding.templateId : '') ||
+    'goal-planner'
+  const template = templateDefaults(templateId)
+  const activationForm = isRecord(onboarding.activationForm) ? onboarding.activationForm : {}
+
   return [
     { role: 'system', content: GOAL_PLANNING_SYSTEM_PROMPT },
     {
       role: 'user',
       content: JSON.stringify({
-        task: 'Create the initial confirmed-plan preview for this goal.',
+        task: 'Create the initial reviewable Active Tool plan. Do not activate it or create calendar events.',
         goal: input.threadTitle,
+        template: {
+          id: templateId,
+          label: template.label,
+          toolName: template.toolName,
+          toolKind: template.toolKind,
+          adapterId: template.adapterId,
+        },
+        templateRules:
+          templateId === 'fitness-ai'
+            ? [
+                'Use conservative, non-medical guidance.',
+                'Preserve explicit injury, pain, medical, and movement constraints.',
+                'Set safety_confirmation true only when the conversation explicitly confirms constraints or none known.',
+              ]
+            : [
+                'Fit standard work into no more than 80% of confirmed weekly capacity.',
+                'Prefer a short executable plan over a generic long checklist.',
+              ],
         rollingSummary: input.rollingSummary || '',
-        confirmedUserContext: confirmedUserContext(input.messages),
+        confirmedUserContext: {
+          ...confirmedUserContext(input.messages),
+          onboarding,
+        },
         recentConversation: recent,
         responseSchema: {
           title: 'string',
           summary: 'string',
           rollingSummary:
             'concise durable summary preserving baseline, target, safety rules, capacity, constraints, and confirmed decisions',
-          target_date: 'YYYY-MM-DD',
-          template_id: 'string',
-          template_label: 'string',
+          target_date: 'YYYY-MM-DD|null',
+          template_id: templateId,
+          template_label: template.label,
+          tool_name: template.toolName,
+          tool_kind: template.toolKind,
+          adapter_id: template.adapterId,
+          activation_form: activationForm,
           tool_features: ['string'],
           route_tags: ['string'],
+          assumptions: ['string'],
+          missing_information: [
+            { id: 'string', label: 'string', impact: 'string', blocking: 'boolean' },
+          ],
+          constraints: ['string'],
+          risks: [{ label: 'string', severity: 'low|medium|high', mitigation: 'string' }],
+          review_cadence: {
+            frequency: 'daily|weekly|biweekly|monthly',
+            local_time: 'HH:mm optional',
+            timezone: 'IANA timezone optional',
+          },
+          confidence: { level: 'low|medium|high', reasons: ['string'] },
+          safety_confirmation: templateId === 'fitness-ai' ? 'boolean' : true,
           policy: {
             weekly_capacity_minutes: 'integer',
             buffer_percent: 20,
@@ -95,7 +167,7 @@ export function buildGoalPlanningPrompt(input: {
               title: 'string',
               description: 'string',
               milestone_title: 'string|null',
-              due_date: 'YYYY-MM-DD required for minimum and standard',
+              due_date: 'YYYY-MM-DD|null',
               estimated_minutes: 'integer',
               priority: 'high|medium|low',
               energy_needed: 'high|medium|low',
@@ -109,20 +181,35 @@ export function buildGoalPlanningPrompt(input: {
   ]
 }
 
+export function buildGoalPlanRevisionPrompt(input: {
+  mode: AIUsageMode
+  currentPlan: GoalActivationPlan
+  instruction: string
+  messages: GoalConversationMessage[]
+}): Array<{ role: 'system' | 'user'; content: string }> {
+  return [
+    { role: 'system', content: GOAL_PLANNING_SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        task: 'Revise the current reviewable plan. Return the complete JSON plan.',
+        rules: [
+          'Change only what the user requested.',
+          'Preserve confirmed facts, safety constraints, template identity, and activation form.',
+          'Do not activate the plan or create calendar events.',
+        ],
+        instruction: input.instruction,
+        currentPlan: input.currentPlan,
+        recentConversation: input.messages.slice(-recentMessageLimit[input.mode]),
+      }),
+    },
+  ]
+}
+
 export function parseGoalActivationPlan(content: string): GoalActivationPlan {
   const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]
   const candidate = fenced ?? content.slice(content.indexOf('{'), content.lastIndexOf('}') + 1)
-  const value = JSON.parse(candidate) as GoalActivationPlan
-  if (!value.title?.trim() || !value.summary?.trim())
-    throw new Error('Planning response is missing a title or summary.')
-  if (
-    !Array.isArray(value.metrics) ||
-    !Array.isArray(value.milestones) ||
-    !Array.isArray(value.actions)
-  ) {
-    throw new Error('Planning response is missing metrics, milestones, or actions.')
-  }
-  return value
+  return GoalActivationPlanSchema.parse(JSON.parse(candidate)) as GoalActivationPlan
 }
 
 export function buildCheckInSummaryPrompt(input: {

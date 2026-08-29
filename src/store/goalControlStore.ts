@@ -1,12 +1,43 @@
 import {
   buildCheckInSummaryPrompt,
   buildGoalPlanningPrompt,
+  buildGoalPlanRevisionPrompt,
   parseGoalActivationPlan,
 } from '../domain/logic/goalPlanningPrompt'
-import type { AIUsageMode, GoalConversationMessage } from '../domain/types/goalControl'
+import type {
+  AIUsageMode,
+  GoalActivationPlan,
+  GoalConversationMessage,
+} from '../domain/types/goalControl'
 import { apiUrl, authenticatedFetch, savePreferences } from '../services/appApiClient'
 import { notifyPendingGoalCheckIns } from '../services/desktopNotification'
 import { goalControlClient } from '../services/goalControlClient'
+
+async function planningRequest(input: {
+  operation: 'goal_plan'
+  threadId: string
+  messages: Array<{ role: 'system' | 'user'; content: string }>
+  errorLabel: string
+}): Promise<GoalActivationPlan> {
+  const response = await authenticatedFetch(apiUrl('/api/ai/chat/completions'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      _calendarOperation: input.operation,
+      _calendarThreadId: input.threadId,
+      messages: input.messages,
+      response_format: { type: 'json_object' },
+    }),
+  })
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>
+    error?: { message?: string }
+  }
+  if (!response.ok) {
+    throw new Error(payload.error?.message || input.errorLabel + ' (' + response.status + ')')
+  }
+  return parseGoalActivationPlan(payload.choices?.[0]?.message?.content || '')
+}
 
 export const goalControlGateway = {
   ...goalControlClient,
@@ -63,28 +94,38 @@ export const goalControlGateway = {
     threadTitle: string
     rollingSummary: string
     messages: GoalConversationMessage[]
+    templateId?: string | null
   }) {
-    const response = await authenticatedFetch(apiUrl('/api/ai/chat/completions'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        _calendarOperation: 'goal_plan',
-        _calendarThreadId: input.threadId,
-        messages: buildGoalPlanningPrompt({
-          mode: input.mode,
-          threadTitle: input.threadTitle,
-          rollingSummary: input.rollingSummary,
-          messages: input.messages,
-        }),
-        response_format: { type: 'json_object' },
+    return planningRequest({
+      operation: 'goal_plan',
+      threadId: input.threadId,
+      messages: buildGoalPlanningPrompt({
+        mode: input.mode,
+        threadTitle: input.threadTitle,
+        rollingSummary: input.rollingSummary,
+        messages: input.messages,
+        templateId: input.templateId,
       }),
+      errorLabel: 'Planning failed',
     })
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>
-      error?: { message?: string }
-    }
-    if (!response.ok)
-      throw new Error(payload.error?.message || `Planning failed (${response.status})`)
-    return parseGoalActivationPlan(payload.choices?.[0]?.message?.content || '')
+  },
+  async revisePlan(input: {
+    mode: AIUsageMode
+    threadId: string
+    currentPlan: GoalActivationPlan
+    instruction: string
+    messages: GoalConversationMessage[]
+  }) {
+    return planningRequest({
+      operation: 'goal_plan',
+      threadId: input.threadId,
+      messages: buildGoalPlanRevisionPrompt({
+        mode: input.mode,
+        currentPlan: input.currentPlan,
+        instruction: input.instruction,
+        messages: input.messages,
+      }),
+      errorLabel: 'Plan revision failed',
+    })
   },
 }

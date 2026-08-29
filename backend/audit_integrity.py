@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -18,6 +21,7 @@ from .database import (
     DataIntegrityQuarantineRecord,
     EffortEntryRecord,
     EventRecord,
+    TodoRecord,
     GoalControlPolicyRecord,
     GoalRecord,
     MetricDefinitionRecord,
@@ -32,6 +36,26 @@ from .database import (
     create_database_engine,
     create_session_factory,
 )
+from .manage_users import ServerDatabaseConfigurationError, require_server_database_url
+
+
+class IntegrityAuditConfigurationError(RuntimeError):
+    pass
+
+
+def require_integrity_database_url(
+    configured: str | None,
+    environment: Mapping[str, str] | None = None,
+) -> str:
+    source = os.environ if environment is None else environment
+    candidate = (configured or source.get('CALENDAR_DATABASE_URL', '')).strip()
+    try:
+        return require_server_database_url({'CALENDAR_DATABASE_URL': candidate})
+    except ServerDatabaseConfigurationError as error:
+        raise IntegrityAuditConfigurationError(
+            'Integrity audit requires an explicit MySQL database URL via '
+            '--database-url or CALENDAR_DATABASE_URL.'
+        ) from error
 
 
 @dataclass(frozen=True)
@@ -40,6 +64,7 @@ class Reference:
     parent_model: Any
     parent_field: str
     optional: bool = False
+    clear_on_repair: bool = False
 
 
 @dataclass(frozen=True)
@@ -50,6 +75,20 @@ class Relation:
 
 
 RELATIONS = (
+    Relation(
+        TodoRecord,
+        'id',
+        (Reference('linked_event_id', EventRecord, 'id', True, True),),
+    ),
+    Relation(
+        EventRecord,
+        'id',
+        (
+            Reference('linked_todo_id', TodoRecord, 'id', True, True),
+            Reference('master_id', EventRecord, 'id', True, True),
+            Reference('exception_for', EventRecord, 'id', True, True),
+        ),
+    ),
     Relation(ProjectRecord, "project_id", (Reference("goal_id", GoalRecord, "goal_id"),)),
     Relation(MilestoneRecord, "milestone_id", (Reference("project_id", ProjectRecord, "project_id"),)),
     Relation(ActionItemRecord, "action_id", (Reference("project_id", ProjectRecord, "project_id"), Reference("milestone_id", MilestoneRecord, "milestone_id", True))),
@@ -109,6 +148,7 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
         )
     factory = create_session_factory(engine)
     archived = 0
+    repaired = 0
     details: list[dict[str, str]] = []
     remaining_issue_count = 0
     while True:
@@ -122,6 +162,20 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
                     "userId": str(record.user_id),
                     "reason": reason,
                 })
+                if repair:
+                    nullable_reference = next(
+                        (
+                            reference
+                            for reference in relation.references
+                            if reference.clear_on_repair
+                            and f' for {reference.field}=' in reason
+                        ),
+                        None,
+                    )
+                    if nullable_reference is not None:
+                        setattr(record, nullable_reference.field, None)
+                        repaired += 1
+                        continue
                 if repair:
                     session.add(DataIntegrityQuarantineRecord(
                         user_id=str(record.user_id),
@@ -137,6 +191,7 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
             break
     engine.dispose()
     return {
+        'repairedCount': repaired,
         "valid": remaining_issue_count == 0,
         "issueCount": len(details),
         "remainingIssueCount": remaining_issue_count,
@@ -145,16 +200,22 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Audit user-scoped business relationships before Alembic constraints are applied.")
     parser.add_argument("--database-url", default=None)
     parser.add_argument("--archive-and-repair", action="store_true")
-    args = parser.parse_args()
-    report = audit(args.database_url, args.archive_and_repair)
+    args = parser.parse_args(argv)
+    try:
+        database_url = require_integrity_database_url(args.database_url)
+    except IntegrityAuditConfigurationError as error:
+        print(f'Error: {error}', file=sys.stderr)
+        return 2
+    report = audit(database_url, args.archive_and_repair)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if report["issueCount"] and not args.archive_and_repair:
-        raise SystemExit(2)
+        return 2
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

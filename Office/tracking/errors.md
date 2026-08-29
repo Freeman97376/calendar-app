@@ -27,7 +27,7 @@
 **Root Cause:** `npm` was installed under `C:\Program Files\nodejs`, but that directory was not available on PATH in the active shell. The default `node` command resolves to an access-denied WindowsApps executable.
 **Affected Files:** `package.json`, Phase 0 verification workflow.
 **Resolution:** Used `C:\Program Files\nodejs\npm.cmd` and `C:\Program Files\nodejs\node.exe` directly. Install, tests, lint, TypeScript build, Vite build, and browser smoke verification now pass.
-**Test Added:** Yes - `tests/unit/app.smoke.test.tsx`.
+**Test Added:** Yes - `Office/test/unit/app.smoke.test.tsx`.
 **Status:** Resolved
 
 ### 2026-05-25 - In-App Browser Runtime Permission Error
@@ -45,7 +45,7 @@
 **Root Cause:** `RecurrenceSelector` immediately normalized an empty numeric input to `1`, so clearing the default `5` and typing `3` could commit `13`.
 **Affected Files:** `src/components/event/RecurrenceSelector.tsx`, `src/components/event/EventForm.tsx`.
 **Resolution:** Added local numeric edit state for recurrence interval/day/count inputs and converted dependent form updates to functional `setValues` calls.
-**Test Added:** Yes - `tests/integration/recurringEvents.test.tsx` covers creating a count-limited daily recurrence through the UI.
+**Test Added:** Yes - `Office/test/integration/recurringEvents.test.tsx` covers creating a count-limited daily recurrence through the UI.
 **Status:** Resolved
 
 ### 2026-05-26 - Following Split Kept Full Count
@@ -54,7 +54,7 @@
 **Root Cause:** `eventStore` copied the unchanged count-limited recurrence rule directly to the new tail master instead of reducing the count by occurrences before the split date.
 **Affected Files:** `src/store/eventStore.ts`.
 **Resolution:** Added following-rule derivation that preserves an explicitly changed rule, but reduces unchanged count rules to the remaining occurrence count.
-**Test Added:** Yes - `tests/integration/recurringEvents.test.tsx` covers edit following.
+**Test Added:** Yes - `Office/test/integration/recurringEvents.test.tsx` covers edit following.
 **Status:** Resolved
 
 ### 2026-05-26 - TypeScript Emitted Root Config Artifacts
@@ -79,7 +79,7 @@
 
 **Symptom:** Full Vitest failed on the weekly recurrence DST test in a timezone with DST.
 **Root Cause:** The test asserted UTC hour equality, but the feature requires preserving local clock time; UTC hour should shift when DST starts.
-**Affected Files:** `tests/unit/domain/recurrence.test.ts`.
+**Affected Files:** `Office/test/unit/domain/recurrence.test.ts`.
 **Resolution:** Updated the assertion to compare local hours across generated instances.
 **Test Added:** No - corrected existing test.
 **Status:** Resolved
@@ -88,7 +88,7 @@
 
 **Symptom:** The Phase 7 Playwright E2E suite could not be executed from the desktop app.
 **Root Cause:** The required escalated command to launch Microsoft Edge and reuse/start the dev server was rejected because the desktop escalation usage limit was reached.
-**Affected Files:** `tests/e2e/createEvent.test.ts`, `tests/e2e/dragAndDrop.test.ts`, `tests/e2e/aiBreakdown.test.ts`.
+**Affected Files:** `Office/test/e2e/createEvent.test.ts`, `Office/test/e2e/dragAndDrop.test.ts`, `Office/test/e2e/aiBreakdown.test.ts`.
 **Resolution:** E2E specs were written but not executed. ESLint and TypeScript validation passed after Phase 7 edits.
 **Test Added:** Yes - runnable Playwright E2E specs for create, reload persistence, drag/drop, and AI no-key panel behavior.
 **Status:** Unresolved

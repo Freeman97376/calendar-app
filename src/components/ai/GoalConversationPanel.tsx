@@ -1,8 +1,13 @@
 import { useState } from 'react'
 
-import type { GoalConversationMessage, QuestionBatchItem } from '../../domain/types/goalControl'
+import type {
+  ActiveToolOnboardingSeed,
+  GoalConversationMessage,
+  QuestionBatchItem,
+} from '../../domain/types/goalControl'
 import { useGoalConversation } from '../../hooks/useGoalConversation'
 import Button from '../ui/Button'
+import ActiveToolOnboardingPanel from './ActiveToolOnboardingPanel'
 import QuestionBatch from './QuestionBatch'
 
 const currentSituationQuestions: QuestionBatchItem[] = [
@@ -159,7 +164,18 @@ function answerRows(message: GoalConversationMessage): AnswerRow[] {
   })
 }
 
-export default function GoalConversationPanel({ onClose }: { onClose: () => void }) {
+export default function GoalConversationPanel({
+  onClose,
+  seed,
+}: {
+  onClose: () => void
+  seed?: ActiveToolOnboardingSeed | null
+}) {
+  if (seed) return <ActiveToolOnboardingPanel onClose={onClose} seed={seed} />
+  return <LegacyGoalConversationPanel onClose={onClose} />
+}
+
+function LegacyGoalConversationPanel({ onClose }: { onClose: () => void }) {
   const goal = useGoalConversation()
   const [title, setTitle] = useState('')
   const pendingQuestions = questionBatch(goal.messages.at(-1))

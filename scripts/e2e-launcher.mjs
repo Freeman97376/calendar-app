@@ -3,13 +3,55 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
+import { resolvePythonExecutable } from './python-executable.mjs'
+
 const root = path.resolve(import.meta.dirname, '..')
 const modeIndex = process.argv.indexOf('--mode')
 const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] : 'desktop'
 if (!['desktop', 'server'].includes(mode)) throw new Error('E2E mode must be desktop or server.')
+const validateOnly = process.argv.includes('--validate-only')
 
-const python =
-  process.env.PYTHON_EXECUTABLE || (process.platform === 'win32' ? 'python' : 'python3')
+const disposableDatabaseNamePattern = /(?:^|[_-])(?:test|e2e)(?:$|[_-])/i
+
+function requireDisposableMysqlUrl(value) {
+  if (!value) {
+    throw new Error(
+      'Server E2E requires an explicit CALENDAR_E2E_DATABASE_URL. CALENDAR_DATABASE_URL is never used as a fallback.',
+    )
+  }
+
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error('CALENDAR_E2E_DATABASE_URL must be a valid MySQL SQLAlchemy URL.')
+  }
+  if (!parsed.protocol.toLowerCase().startsWith('mysql+')) {
+    throw new Error('CALENDAR_E2E_DATABASE_URL must use an explicit mysql+ SQLAlchemy driver.')
+  }
+
+  let pathSegments
+  try {
+    pathSegments = parsed.pathname
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment))
+  } catch {
+    throw new Error('CALENDAR_E2E_DATABASE_URL contains an invalid database name.')
+  }
+  if (pathSegments.length !== 1 || !disposableDatabaseNamePattern.test(pathSegments[0])) {
+    throw new Error(
+      'CALENDAR_E2E_DATABASE_URL must target a dedicated database whose name contains a test or e2e segment.',
+    )
+  }
+  return pathSegments[0]
+}
+
+const webPort = process.env.CALENDAR_E2E_WEB_PORT || '5173'
+const apiPort = process.env.CALENDAR_E2E_API_PORT || '8787'
+const webUrl = `http://127.0.0.1:${webPort}`
+const apiUrl = `http://127.0.0.1:${apiPort}`
+
 const artifactDir = path.join(root, 'test-results', `e2e-${mode}`)
 const normalizedRoot = path.resolve(root) + path.sep
 const normalizedArtifacts = path.resolve(artifactDir)
@@ -90,11 +132,12 @@ async function waitFor(url, label, timeoutMs = 60_000) {
 
 const commonEnv = {
   ...process.env,
-  CALENDAR_ALLOWED_ORIGINS: 'http://127.0.0.1:5173',
+  CALENDAR_ALLOWED_ORIGINS: webUrl,
   CALENDAR_LOG_LEVEL: 'warning',
 }
-const apiUrl = 'http://127.0.0.1:8787'
+
 let backendEnv
+let python
 if (mode === 'desktop') {
   const dataDir = path.join(artifactDir, 'data')
   const normalizedData = path.resolve(dataDir)
@@ -109,11 +152,21 @@ if (mode === 'desktop') {
     CALENDAR_DATA_DIR: dataDir,
     FRIDGE_DATA_DIR: dataDir,
   }
-} else {
-  const databaseUrl = process.env.CALENDAR_E2E_DATABASE_URL || process.env.CALENDAR_DATABASE_URL
-  if (!databaseUrl?.startsWith('mysql+')) {
-    throw new Error('Server E2E requires CALENDAR_E2E_DATABASE_URL with a MySQL SQLAlchemy URL.')
+  for (const key of [
+    'CALENDAR_DATABASE_URL',
+    'CALENDAR_E2E_ALLOW_SEED',
+    'CALENDAR_E2E_DATABASE_URL',
+    'CALENDAR_E2E_PASSWORD',
+  ]) {
+    delete backendEnv[key]
   }
+  if (validateOnly) {
+    process.stdout.write('E2E_CONFIGURATION_VALID mode=desktop database=isolated-sqlite\n')
+    process.exit(0)
+  }
+} else {
+  const databaseUrl = process.env.CALENDAR_E2E_DATABASE_URL?.trim() ?? ''
+  const databaseName = requireDisposableMysqlUrl(databaseUrl)
   const password = process.env.CALENDAR_E2E_PASSWORD || 'Calendar-E2E-Password-123!'
   backendEnv = {
     ...commonEnv,
@@ -123,6 +176,11 @@ if (mode === 'desktop') {
     CALENDAR_E2E_PASSWORD: password,
     SESSION_COOKIE_SECURE: '0',
   }
+  if (validateOnly) {
+    process.stdout.write('E2E_CONFIGURATION_VALID mode=server database=' + databaseName + '\n')
+    process.exit(0)
+  }
+  python = resolvePythonExecutable({ root })
   checked(
     python,
     ['-m', 'alembic', '-x', `database_url=${databaseUrl}`, 'upgrade', 'head'],
@@ -132,6 +190,7 @@ if (mode === 'desktop') {
   checked(python, ['scripts/seed-e2e-users.py'], backendEnv, 'E2E account seed')
 }
 
+python ??= resolvePythonExecutable({ root })
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => stop(0))
 process.on('uncaughtException', (error) => {
   process.stderr.write(`${error.stack || error.message}\n`)
@@ -140,7 +199,7 @@ process.on('uncaughtException', (error) => {
 
 start(
   python,
-  ['-m', 'backend.server', '--mode', mode, '--host', '127.0.0.1', '--port', '8787'],
+  ['-m', 'backend.server', '--mode', mode, '--host', '127.0.0.1', '--port', apiPort],
   'backend',
   backendEnv,
 )
@@ -149,10 +208,10 @@ await waitFor(`${apiUrl}/api/health`, 'Calendar API')
 const viteCli = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js')
 start(
   process.execPath,
-  [viteCli, '--host', '127.0.0.1', '--port', '5173', '--strictPort'],
+  [viteCli, '--host', '127.0.0.1', '--port', webPort, '--strictPort'],
   'vite',
   { ...commonEnv, VITE_API_BASE_URL: apiUrl },
 )
-await waitFor('http://127.0.0.1:5173', 'Vite')
+await waitFor(webUrl, 'Vite')
 process.stdout.write(`E2E_READY mode=${mode}\n`)
 await new Promise(() => {})

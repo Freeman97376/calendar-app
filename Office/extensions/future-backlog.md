@@ -6,6 +6,29 @@
 
 ---
 
+> Historical note (2026-08-12): the May 2026 list below predates the current
+> FastAPI/MySQL server, manual account provisioning, typed AI gateway, timezone
+> support, and Tauri desktop runtime. Treat its Firebase, anonymous-user,
+> authentication, timezone, and desktop items as historical context rather than
+> current work. Current product facts live in `Office/planning/architecture.md`.
+
+## Current High-Value Candidates
+
+| Priority | Extension                           | Why it fits the current architecture                                                                | First safe increment                                                                          |
+| -------- | ----------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| P1       | Calendar interoperability           | The API and recurrence model now have stable typed boundaries                                       | Add RFC 5545 `.ics` export, then import with preview and relationship validation              |
+| P1       | Reminders and notification delivery | Desktop and server runtimes need different delivery adapters                                        | Persist reminder rules, add desktop notifications first, then an opt-in server worker         |
+| P1       | Idempotent compound writes          | Tool activation and imports now use transactional boundaries                                        | Add durable idempotency keys for retry-safe goal/project and import operations                |
+| P1       | Real MySQL concurrency release gate | SQLite cannot prove MySQL locking, isolation, or concurrent retry behavior                          | Add disposable-MySQL contention cases, then run migration, contract, and Server E2E           |
+| P1       | Packaged recovery smoke             | Source-level sidecar tests do not prove signed NSIS/portable upgrade recovery                       | Test backup/restore and structured recovery on a clean Windows VM artifact                    |
+| P2       | Mobile client                       | Authenticated FastAPI routes and extractable domain logic are reusable                              | Extract API/domain contracts before choosing React Native or native UI                        |
+| P2       | Shared calendars                    | Tenant isolation is explicit, but sharing needs a separate authorization model                      | Add ACL tables and read-only sharing before collaborative editing                             |
+| P2       | Strict DTO completion               | Critical calendar, fridge, AI, and goal-control paths are strict, but coverage should be systematic | Inventory remaining raw dictionaries, reject unknown/non-finite values, and add OpenAPI tests |
+| P2       | Operational observability           | AI metering and structured recovery errors now provide stable event boundaries                      | Add redacted metrics for latency, budgets, retries, migration failures, and job health        |
+| P3       | Offline server client               | Desktop is local-only today; implicit cloud sync would violate the runtime boundary                 | Design an explicit opt-in sync protocol with conflict previews and per-device cursors         |
+
+---
+
 ## Monorepo Migration (When Needed)
 
 **Trigger:** A second app (mobile, backend) is ready to be built.
@@ -29,7 +52,7 @@ Step 6: Update import paths to @calendar/domain, @calendar/ui
 
 ---
 
-## Extension Ideas
+## Historical Extension Ideas (May 2026)
 
 ### 🟡 High Value (do soon after Phase 7)
 

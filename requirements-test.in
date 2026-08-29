@@ -1,0 +1,2 @@
+-r requirements-server.lock
+httpx2>=2.0,<3.0

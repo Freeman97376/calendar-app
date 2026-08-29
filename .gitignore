@@ -11,6 +11,8 @@ playwright-report/
 test-results/
 
 # Local environment
+.venv/
+.venv-test/
 .env
 .env.local
 .env.*.local
@@ -36,6 +38,9 @@ pnpm-debug.log*
 __pycache__/
 *.py[cod]
 backend/data/*.sqlite*
+backend/data/fridge_inventory.json
+backend/data/shelf_life_cache.json
+.dev-data/
 *.sqlite3-journal
 *.sqlite3-shm
 *.sqlite3-wal

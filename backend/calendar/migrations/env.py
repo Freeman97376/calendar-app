@@ -16,14 +16,29 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def select_database_url(
+    *,
+    command_line_url: str | None,
+    configured_url: str | None,
+    environment_url: str | None,
+) -> str:
+    for candidate in (command_line_url, configured_url, environment_url):
+        if candidate and candidate.strip():
+            return candidate.strip()
+    raise RuntimeError(
+        'Alembic requires an explicit database URL via -x database_url=..., '
+        'alembic.ini sqlalchemy.url, or CALENDAR_DATABASE_URL.'
+    )
+
+
 def database_url() -> str:
     command_line_url = context.get_x_argument(as_dictionary=True).get("database_url")
-    if command_line_url:
-        return command_line_url
     configured_url = config.get_main_option("sqlalchemy.url")
-    if configured_url:
-        return configured_url
-    return os.getenv("CALENDAR_DATABASE_URL", "sqlite:///backend/data/calendar_app.sqlite3")
+    return select_database_url(
+        command_line_url=command_line_url,
+        configured_url=configured_url,
+        environment_url=os.getenv('CALENDAR_DATABASE_URL'),
+    )
 
 
 def run_migrations_offline() -> None:
