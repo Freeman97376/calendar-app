@@ -18,6 +18,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .database import (
@@ -125,6 +126,30 @@ class AuthService:
         if len(password) > 256:
             raise AuthError("invalid_password", "Password is too long.")
 
+    @staticmethod
+    def registration_enabled() -> bool:
+        code = os.getenv("CALENDAR_REGISTRATION_INVITE_CODE", "").strip()
+        return 0 < len(code) <= 256
+
+    def register(self, username: str, password: str, invite_code: str, *, client_ip: str) -> dict[str, Any]:
+        if not self.registration_enabled():
+            raise AuthError("registration_disabled", "Registration is currently unavailable.", 403)
+        self._enforce_auth_rate_limit(client_ip, username.strip().lower(), operation="register")
+        expected = os.getenv("CALENDAR_REGISTRATION_INVITE_CODE", "").strip()
+        if not secrets.compare_digest(hash_secret(invite_code.strip()), hash_secret(expected)):
+            raise AuthError("invalid_invite_code", "The invitation code is invalid.", 403)
+        try:
+            return self.create_user(username, password, admin=False)
+        except IntegrityError:
+            # The unique username constraint arbitrates simultaneous registrations.
+            with self.session_factory() as session:
+                existing = session.scalar(select(UserRecord.id).where(
+                    UserRecord.username == self.normalize_username(username)
+                ))
+            if existing is not None:
+                raise AuthError("username_exists", "Username already exists.", 409) from None
+            raise
+
     def create_user(self, username: str, password: str, *, admin: bool = False) -> dict[str, Any]:
         normalized = self.normalize_username(username)
         self.validate_password(password)
@@ -206,7 +231,7 @@ class AuthService:
 
     def login(self, username: str, password: str, *, client_ip: str = "unknown") -> LoginResult:
         normalized = username.strip().lower()
-        self._enforce_login_rate_limit(client_ip, normalized)
+        self._enforce_auth_rate_limit(client_ip, normalized)
         now = utc_now()
         with self._write_transaction() as session:
             user = session.scalar(
@@ -419,28 +444,33 @@ class AuthService:
             return
         raise RuntimeError(f"Unsupported authentication database: {self.engine.dialect.name}")
 
-    def _enforce_login_rate_limit(self, client_ip: str, normalized_username: str) -> None:
+    def _enforce_auth_rate_limit(
+        self, client_ip: str, normalized_username: str, *, operation: str = "login"
+    ) -> None:
         now = utc_now()
-        window_seconds = max(60, int(os.getenv("AUTH_LOGIN_WINDOW_SECONDS", "900")))
+        registering = operation == "register"
+        prefix = "AUTH_REGISTER" if registering else "AUTH_LOGIN"
+        window_seconds = max(60, int(os.getenv(f"{prefix}_WINDOW_SECONDS", "900")))
         limits = {
-            "ip": max(1, int(os.getenv("AUTH_LOGIN_IP_MAX_ATTEMPTS", "30"))),
-            "username": max(1, int(os.getenv("AUTH_LOGIN_USERNAME_MAX_ATTEMPTS", "10"))),
+            "ip": max(1, int(os.getenv(f"{prefix}_IP_MAX_ATTEMPTS", "10" if registering else "30"))),
+            "username": max(1, int(os.getenv(f"{prefix}_USERNAME_MAX_ATTEMPTS", "5" if registering else "10"))),
         }
         keys = {"ip": client_ip.strip() or "unknown", "username": normalized_username[:256]}
         rate_error: AuthError | None = None
         with self._write_transaction() as session:
             for scope, raw_key in keys.items():
+                bucket_scope = {"ip": "register_ip", "username": "register_user"}[scope] if registering else scope
                 key_hash = hash_secret(raw_key)
                 timestamp = utc_iso(now)
                 self._ensure_throttle_record(
                     session,
-                    scope=scope,
+                    scope=bucket_scope,
                     key_hash=key_hash,
                     timestamp=timestamp,
                 )
                 record = session.scalar(
                     select(AuthThrottleRecord).where(
-                        AuthThrottleRecord.scope == scope,
+                        AuthThrottleRecord.scope == bucket_scope,
                         AuthThrottleRecord.key_hash == key_hash,
                     ).with_for_update()
                 )
@@ -450,8 +480,8 @@ class AuthService:
                 if blocked_until and blocked_until > now:
                     retry_after = max(1, math.ceil((blocked_until - now).total_seconds()))
                     rate_error = AuthError(
-                        "login_rate_limited",
-                        "Too many sign-in attempts. Try again later.",
+                        f"{operation}_rate_limited",
+                        "Too many registration attempts. Try again later." if registering else "Too many sign-in attempts. Try again later.",
                         429,
                         retry_after=retry_after,
                     )
@@ -466,8 +496,8 @@ class AuthService:
                 if record.attempts > limits[scope]:
                     record.blocked_until = utc_iso(now + timedelta(seconds=window_seconds))
                     rate_error = AuthError(
-                        "login_rate_limited",
-                        "Too many sign-in attempts. Try again later.",
+                        f"{operation}_rate_limited",
+                        "Too many registration attempts. Try again later." if registering else "Too many sign-in attempts. Try again later.",
                         429,
                         retry_after=window_seconds,
                     )

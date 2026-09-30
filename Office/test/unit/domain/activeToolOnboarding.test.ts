@@ -34,6 +34,7 @@ function plan(patch: Partial<GoalActivationPlan> = {}): GoalActivationPlan {
     actions: [
       {
         description: '',
+        due_date: '2026-09-01',
         energy_needed: 'medium',
         estimated_minutes: 30,
         execution_tier: 'standard',
@@ -45,7 +46,7 @@ function plan(patch: Partial<GoalActivationPlan> = {}): GoalActivationPlan {
     confidence: { level: 'medium', reasons: [] },
     constraints: [],
     metrics: [],
-    milestones: [{ description: '', title: 'Reach the milestone' }],
+    milestones: [{ description: '', due_date: '2026-09-01', title: 'Reach the milestone' }],
     missing_information: [],
     policy: {},
     review_cadence: { frequency: 'weekly' },
@@ -113,6 +114,27 @@ describe('active tool onboarding rules', () => {
     ])
   })
 
+  it('blocks required actions without a planning date but allows undated stretch work', () => {
+    const required = plan({
+      actions: [{ ...plan().actions[0], due_date: null, title: 'Review current schema' }],
+    })
+    const stretch = plan({
+      actions: [
+        {
+          ...plan().actions[0],
+          due_date: null,
+          execution_tier: 'stretch',
+          title: 'Optional polish',
+        },
+      ],
+    })
+
+    expect(planBlockingIssues(required)).toContain('必要行动缺少计划完成日：Review current schema')
+    expect(planBlockingIssues(stretch)).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('计划完成日')]),
+    )
+  })
+
   it('marks only material non-safety questions as optional', () => {
     const goalQuestions = activeToolClarificationQuestions(seed(goalPlannerToolMetadata, 'Launch'))
     expect(goalQuestions.every((question) => question.required === false)).toBe(true)
@@ -128,6 +150,24 @@ describe('active tool onboarding rules', () => {
         seed(fitnessAIToolMetadata, 'Train twice weekly with knee pain'),
       ),
     ).toBe(true)
+  })
+
+  it('does not mistake an ordinary scheduling limit for fitness safety confirmation', () => {
+    const fitnessSeed = seed(fitnessAIToolMetadata, '每周训练3次，每次45分钟，限制在晚上')
+
+    expect(activeToolClarificationQuestions(fitnessSeed)[0].id).toBe('fitness_safety_constraints')
+    expect(fitnessSafetyWasConfirmed([], fitnessSeed)).toBe(false)
+  })
+
+  it('accepts an explicit Chinese no-injury statement as fitness safety confirmation', () => {
+    const fitnessSeed = seed(fitnessAIToolMetadata, '每周训练3次，没有已知伤病')
+
+    expect(
+      activeToolClarificationQuestions(fitnessSeed).some(
+        (question) => question.id === 'fitness_safety_constraints',
+      ),
+    ).toBe(false)
+    expect(fitnessSafetyWasConfirmed([], fitnessSeed)).toBe(true)
   })
 
   it('keeps skipped optional facts visible and lowers confidence', () => {

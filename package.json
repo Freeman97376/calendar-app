@@ -29,7 +29,8 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-desktop.ps1",
     "version:set": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-version.ps1",
-    "version:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-version.ps1"
+    "version:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-version.ps1",
+    "build:server": "tsc -b && vite build --base=/calendar/ --outDir=dist-server/calendar"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

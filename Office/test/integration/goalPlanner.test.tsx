@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { HttpResponse, http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import App from '../../../src/App'
@@ -42,6 +43,7 @@ import {
   type LongTermMemoryClientContract,
 } from '../../../src/store/longTermMemoryStore'
 import { useUIStore } from '../../../src/store/uiStore'
+import { server } from '../support/mocks/server'
 
 function backendStatusResponse() {
   return new Response(
@@ -325,6 +327,181 @@ describe('Goal Planner tool', () => {
     expect(await screen.findByText(/How much time is realistically available/)).toBeInTheDocument()
   }, 15_000)
 
+  it('fills missing required action dates before showing an activatable plan', async () => {
+    const user = userEvent.setup()
+    const targetDate = new Date()
+    targetDate.setUTCDate(targetDate.getUTCDate() + 56)
+    const target = targetDate.toISOString().slice(0, 10)
+    const actionTitles = [
+      'Review current schema',
+      'Document design decisions',
+      'Implement persistence layer',
+      'Implement conversation list endpoint',
+      'Implement create and read endpoints',
+    ]
+    server.use(
+      http.post('*/api/ai/chat/completions', () =>
+        HttpResponse.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  actions: actionTitles.map((title) => ({
+                    description: '',
+                    due_date: null,
+                    energy_needed: 'medium',
+                    estimated_minutes: 30,
+                    execution_tier: 'standard',
+                    milestone_title: 'Foundation ready',
+                    priority: 'medium',
+                    status: 'todo',
+                    title,
+                  })),
+                  assumptions: [],
+                  confidence: { level: 'high', reasons: [] },
+                  constraints: [],
+                  dependencies: actionTitles.slice(1).map((title, index) => ({
+                    predecessor_title: actionTitles[index],
+                    successor_title: title,
+                  })),
+                  metrics: [],
+                  milestones: [
+                    {
+                      description: '',
+                      due_date: target,
+                      status: 'not_started',
+                      title: 'Foundation ready',
+                    },
+                  ],
+                  missing_information: [],
+                  policy: {
+                    active_tier: 'standard',
+                    available_days: [],
+                    buffer_percent: 20,
+                    weekly_capacity_minutes: 240,
+                  },
+                  review_cadence: { frequency: 'weekly', timezone: 'UTC' },
+                  risks: [],
+                  safety_confirmation: true,
+                  summary: 'Build the conversation foundation.',
+                  target_date: target,
+                  title: 'Conversation foundation',
+                }),
+                role: 'assistant',
+              },
+            },
+          ],
+        }),
+      ),
+    )
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
+    await user.click(screen.getByRole('button', { name: 'Goal Planner' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Launch a project in 8 weeks with 4 hours per week; budget is the main constraint.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
+    await user.click(await screen.findByRole('button', { name: 'Review initial plan' }))
+    await user.click(
+      await screen.findByRole('button', { name: 'Generate initial plan / 生成初始计划' }),
+    )
+
+    expect(await screen.findByDisplayValue('Conversation foundation')).toBeInTheDocument()
+    for (const title of actionTitles) {
+      const titleInput = screen.getByDisplayValue(title)
+      const actionCard = titleInput.closest('div.grid') as HTMLElement | null
+      if (!actionCard) throw new Error(`Missing action card for ${title}`)
+      const dateInput = actionCard.querySelector<HTMLInputElement>('input[type="date"]')
+      if (!dateInput) throw new Error(`Missing planning date input for ${title}`)
+      expect(dateInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+    expect(screen.getAllByText('系统建议日期，可在批准前调整。')).toHaveLength(5)
+    expect(
+      screen.getByRole('button', { name: 'Approve and create Active Tool / 批准并创建' }),
+    ).toBeEnabled()
+  }, 15_000)
+
+  it('asks once for an unschedulable horizon and then supports manual dates', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/ai/chat/completions', () =>
+        HttpResponse.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  actions: [
+                    {
+                      description: '',
+                      due_date: null,
+                      energy_needed: 'medium',
+                      estimated_minutes: 60,
+                      execution_tier: 'minimum',
+                      priority: 'high',
+                      status: 'todo',
+                      title: 'Review current schema',
+                    },
+                  ],
+                  assumptions: [],
+                  confidence: { level: 'medium', reasons: [] },
+                  constraints: [],
+                  dependencies: [],
+                  metrics: [],
+                  milestones: [{ description: '', title: 'Open milestone' }],
+                  missing_information: [],
+                  policy: {
+                    active_tier: 'standard',
+                    available_days: [],
+                    buffer_percent: 20,
+                    weekly_capacity_minutes: 240,
+                  },
+                  review_cadence: { frequency: 'weekly', timezone: 'UTC' },
+                  risks: [],
+                  safety_confirmation: true,
+                  summary: 'Plan an open-ended foundation.',
+                  target_date: null,
+                  title: 'Open foundation',
+                }),
+                role: 'assistant',
+              },
+            },
+          ],
+        }),
+      ),
+    )
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Tool Templates' }))
+    await user.click(screen.getByRole('button', { name: 'Goal Planner' }))
+    await user.type(
+      screen.getByLabelText('Requirements'),
+      'Create a project with 4 hours per week; budget is the main constraint; deadline is undecided.',
+    )
+    await user.click(screen.getByRole('button', { name: 'Send requirement' }))
+    await user.click(await screen.findByRole('button', { name: 'Review initial plan' }))
+    await user.click(
+      await screen.findByRole('button', { name: 'Generate initial plan / 生成初始计划' }),
+    )
+
+    expect(await screen.findByText(/必要行动缺少可推导的日期/)).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'I will edit dates manually / 我手动填写日期' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(screen.queryByText(/必要行动缺少可推导的日期/)).not.toBeInTheDocument()
+    const titleInput = screen.getByDisplayValue('Review current schema')
+    const actionCard = titleInput.closest('div.grid') as HTMLElement | null
+    const dateInput = actionCard?.querySelector<HTMLInputElement>('input[type="date"]') ?? null
+    if (!dateInput) throw new Error('Missing planning date input for Review current schema')
+    expect(dateInput).toHaveAttribute('aria-invalid', 'true')
+    expect(
+      screen.getByRole('button', { name: 'Approve and create Active Tool / 批准并创建' }),
+    ).toBeDisabled()
+  }, 15_000)
+
   it('shows and edits the selected project roadmap in Goal Planner', async () => {
     const user = userEvent.setup()
     memoryClient.goals = [
@@ -403,8 +580,9 @@ describe('Goal Planner tool', () => {
     expect(await screen.findByText(/Research/)).toBeInTheDocument()
   })
 
-  it('shows a mock plan and edits the long-term plan and tool characteristics in Active Tools', async () => {
+  it('stages active-tool edits as a global scheduling proposal without applying them', async () => {
     const user = userEvent.setup()
+    let recomputeRequest: Record<string, unknown> | null = null
     const mockPlan = [
       {
         description: 'Document the existing planning workflow',
@@ -454,6 +632,117 @@ describe('Goal Planner tool', () => {
         updated_at: timestamp(),
       },
     ]
+    server.use(
+      http.get('*/api/memory/projects/project_1/dashboard', () =>
+        HttpResponse.json({
+          success: true,
+          dashboard: {
+            project: {
+              project_id: 'project_1',
+              title: 'Planning System',
+              description: 'Operate the planning system',
+              status: 'active',
+              metadata,
+            },
+            goal: {
+              goal_id: 'goal_1',
+              title: 'Planning operations',
+            },
+            actions: [
+              {
+                action_id: 'action_1',
+                title: 'Review the planning system',
+                status: 'todo',
+                estimated_minutes: 60,
+                execution_tier: 'standard',
+                priority: 'high',
+                due_date: '2026-09-30',
+              },
+            ],
+            milestones: [],
+            metrics: [],
+            policy: {
+              active_tier: 'standard',
+              ai_usage_mode: 'inherit',
+              weekly_capacity_minutes: 240,
+              buffer_percent: 20,
+              available_days: ['mon', 'wed'],
+              planning_brief: {},
+            },
+            dependencies: [],
+            effort: [],
+            health: {
+              status: 'attention',
+              factors: [],
+              confidence: 'deterministic',
+            },
+            critical_path: {
+              action_ids: ['action_1'],
+              total_minutes: 60,
+              has_cycle: false,
+              projected_finish: '2026-09-30',
+              usable_weekly_minutes: 192,
+            },
+            milestone_predictions: [],
+            review: {
+              recommend_replan: false,
+              recommend_pause: false,
+              triggers: [],
+              trigger_count: 0,
+              safety_warnings: [],
+              adjustment_question: '',
+            },
+            pending_check_in: null,
+            versions: [
+              {
+                version_id: 'version_1',
+                version_number: 1,
+                summary: 'Activated plan',
+                source: 'activation',
+                created_at: timestamp(),
+                is_pinned: true,
+              },
+            ],
+            proposals: [],
+            threads: [],
+            usage: {
+              selected_mode: 'balanced',
+              effective_mode: 'balanced',
+              administrator_maximum_mode: 'balanced',
+              server_default_mode: 'balanced',
+              limits: {},
+            },
+          },
+        }),
+      ),
+      http.post('*/api/scheduling/proposals/recompute', async ({ request }) => {
+        recomputeRequest = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json({
+          success: true,
+          proposal: {
+            proposalId: 'schedule-edit-1',
+            status: 'pending',
+            inputFingerprint: 'a'.repeat(64),
+            proposal: {
+              kind: 'global_schedule',
+              reason: 'active_tool_plan_edit',
+              message: '请确认工具计划变更和全局重排影响。',
+              changes: [],
+              actionDateChanges: [],
+              conflicts: [],
+              toolImpacts: [],
+              capacityBorrowing: [],
+              unscheduled: [],
+              planChange: { projectId: 'project_1', projectTitle: 'Planning System' },
+              autoApply: false,
+            },
+            createdAt: timestamp(),
+            updatedAt: timestamp(),
+            replayed: false,
+          },
+        })
+      }),
+    )
 
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Active Tools' }))
@@ -464,7 +753,7 @@ describe('Goal Planner tool', () => {
     expect(screen.getByText('Reviewable calendar drafts')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Edit plan & characteristics' }))
-    const dialog = screen.getByRole('dialog', {
+    const dialog = await screen.findByRole('dialog', {
       name: 'Edit long-term plan and tool characteristics',
     })
     const planInput = within(dialog).getByLabelText('Implementation path')
@@ -479,26 +768,39 @@ describe('Goal Planner tool', () => {
     await user.type(featuresInput, 'Durable progress memory\nWeekly variance review')
     await user.click(within(dialog).getByRole('button', { name: 'Save plan & characteristics' }))
 
-    expect(await screen.findByText(/Prototype workflow/)).toBeInTheDocument()
-    expect(screen.getByText(/Ship rollout/)).toBeInTheDocument()
-    expect(screen.getByText('Weekly variance review')).toBeInTheDocument()
-    expect(memoryClient.projects[0].metadata).toMatchObject({
-      implementationPath: [
-        {
-          description: 'Validate the automation',
-          id: 'path-1',
-          order: 1,
-          title: 'Prototype workflow',
+    expect(await screen.findByText('请确认工具计划变更和全局重排影响。')).toBeInTheDocument()
+    expect(recomputeRequest).toMatchObject({
+      reason: 'active_tool_plan_edit',
+      projectPatch: {
+        projectId: 'project_1',
+        baseVersionId: 'version_1',
+        changes: {
+          metadata: {
+            implementationPath: [
+              {
+                description: 'Validate the automation',
+                id: 'path-1',
+                order: 1,
+                title: 'Prototype workflow',
+              },
+              {
+                description: 'Release the planning system',
+                id: 'path-2',
+                order: 2,
+                title: 'Ship rollout',
+              },
+            ],
+            longTermGoalLabel: 'Build a repeatable planning system',
+            toolFeatures: ['Durable progress memory', 'Weekly variance review'],
+          },
+          policy: {
+            weeklyCapacityMinutes: 240,
+            bufferPercent: 20,
+            availableDays: ['mon', 'wed'],
+          },
         },
-        {
-          description: 'Release the planning system',
-          id: 'path-2',
-          order: 2,
-          title: 'Ship rollout',
-        },
-      ],
-      longTermGoalLabel: 'Build a repeatable planning system',
-      toolFeatures: ['Durable progress memory', 'Weekly variance review'],
+      },
     })
+    expect(memoryClient.projects[0].metadata).toEqual(metadata)
   })
 })

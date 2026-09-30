@@ -7,10 +7,10 @@ This repository ships a browser application, a Python backend, and a Tauri deskt
 ## Fixed runtime boundaries
 
 - Server mode uses MySQL.
-- Server accounts are provisioned manually by administrators. There is no public registration.
+- Server administrators are provisioned manually. Ordinary users may self-register with the server-configured shared invitation code; registration is disabled when no code is configured. The code is reusable and has no automatic expiry. Never allow unauthenticated registration without a valid code or let self-registration grant administrator privileges.
 - Desktop mode uses SQLite, has no login, and is a true local build.
 - Desktop does not automatically synchronize data to a cloud service.
-- AI requests use the backend DeepSeek-compatible interface. Provider secrets stay in backend environment variables and must never use a `VITE_*` variable.
+- AI requests use the backend DeepSeek-compatible interface. Shared provider secrets stay in backend environment variables. Server users may save their own DeepSeek keys through authenticated, CSRF-protected settings; these are encrypted in account-scoped storage with a backend environment encryption key, never returned to clients or included in portable backups. Provider secrets must never use a `VITE_*` variable.
 - Firebase is legacy migration/export compatibility only, not the current storage or AI architecture.
 
 Do not weaken authentication, tenant isolation, CSRF/cookie policy, backup integrity, or server-versus-desktop database checks. Tests must never use production databases, real accounts, user backups, or signing keys.

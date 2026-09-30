@@ -10,6 +10,8 @@ import Button from '../ui/Button'
 import DataPortabilityPanel from './DataPortabilityPanel'
 import AIUsageSettings from './AIUsageSettings'
 import DesktopUpdateSettings from './DesktopUpdateSettings'
+import SchedulingSettings from './SchedulingSettings'
+import PersonalAISettings from './PersonalAISettings'
 
 type BackendDraft = {
   deepseekApiKey: string
@@ -135,6 +137,9 @@ export default function SettingsPanel() {
 
   return (
     <div className="min-h-0 flex-1 space-y-5 overflow-auto p-4">
+      {auth.capabilities?.personalAIConfig && auth.user ? (
+        <PersonalAISettings key={auth.user.id} userId={auth.user.id} />
+      ) : null}
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-950">{t('settings.frontendRuntime')}</h3>
         <form className="space-y-5" onSubmit={saveRuntime}>
@@ -581,6 +586,8 @@ export default function SettingsPanel() {
 
       <EventTypeSettings title={t('settings.eventAndTaskTypes')} />
 
+      {auth.capabilities?.globalScheduling ? <SchedulingSettings /> : null}
+
       {auth.capabilities?.dataPortability ? <DataPortabilityPanel /> : null}
 
       {auth.capabilities?.backendConfigEditable ? (
@@ -683,8 +690,7 @@ export default function SettingsPanel() {
         </section>
       ) : (
         <section className="border-t border-slate-200 pt-4 text-sm text-slate-600">
-          Server AI and storage configuration is managed by the operator. / 服务器 AI
-          与存储配置由管理员在服务器端维护。
+          {t('personalAI.storageManaged')}
         </section>
       )}
 

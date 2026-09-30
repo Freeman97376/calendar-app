@@ -79,4 +79,36 @@ describe('uiStore workspace panels', () => {
       selectedStartTime: null,
     })
   })
+
+  it('freezes AI approval content and keeps one idempotency key for the drawer lifetime', () => {
+    const plan = {
+      actions: [
+        {
+          allDay: false,
+          endAt: '2026-08-30T18:00:00.000Z',
+          startAt: '2026-08-30T17:00:00.000Z',
+          title: 'Original title',
+          type: 'create_event' as const,
+        },
+      ],
+      summary: 'Original summary',
+      warnings: [],
+    }
+
+    useUIStore.getState().openApprovalDrawer({ plan, source: 'ai-action-plan' })
+    const first = useUIStore.getState().approvalDrawerContext
+    plan.summary = 'Changed after review opened'
+    plan.actions[0].title = 'Changed title'
+    const second = useUIStore.getState().approvalDrawerContext
+
+    expect(first?.source).toBe('ai-action-plan')
+    expect(second).toEqual(first)
+    if (second?.source !== 'ai-action-plan') throw new Error('Expected AI approval context')
+    expect(second.plan.summary).toBe('Original summary')
+    expect(second.plan.actions[0]).toMatchObject({ title: 'Original title' })
+    expect(second.idempotencyKey).toMatch(/^approval-/)
+
+    useUIStore.getState().closeApprovalDrawer()
+    expect(useUIStore.getState().approvalDrawerContext).toBeNull()
+  })
 })

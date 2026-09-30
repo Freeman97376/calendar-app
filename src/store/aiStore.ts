@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { AIPlanReviewSchema, type AIPlanRecord } from '../domain/schemas/aiPlanReview.schema'
 
 import type {
   AIAction,
@@ -7,7 +8,10 @@ import type {
   AICalendarActionPlan,
   AICalendarContext,
 } from '../domain/types'
-import { AIEnabledToolRouteRequestSchema } from '../domain/schemas/ai.schema'
+import {
+  AICalendarActionPlanSchema,
+  AIEnabledToolRouteRequestSchema,
+} from '../domain/schemas/ai.schema'
 import { isReviewFirstTemplate } from '../domain/logic/activeToolOnboarding'
 import {
   activeToolRouteSummary,
@@ -29,7 +33,6 @@ import type { AIConversationContext } from '../domain/types/aiConversation'
 import { goalControlClient } from '../services/goalControlClient'
 import { dispatchEnabledToolInstance } from './enabledToolRunner'
 import { useLongTermMemoryStore } from './longTermMemoryStore'
-import { useUIStore } from './uiStore'
 import type { IAIService } from '../services/ai/IAIService'
 
 const NEAR_TERM_CONFIRMATION_WINDOW_MS = 48 * 60 * 60 * 1000
@@ -83,10 +86,14 @@ export type AIStore = {
   model: string
   conversationContext: AIConversationContext | null
   messages: AIMessage[]
+  actionPlanRecord: AIPlanRecord | null
+  isSavingConversation: boolean
+  conversationSaveFailed: boolean
   pendingActionPlan: AICalendarActionPlan | null
   pendingEnabledToolRoute: PendingEnabledToolRoute | null
   pendingSuggestion: AIBreakdownResult | null
   pendingToolTemplateActivation: PendingToolTemplateActivation | null
+  selectedEnabledToolProjectId: string | null
   provider: AIProvider
   acceptSuggestion: () => void
   clearActionPlan: () => void
@@ -99,6 +106,7 @@ export type AIStore = {
   markActionPlanApplied: () => void
   setModel: (model: string) => void
   setProvider: (provider: AIProvider) => void
+  setSelectedEnabledToolProjectId: (projectId: string | null) => void
   sendConversationMessage: (
     message: string,
     context: AICalendarContext,
@@ -118,9 +126,33 @@ export type AIStore = {
 
 let aiService: IAIService | null = null
 let aiRequestGeneration = 0
+let activeAIConversationThreadId: string | null = null
+let aiSessionEpoch = 0
+let persistenceQueue: Promise<void> = Promise.resolve()
+type SaveJob = {
+  messages: AIMessage[]
+  title: string
+  structured: Record<string, unknown>
+  epoch: number
+}
+let failedSaves: SaveJob[] = []
+export const getAISessionEpoch = () => aiSessionEpoch
+export const getAIRequestGeneration = () => aiRequestGeneration
+
+function resetConversationPersistence() {
+  aiSessionEpoch += 1
+  persistenceQueue = Promise.resolve()
+  failedSaves = []
+  useAIStore.setState({
+    actionPlanRecord: null,
+    isSavingConversation: false,
+    conversationSaveFailed: false,
+  })
+}
 
 function beginAIRequest(): number {
   aiRequestGeneration += 1
+  useAIStore.setState({ actionPlanRecord: null })
   return aiRequestGeneration
 }
 
@@ -156,6 +188,195 @@ function createMessage(role: AIMessage['role'], content: string): AIMessage {
     role,
     content,
     timestamp: new Date().toISOString(),
+  }
+}
+
+function planRecord(
+  threadId: string,
+  messageId: string,
+  structured: Record<string, unknown>,
+): AIPlanRecord | null {
+  const parsed = AICalendarActionPlanSchema.safeParse(structured.actionPlan)
+  if (!parsed.success) return null
+  const review = AIPlanReviewSchema.safeParse(structured.actionPlanReview)
+  return {
+    plan: parsed.data,
+    ref: { threadId, messageId },
+    review: review.success ? review.data : null,
+  }
+}
+
+async function saveConversationJob(job: SaveJob) {
+  if (job.epoch !== aiSessionEpoch) return
+  if (!activeAIConversationThreadId)
+    activeAIConversationThreadId = `chat-${globalThis.crypto.randomUUID()}`
+  const threadId = activeAIConversationThreadId
+  await goalControlClient.createAIConversation({
+    thread_id: threadId,
+    metadata: { surface: 'ai-assistant' },
+    title: conversationTitle ?? (job.title.trim().slice(0, 200) || 'New AI conversation'),
+  })
+  if (job.epoch !== aiSessionEpoch) return
+  for (const [index, message] of job.messages.entries()) {
+    const saved = await goalControlClient.addAIConversationMessage(threadId, {
+      message_id: message.id,
+      content: message.content,
+      role: message.role,
+      structured: index === job.messages.length - 1 ? job.structured : {},
+    })
+    if (job.epoch !== aiSessionEpoch) return
+    const record = planRecord(threadId, saved.message_id, saved.structured)
+    const currentPlan = AICalendarActionPlanSchema.safeParse(
+      useAIStore.getState().pendingActionPlan,
+    )
+    if (
+      record &&
+      currentPlan.success &&
+      useAIStore.getState().messages[useAIStore.getState().messages.length - 1]?.id ===
+        message.id &&
+      JSON.stringify(currentPlan.data) === JSON.stringify(record.plan)
+    ) {
+      useAIStore.setState({ actionPlanRecord: record })
+    }
+  }
+}
+
+let conversationTitle: string | null = null
+export function persistAIConversationMessages(
+  messages: AIMessage[],
+  title: string,
+  structured: Record<string, unknown> = {},
+) {
+  if (!messages.length) return Promise.resolve()
+  conversationTitle ??= title.trim().slice(0, 200) || 'New AI conversation'
+  const job: SaveJob = {
+    messages: structuredClone(messages),
+    title,
+    structured: structuredClone(structured),
+    epoch: aiSessionEpoch,
+  }
+  failedSaves.push(job)
+  return retryAIConversationSave()
+}
+
+export function retryAIConversationSave() {
+  const epoch = aiSessionEpoch
+  useAIStore.setState({ isSavingConversation: true, conversationSaveFailed: false })
+  persistenceQueue = persistenceQueue
+    .catch(() => undefined)
+    .then(async () => {
+      if (epoch !== aiSessionEpoch) return
+      try {
+        while (failedSaves.length && epoch === aiSessionEpoch) {
+          const job = failedSaves[0]
+          await saveConversationJob(job)
+          if (epoch !== aiSessionEpoch) return
+          failedSaves.shift()
+        }
+        useAIStore.setState((state) => ({
+          isSavingConversation: false,
+          conversationSaveFailed: false,
+          error: state.error?.startsWith('Conversation could not be saved.') ? null : state.error,
+        }))
+      } catch (error) {
+        if (epoch !== aiSessionEpoch) return
+        useAIStore.setState({
+          isSavingConversation: false,
+          conversationSaveFailed: true,
+          error: `Conversation could not be saved. Retry saving before executing the plan: ${error instanceof Error ? error.message : 'unknown error'}`,
+        })
+      }
+    })
+  return persistenceQueue
+}
+
+export async function dismissAIActionPlan() {
+  const record = useAIStore.getState().actionPlanRecord
+  const epoch = aiSessionEpoch
+  if (!record?.review) return
+  try {
+    const saved = await goalControlClient.dismissAIActionPlan(
+      record.ref.threadId,
+      record.ref.messageId,
+    )
+    if (
+      epoch !== aiSessionEpoch ||
+      useAIStore.getState().actionPlanRecord?.ref.messageId !== record.ref.messageId
+    )
+      return
+    useAIStore.setState({
+      actionPlanRecord: planRecord(record.ref.threadId, record.ref.messageId, saved.structured),
+      pendingActionPlan: null,
+    })
+  } catch (error) {
+    if (epoch === aiSessionEpoch)
+      useAIStore.setState({
+        error: error instanceof Error ? error.message : 'Unable to dismiss plan',
+      })
+  }
+}
+
+export async function restoreLatestAIConversation() {
+  const epoch = aiSessionEpoch
+  const generation = aiRequestGeneration
+  try {
+    const threads = await goalControlClient.listAIConversations()
+    if (epoch !== aiSessionEpoch || generation !== aiRequestGeneration) return
+    const latest = threads[0]
+    if (!latest) return
+    const conversation = await goalControlClient.getAIConversation(latest.thread_id)
+    if (epoch !== aiSessionEpoch || generation !== aiRequestGeneration) return
+    activeAIConversationThreadId = latest.thread_id
+    conversationTitle = latest.title
+    const messages = conversation.messages
+      .filter((message) => message.role === 'user' || message.role === 'assistant')
+      .map((message) => ({
+        content: message.content,
+        id: message.message_id,
+        role: message.role as AIMessage['role'],
+        timestamp: message.created_at,
+      }))
+    const lastPlan = [...conversation.messages]
+      .reverse()
+      .find((message) => message.role === 'assistant' && message.structured?.actionPlan)
+    const record = lastPlan
+      ? planRecord(latest.thread_id, lastPlan.message_id, lastPlan.structured)
+      : null
+    const pendingActionPlan =
+      record?.review &&
+      !record.review.dismissed &&
+      record.review.operations.apply.status === 'pending'
+        ? record.plan
+        : null
+    useAIStore.setState({
+      actionPlanRecord: record,
+      conversationContext: pendingActionPlan ? draftActionPlanContext(pendingActionPlan) : null,
+      error: null,
+      messages,
+      pendingActionPlan,
+    })
+  } catch (error) {
+    if (epoch === aiSessionEpoch && generation === aiRequestGeneration)
+      useAIStore.setState({
+        error: `Conversation history could not be restored: ${error instanceof Error ? error.message : 'unknown persistence error'}`,
+      })
+  }
+}
+
+async function archiveActiveAIConversation() {
+  const threadId = activeAIConversationThreadId
+  const epoch = aiSessionEpoch
+  activeAIConversationThreadId = null
+  if (!threadId) return
+  try {
+    await goalControlClient.updateAIConversation(threadId, { status: 'archived' })
+  } catch (error) {
+    if (epoch !== aiSessionEpoch) return
+    useAIStore.setState({
+      error: `Conversation was cleared locally but could not be archived: ${
+        error instanceof Error ? error.message : 'unknown persistence error'
+      }`,
+    })
   }
 }
 
@@ -296,6 +517,28 @@ async function findEnabledToolRoute(
       projectId: instance.projectId,
       reason: result.reason,
       rewrittenInstruction: result.rewrittenInstruction,
+      toolName: instance.toolName,
+    },
+  }
+}
+
+async function selectedEnabledToolRoute(
+  projectId: string,
+  message: string,
+): Promise<{ instance: ActiveTool; route: PendingEnabledToolRoute } | null> {
+  const instance = (await activeToolInstances()).find(
+    (candidate) => candidate.projectId === projectId,
+  )
+  if (!instance) return null
+  return {
+    instance,
+    route: {
+      confidence: 1,
+      instanceAlias: instance.instanceAlias,
+      originalMessage: message,
+      projectId: instance.projectId,
+      reason: '用户已在当前对话中明确选择此工具。',
+      rewrittenInstruction: message,
       toolName: instance.toolName,
     },
   }
@@ -496,17 +739,26 @@ export const useAIStore = create<AIStore>((set, get) => ({
   model: 'deepseek-chat',
   conversationContext: null,
   messages: [],
+  actionPlanRecord: null,
+  isSavingConversation: false,
+  conversationSaveFailed: false,
   pendingActionPlan: null,
   pendingEnabledToolRoute: null,
   pendingSuggestion: null,
   pendingToolTemplateActivation: null,
+  selectedEnabledToolProjectId: null,
   provider: 'api',
   acceptSuggestion: () => set({ pendingSuggestion: null }),
-  clearActionPlan: () => set({ pendingActionPlan: null }),
+  clearActionPlan: () => {
+    void dismissAIActionPlan()
+  },
   clearEnabledToolRoute: () => set({ pendingEnabledToolRoute: null }),
   clearToolTemplateActivation: () => set({ pendingToolTemplateActivation: null }),
   clearHistory: () => {
     invalidateAIRequests()
+    resetConversationPersistence()
+    void archiveActiveAIConversation()
+    conversationTitle = null
     set({
       conversationContext: null,
       error: null,
@@ -516,12 +768,16 @@ export const useAIStore = create<AIStore>((set, get) => ({
       pendingEnabledToolRoute: null,
       pendingSuggestion: null,
       pendingToolTemplateActivation: null,
+      selectedEnabledToolProjectId: null,
     })
   },
   dismissSuggestion: () => set({ pendingSuggestion: null }),
   markActionPlanApplied: () => set({ pendingActionPlan: null }),
   reset: () => {
     invalidateAIRequests()
+    activeAIConversationThreadId = null
+    conversationTitle = null
+    resetConversationPersistence()
     set({
       error: null,
       isAvailable: Boolean(aiService?.isAvailable()),
@@ -533,11 +789,14 @@ export const useAIStore = create<AIStore>((set, get) => ({
       pendingEnabledToolRoute: null,
       pendingSuggestion: null,
       pendingToolTemplateActivation: null,
+      selectedEnabledToolProjectId: null,
       provider: 'api',
     })
   },
   setModel: (model) => set({ model }),
   setProvider: (provider) => set({ provider }),
+  setSelectedEnabledToolProjectId: (selectedEnabledToolProjectId) =>
+    set({ selectedEnabledToolProjectId, pendingEnabledToolRoute: null }),
   startTodoStepConversation: (context) => {
     invalidateAIRequests()
     const contextMessage = createMessage('user', selectedTodoStepsMessage(context))
@@ -579,16 +838,16 @@ export const useAIStore = create<AIStore>((set, get) => ({
         'assistant',
         `${result.assistantReply}${
           result.calendarEventCount
-            ? ` ${result.calendarEventCount} calendar draft${result.calendarEventCount === 1 ? '' : 's'} are waiting in Active Tools.`
+            ? ` ${result.calendarEventCount} 个日历草稿的审批已显示在当前对话。`
             : ''
         }`,
       )
-      useUIStore.getState().openEnabledToolsPanel(route.projectId)
       set((state) => ({
         isLoading: false,
         messages: [...state.messages, assistantMessage],
         pendingEnabledToolRoute: null,
         pendingToolTemplateActivation: null,
+        selectedEnabledToolProjectId: route.projectId,
       }))
     } catch (error) {
       if (!isCurrentAIRequest(requestGeneration)) return
@@ -683,13 +942,16 @@ export const useAIStore = create<AIStore>((set, get) => ({
         options.allowEnabledToolRouting !== false &&
         !pendingActionPlan &&
         !currentConversationContext
+      const selectedProjectId = get().selectedEnabledToolProjectId
       const routeMatch = canRouteToEnabledTool
-        ? await findEnabledToolRoute(aiService, trimmedMessage, context)
+        ? selectedProjectId
+          ? await selectedEnabledToolRoute(selectedProjectId, trimmedMessage)
+          : await findEnabledToolRoute(aiService, trimmedMessage, context)
         : null
       if (!isCurrentAIRequest(requestGeneration)) return
 
       if (routeMatch) {
-        if (options.confirmEnabledToolRouting !== false) {
+        if (options.confirmEnabledToolRouting !== false && !selectedProjectId) {
           const assistantMessage = createMessage(
             'assistant',
             `Route this to ${routeMatch.route.instanceAlias} | ${routeMatch.route.toolName}? ${routeMatch.route.reason}`,
@@ -705,14 +967,13 @@ export const useAIStore = create<AIStore>((set, get) => ({
 
         const dispatchResult = await dispatchRoute(routeMatch.route, context, aiService)
         if (!isCurrentAIRequest(requestGeneration)) return
-        useUIStore.getState().openEnabledToolsPanel(routeMatch.route.projectId)
         const assistantMessage = createMessage(
           'assistant',
           `${dispatchResult.assistantReply}${
             dispatchResult.calendarEventCount
               ? ` ${dispatchResult.calendarEventCount} calendar draft${
                   dispatchResult.calendarEventCount === 1 ? '' : 's'
-                } are waiting in Active Tools.`
+                } 的审批已显示在当前对话。`
               : ''
           }`,
         )
@@ -721,6 +982,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
           messages: [...state.messages, assistantMessage],
           pendingEnabledToolRoute: null,
           pendingToolTemplateActivation: null,
+          selectedEnabledToolProjectId: routeMatch.route.projectId,
         }))
         return
       }
@@ -792,13 +1054,16 @@ export const useAIStore = create<AIStore>((set, get) => ({
     })
 
     try {
+      const selectedProjectId = get().selectedEnabledToolProjectId
       const routeMatch =
         options.allowEnabledToolRouting === false
           ? null
-          : await findEnabledToolRoute(aiService, trimmedCommand, context)
+          : selectedProjectId
+            ? await selectedEnabledToolRoute(selectedProjectId, trimmedCommand)
+            : await findEnabledToolRoute(aiService, trimmedCommand, context)
       if (!isCurrentAIRequest(requestGeneration)) return
       if (routeMatch) {
-        if (options.confirmEnabledToolRouting !== false) {
+        if (options.confirmEnabledToolRouting !== false && !selectedProjectId) {
           const assistantMessage = createMessage(
             'assistant',
             `Route this to ${routeMatch.route.instanceAlias} | ${routeMatch.route.toolName}? ${routeMatch.route.reason}`,
@@ -816,14 +1081,13 @@ export const useAIStore = create<AIStore>((set, get) => ({
 
         const dispatchResult = await dispatchRoute(routeMatch.route, context, aiService)
         if (!isCurrentAIRequest(requestGeneration)) return
-        useUIStore.getState().openEnabledToolsPanel(routeMatch.route.projectId)
         const assistantMessage = createMessage(
           'assistant',
           `${dispatchResult.assistantReply}${
             dispatchResult.calendarEventCount
               ? ` ${dispatchResult.calendarEventCount} calendar draft${
                   dispatchResult.calendarEventCount === 1 ? '' : 's'
-                } are waiting in Active Tools.`
+                } 的审批已显示在当前对话。`
               : ''
           }`,
         )
@@ -834,6 +1098,7 @@ export const useAIStore = create<AIStore>((set, get) => ({
           pendingActionPlan: null,
           pendingEnabledToolRoute: null,
           pendingToolTemplateActivation: null,
+          selectedEnabledToolProjectId: routeMatch.route.projectId,
         }))
         return
       }

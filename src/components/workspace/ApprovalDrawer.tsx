@@ -114,9 +114,13 @@ function DrawerFrame({ children, footer, title }: DrawerFrameProps) {
 function AIPlanApprovalDrawer() {
   const { locale, t } = useI18n()
   const ai = useAI()
+  const approvalDrawer = useApprovalDrawer()
   const [status, setStatus] = useState<string | null>(null)
   const [timeConfirmed, setTimeConfirmed] = useState(false)
-  const plan = ai.pendingActionPlan
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const context =
+    approvalDrawer.context?.source === 'ai-action-plan' ? approvalDrawer.context : null
+  const plan = context?.plan ?? null
   const requiresTimeConfirmation = plan?.warnings.some(isTimeConfirmationWarning) ?? false
   const hasTimeConflict = plan?.warnings.some(isTimeConflictWarning) ?? false
 
@@ -138,7 +142,9 @@ function AIPlanApprovalDrawer() {
     }
 
     try {
-      const result = await ai.applyActionPlan()
+      if (!context || isSubmitting) return
+      setIsSubmitting(true)
+      const result = await ai.applyActionPlan(context)
       setStatus(
         `Applied ${result.appliedCount} AI action${result.appliedCount === 1 ? '' : 's'}.${
           result.skippedDuplicateCount
@@ -150,13 +156,17 @@ function AIPlanApprovalDrawer() {
       )
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Unable to apply AI actions')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   async function addAIPlanToTasks() {
     setStatus(null)
     try {
-      const todos = await ai.addAssistantResultToTodo()
+      if (!context || isSubmitting) return
+      setIsSubmitting(true)
+      const todos = await ai.addAssistantResultToTodo(context)
       setStatus(
         todos.length === 1
           ? `Added task ${todos[0].title}.`
@@ -164,6 +174,8 @@ function AIPlanApprovalDrawer() {
       )
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Unable to add AI result to tasks')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -171,13 +183,35 @@ function AIPlanApprovalDrawer() {
     <DrawerFrame
       footer={
         <>
-          <Button onClick={() => void addAIPlanToTasks()}>{t('ai.addToTasks')}</Button>
           <Button
-            disabled={!plan || hasTimeConflict || (requiresTimeConfirmation && !timeConfirmed)}
+            disabled={
+              isSubmitting ||
+              !context?.record?.review ||
+              context.record.review.dismissed ||
+              context.record.review.operations.copy_to_todos.status === 'applied'
+            }
+            onClick={() => void addAIPlanToTasks()}
+          >
+            {context?.record?.review?.operations.copy_to_todos.status === 'applied'
+              ? t('ai.tasksAdded')
+              : t('ai.addToTasks')}
+          </Button>
+          <Button
+            disabled={
+              isSubmitting ||
+              !plan ||
+              !context?.record?.review ||
+              context.record.review.dismissed ||
+              context.record.review.operations.apply.status === 'applied' ||
+              hasTimeConflict ||
+              (requiresTimeConfirmation && !timeConfirmed)
+            }
             onClick={() => void applyAIPlan()}
             variant="primary"
           >
-            {t('ai.applyActions')}
+            {context?.record?.review?.operations.apply.status === 'applied'
+              ? t('ai.planApplied')
+              : t('ai.applyActions')}
           </Button>
         </>
       }
@@ -257,12 +291,17 @@ function AIPlanApprovalDrawer() {
 function ActiveToolPlanApprovalDrawer() {
   const { locale, t } = useI18n()
   const activeTools = useEnabledTools()
+  const approvalDrawer = useApprovalDrawer()
   const [status, setStatus] = useState<string | null>(null)
+  const context =
+    approvalDrawer.context?.source === 'active-tool-calendar-drafts' ? approvalDrawer.context : null
+  const drafts = context?.drafts ?? []
 
   async function applyActiveToolPlan() {
     setStatus(null)
     try {
-      await activeTools.applyCalendarDrafts()
+      if (!context) return
+      await activeTools.applyCalendarDrafts(context)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Unable to apply calendar drafts')
     }
@@ -272,7 +311,7 @@ function ActiveToolPlanApprovalDrawer() {
     <DrawerFrame
       footer={
         <Button
-          disabled={!activeTools.calendarDrafts.length || activeTools.isApplyingCalendarDrafts}
+          disabled={!drafts.length || activeTools.isApplyingCalendarDrafts}
           onClick={() => void applyActiveToolPlan()}
           variant="primary"
         >
@@ -283,19 +322,19 @@ function ActiveToolPlanApprovalDrawer() {
       }
       title={t('approval.activeToolPlan')}
     >
-      {activeTools.calendarDrafts.length ? (
+      {drafts.length ? (
         <section className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-950">
-              {activeTools.activeInstance?.instanceAlias ?? t('enabled.header')}
+              {context?.toolName ?? t('enabled.header')}
             </h3>
             <p className="mt-1 text-xs text-slate-500">
-              {activeTools.calendarDrafts.length} calendar draft
-              {activeTools.calendarDrafts.length === 1 ? '' : 's'} ready for approval.
+              {drafts.length} calendar draft
+              {drafts.length === 1 ? '' : 's'} ready for approval.
             </p>
           </div>
           <div className="space-y-2">
-            {activeTools.calendarDrafts.map((draft, index) => (
+            {drafts.map((draft, index) => (
               <article
                 className="rounded-md border border-slate-200 bg-slate-50 p-3"
                 key={`${draft.title}-${index}`}

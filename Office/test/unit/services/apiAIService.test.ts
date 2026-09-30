@@ -71,6 +71,29 @@ describe('ApiAIService', () => {
     expect(request.messages.map((message) => message.role)).toEqual(['system', 'user'])
   })
 
+  it('leaves planning output budgets to the backend and does not retry truncated output', async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: { code: 'ai_output_truncated', message: 'The planning output was truncated.' },
+          }),
+          { status: 422 },
+        ),
+    )
+    const service = new ApiAIService({
+      apiKey: 'backend-managed',
+      baseUrl: '/calendar/api/ai',
+      fetcher,
+    })
+    await expect(service.breakdownGoal('A synthetic long goal')).rejects.toThrow('truncated')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    const calls = fetcher.mock.calls as unknown as Array<[string, RequestInit]>
+    const request = JSON.parse(String(calls[0][1].body))
+    expect(request._calendarOperation).toBe('goal_plan')
+    expect(request).not.toHaveProperty('max_tokens')
+  })
+
   it('breakdownGoal throws a helpful error when the API key is missing', async () => {
     const fetcher = vi.fn()
     const service = new ApiAIService({ apiKey: '', fetcher })
@@ -530,6 +553,59 @@ describe('ApiAIService', () => {
     expect(contextMessage).toContain('Conversation task context')
     expect(contextMessage).toContain('Draft launch checklist')
     expect(contextMessage).toContain('Conversation messages')
+  })
+
+  it('continueConversation exposes delete actions and the matching event id to the model', async () => {
+    const fetcher = vi.fn(async () =>
+      apiResponse({
+        reply: 'I prepared the matching event for deletion. Review it before applying.',
+        actionPlan: {
+          summary: 'Delete canceled lunch.',
+          actions: [
+            {
+              type: 'delete_event',
+              eventId: 'event-delete-1',
+              reason: 'Matched the only event titled Canceled lunch.',
+            },
+          ],
+          warnings: [],
+        },
+      }),
+    )
+    const service = new ApiAIService({ apiKey: 'test-key', fetcher })
+
+    await expect(
+      service.continueConversation([{ role: 'user', content: 'Delete Canceled lunch.' }], {
+        currentDate: '2026-06-18',
+        events: [
+          {
+            id: 'event-delete-1',
+            title: 'Canceled lunch',
+            startAt: '2026-06-19T12:00:00.000Z',
+            endAt: '2026-06-19T13:00:00.000Z',
+            allDay: false,
+          },
+        ],
+        eventTypes: [],
+        today: '2026-06-18',
+        todos: [],
+      }),
+    ).resolves.toMatchObject({
+      actionPlan: {
+        actions: [{ eventId: 'event-delete-1', type: 'delete_event' }],
+      },
+    })
+
+    const calls = fetcher.mock.calls as unknown as Array<[string, RequestInit]>
+    const request = JSON.parse(String(calls[0][1].body)) as {
+      messages: Array<{ role: string; content: string }>
+    }
+
+    expect(request.messages[0].content).toContain(
+      'the actionPlan must contain delete_event or delete_todo',
+    )
+    expect(request.messages[1].content).toContain('"type": "delete_event"')
+    expect(request.messages[1].content).toContain('"id": "event-delete-1"')
   })
 
   it('breakdownGoal extracts JSON when the model wraps the object in text', async () => {

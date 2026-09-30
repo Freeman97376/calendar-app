@@ -6,6 +6,7 @@ import { useEventStore } from './eventStore'
 import { useEventTypeStore } from './eventTypeStore'
 import { useFridgeStore } from './fridgeStore'
 import { useLongTermMemoryStore } from './longTermMemoryStore'
+import { resetScheduleRecomputeTimer, useSchedulingStore } from './schedulingStore'
 import { useTodoStore } from './todoStore'
 import { useToolSessionStore } from './toolSessionStore'
 import { useUIStore } from './uiStore'
@@ -16,6 +17,8 @@ export function resetUserSessionStores(preferences: Record<string, unknown> = {}
   useEventTypeStore.getState().reset()
   useTodoStore.getState().reset()
   useLongTermMemoryStore.getState().reset()
+  resetScheduleRecomputeTimer()
+  useSchedulingStore.getState().reset()
   useFridgeStore.getState().reset()
   useToolSessionStore.getState().reset()
   useAIStore.getState().reset()

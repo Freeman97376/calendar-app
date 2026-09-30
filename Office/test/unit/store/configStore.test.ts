@@ -64,6 +64,29 @@ describe('runtime AI proxy configuration', () => {
     expect(fetcher.mock.calls[0][0]).toBe('http://calendar.local/api/ai/chat/completions')
   })
 
+  it('keeps AI backend-managed even when legacy browser preferences request local mode', () => {
+    configureRuntimeEnvironment({
+      aiRuntime: {
+        editable: false,
+        keyConfigured: true,
+        mode: 'backend-managed',
+        planningModel: 'planning-model',
+        provider: 'deepseek-compatible',
+        routineModel: 'routine-model',
+        ruleBasedFallback: false,
+      },
+      serverManagedAI: false,
+    })
+    initializeRuntimeConfig({ aiProvider: 'local', aiApiModel: 'browser-model' })
+
+    expect(useConfigStore.getState().aiRuntime).toMatchObject({
+      editable: false,
+      mode: 'backend-managed',
+      routineModel: 'routine-model',
+    })
+    expect(getConfiguredAIService()?.isAvailable()).toBe(true)
+  })
+
   it('saves backend configuration to the injected Calendar API instead of the editable fridge URL', async () => {
     const fetcher = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
@@ -93,5 +116,48 @@ describe('runtime AI proxy configuration', () => {
 
     expect(fetcher).toHaveBeenCalledOnce()
     expect(fetcher.mock.calls[0][0]).toBe('http://127.0.0.1:49152/api/config')
+    expect(useConfigStore.getState().aiRuntime).toMatchObject({
+      keyConfigured: true,
+      routineModel: 'deepseek-chat',
+    })
+  })
+
+  it('does not let an older settings response overwrite a newer account configuration', async () => {
+    let release!: (value: Response) => void
+    const pending = new Promise<Response>((resolve) => {
+      release = resolve
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => pending),
+    )
+    configureConfigServices(new RuntimeConfigService(localStorage, 'test_runtime_config'))
+    const oldLoad = useConfigStore.getState().loadBackendStatus()
+    configureRuntimeEnvironment({
+      aiRuntime: {
+        ...useConfigStore.getState().aiRuntime,
+        keyConfigured: false,
+        routineModel: 'new-account-model',
+      },
+    })
+    release(
+      new Response(
+        JSON.stringify({
+          success: true,
+          deepseek: {
+            configured: true,
+            base_url: 'https://api.deepseek.com',
+            model: 'old-account-model',
+          },
+          fridge: { data_dir: 'server-managed' },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    )
+    await oldLoad
+    expect(useConfigStore.getState().aiRuntime).toMatchObject({
+      keyConfigured: false,
+      routineModel: 'new-account-model',
+    })
   })
 })

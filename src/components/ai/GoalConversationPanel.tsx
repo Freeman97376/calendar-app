@@ -6,8 +6,11 @@ import type {
   QuestionBatchItem,
 } from '../../domain/types/goalControl'
 import { useGoalConversation } from '../../hooks/useGoalConversation'
+import { useWorkspacePanel } from '../../hooks/useWorkspacePanel'
 import Button from '../ui/Button'
+import GlobalSchedulePanel from '../tools/GlobalSchedulePanel'
 import ActiveToolOnboardingPanel from './ActiveToolOnboardingPanel'
+import InitialPlanReview from './InitialPlanReview'
 import QuestionBatch from './QuestionBatch'
 
 const currentSituationQuestions: QuestionBatchItem[] = [
@@ -177,6 +180,7 @@ export default function GoalConversationPanel({
 
 function LegacyGoalConversationPanel({ onClose }: { onClose: () => void }) {
   const goal = useGoalConversation()
+  const workspace = useWorkspacePanel()
   const [title, setTitle] = useState('')
   const pendingQuestions = questionBatch(goal.messages.at(-1))
   const situationRows = goal.messages
@@ -187,31 +191,43 @@ function LegacyGoalConversationPanel({ onClose }: { onClose: () => void }) {
     <div className="flex min-h-0 flex-1 flex-col bg-white">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">
-            Long-term goal conversation / 长期目标对话
-          </h2>
+          <h2 className="text-base font-semibold text-slate-950">工具编辑器</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Current situation → outcome and capacity → measurement and control → confirmed plan.
+            新建和编辑草稿使用此界面；已激活工具在独立工作区审核变更与全局排程。
           </p>
         </div>
-        <Button onClick={onClose} variant="ghost">
-          Back to AI / 返回
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={goal.newConversation} variant="primary">
+            新建工具
+          </Button>
+          <Button onClick={() => workspace.openPanel('enabled-tools')} variant="ghost">
+            已激活工具
+          </Button>
+          <Button onClick={onClose} variant="ghost">
+            返回日常对话
+          </Button>
+        </div>
       </header>
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
         {goal.threads.length ? (
-          <div className="flex flex-wrap gap-2">
-            {goal.threads.map((item) => (
-              <button
-                className={`rounded border px-2 py-1 text-xs ${goal.thread?.thread_id === item.thread_id ? 'border-emerald-700 bg-emerald-50' : 'border-slate-200'}`}
-                key={item.thread_id}
-                onClick={() => void goal.selectThread(item)}
-                type="button"
-              >
-                {item.title} · {item.status}
-              </button>
-            ))}
-          </div>
+          <section className="rounded-md border border-slate-200 bg-white p-3">
+            <h3 className="text-sm font-semibold text-slate-900">工具草稿</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              这里只显示 draft，不会自动打开任何历史草稿。
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {goal.threads.map((item) => (
+                <button
+                  className={`rounded border px-2 py-1 text-xs ${goal.thread?.thread_id === item.thread_id ? 'border-emerald-700 bg-emerald-50' : 'border-slate-200'}`}
+                  key={item.thread_id}
+                  onClick={() => void goal.selectThread(item)}
+                  type="button"
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         {!goal.thread ? (
@@ -314,72 +330,30 @@ function LegacyGoalConversationPanel({ onClose }: { onClose: () => void }) {
             </Button>
           </section>
         ) : null}
-        {goal.plan ? (
-          <section className="space-y-4 rounded-md border border-emerald-300 bg-white p-4">
-            <div>
-              <p className="text-xs font-semibold uppercase text-emerald-700">
-                Plan preview · confirmation required
-              </p>
-              <input
-                className="mt-2 h-10 w-full rounded border border-slate-300 px-3 text-lg font-semibold"
-                onChange={(event) =>
-                  goal.setPlan((current) =>
-                    current ? { ...current, title: event.target.value } : current,
-                  )
-                }
-                value={goal.plan.title}
-              />
-              <textarea
-                className="mt-2 min-h-20 w-full rounded border border-slate-300 p-3 text-sm"
-                onChange={(event) =>
-                  goal.setPlan((current) =>
-                    current ? { ...current, summary: event.target.value } : current,
-                  )
-                }
-                value={goal.plan.summary}
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <PlanList
-                title="Metrics / 指标"
-                values={goal.plan.metrics.map((item) => item.name)}
-              />
-              <PlanList
-                title="Milestones"
-                values={goal.plan.milestones.map((item) => item.title)}
-              />
-              <PlanList title="Actions" values={goal.plan.actions.map((item) => item.title)} />
-            </div>
-            <div className="flex gap-2">
-              <Button disabled={goal.busy} onClick={() => void goal.activate()} variant="primary">
-                Confirm and activate / 确认并激活
-              </Button>
-              <Button disabled={goal.busy} onClick={() => void goal.generatePlan()}>
-                Regenerate / 重新生成
-              </Button>
-            </div>
-          </section>
+        {goal.plan && !goal.activationMessage ? (
+          <InitialPlanReview
+            blockingIssues={goal.blockingIssues}
+            busy={goal.busy}
+            onActivate={goal.activate}
+            onChange={goal.setPlan}
+            onRegenerate={goal.generatePlan}
+            plan={goal.plan}
+            requiresPlanningDate={goal.requiresPlanningDate}
+          />
         ) : null}
         {goal.busy ? <p className="text-sm text-slate-500">Working…</p> : null}
+        {goal.activationMessage ? (
+          <>
+            <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900">
+              {goal.activationMessage}
+            </p>
+            <GlobalSchedulePanel />
+          </>
+        ) : null}
         {goal.error ? (
           <p className="rounded bg-red-50 p-3 text-sm text-red-800">{goal.error}</p>
         ) : null}
       </div>
-    </div>
-  )
-}
-
-function PlanList({ title, values }: { title: string; values: string[] }) {
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-      <ol className="mt-2 space-y-1 text-xs text-slate-600">
-        {values.map((value, index) => (
-          <li key={`${value}-${index}`}>
-            {index + 1}. {value}
-          </li>
-        ))}
-      </ol>
     </div>
   )
 }

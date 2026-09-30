@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 
 import { RuntimeConfigSchema } from '../domain/schemas/config.schema'
-import type { BackendConfigStatus, BackendConfigUpdate, RuntimeConfig } from '../domain/types'
+import type {
+  AIRuntime,
+  BackendConfigStatus,
+  BackendConfigUpdate,
+  RuntimeConfig,
+  SchedulingPreferences,
+} from '../domain/types'
 import { apiBaseUrl, authenticatedFetch, savePreferences } from '../services/appApiClient'
 import { createAIService, modelForProvider } from '../services/ai/aiServiceFactory'
 import {
@@ -13,6 +19,7 @@ import { configureAIService } from './aiStore'
 import { configureFridgeService } from './fridgeStore'
 
 export type ConfigStore = {
+  aiRuntime: AIRuntime
   backendStatus: BackendConfigStatus | null
   config: RuntimeConfig
   error: string | null
@@ -21,15 +28,23 @@ export type ConfigStore = {
   reset: () => void
   saveBackendConfig: (update: BackendConfigUpdate) => Promise<BackendConfigStatus>
   saveRuntimeConfig: (config: RuntimeConfig) => RuntimeConfig
+  saveSchedulingPreferences: (scheduling: SchedulingPreferences) => Promise<RuntimeConfig>
 }
 
 let runtimeConfigService = new RuntimeConfigService()
 const initialConfig = runtimeConfigService.getConfig()
 let currentConfig = initialConfig
-// Both server and desktop builds route model requests through the Calendar API.
-// Starting in proxy mode also prevents a stale browser config from briefly
-// sending chat requests directly to DeepSeek before bootstrap completes.
-let serverManagedAI = true
+const defaultAIRuntime: AIRuntime = {
+  editable: false,
+  keyConfigured: false,
+  mode: 'backend-managed',
+  planningModel: 'deepseek-reasoner',
+  provider: 'deepseek-compatible',
+  routineModel: 'deepseek-chat',
+  ruleBasedFallback: false,
+}
+let currentAIRuntime = defaultAIRuntime
+let backendConfigEpoch = 0
 let persistPreferences = false
 let authoritativePreferences = false
 // Configuration is served by the Calendar backend, whose address is injected at
@@ -45,14 +60,13 @@ function applyDocumentLanguage(config: RuntimeConfig) {
 
 function applyRuntimeConfig(config: RuntimeConfig) {
   applyDocumentLanguage(config)
-  const aiConfig = serverManagedAI
-    ? {
-        ...config,
-        aiApiBaseUrl: `${apiBaseUrl()}/api/ai`,
-        aiApiKey: 'server-managed',
-        aiProvider: 'api' as const,
-      }
-    : config
+  const aiConfig = {
+    ...config,
+    aiApiBaseUrl: `${apiBaseUrl()}/api/ai`,
+    aiApiKey: 'server-managed',
+    aiApiModel: currentAIRuntime.routineModel,
+    aiProvider: 'api' as const,
+  }
   configureAIService(createAIService(aiConfig, { fetcher: authenticatedFetch }), {
     model: modelForProvider(aiConfig.aiProvider, aiConfig),
     provider: aiConfig.aiProvider,
@@ -65,13 +79,16 @@ function applyRuntimeConfig(config: RuntimeConfig) {
 }
 
 export function configureRuntimeEnvironment(options: {
+  aiRuntime?: AIRuntime
   authoritativePreferences?: boolean
   persistPreferences?: boolean
   serverManagedAI?: boolean
 }) {
+  backendConfigEpoch += 1
   authoritativePreferences = options.authoritativePreferences ?? authoritativePreferences
   persistPreferences = options.persistPreferences ?? persistPreferences
-  serverManagedAI = options.serverManagedAI ?? serverManagedAI
+  currentAIRuntime = options.aiRuntime ?? currentAIRuntime
+  useConfigStore.setState({ aiRuntime: currentAIRuntime })
   applyRuntimeConfig(currentConfig)
 }
 
@@ -103,26 +120,38 @@ export function configureConfigServices(
 }
 
 export const useConfigStore = create<ConfigStore>((set) => ({
+  aiRuntime: defaultAIRuntime,
   backendStatus: null,
   config: initialConfig,
   error: null,
   isLoadingBackend: false,
   loadBackendStatus: async () => {
+    const epoch = ++backendConfigEpoch
     set({ error: null, isLoadingBackend: true })
     try {
       const backendStatus = await backendConfigApi.getStatus()
-      set({ backendStatus, isLoadingBackend: false })
+      if (epoch !== backendConfigEpoch) return backendStatus
+      currentAIRuntime = {
+        ...currentAIRuntime,
+        keyConfigured: backendStatus.deepseek.configured,
+        routineModel: backendStatus.deepseek.model,
+      }
+      set({ aiRuntime: currentAIRuntime, backendStatus, isLoadingBackend: false })
+      applyRuntimeConfig(currentConfig)
       return backendStatus
     } catch (error) {
+      if (epoch !== backendConfigEpoch) throw error
       const message = error instanceof Error ? error.message : 'Unable to load backend config'
       set({ error: message, isLoadingBackend: false })
       throw error
     }
   },
   reset: () => {
+    backendConfigEpoch += 1
     const config = runtimeConfigService.getConfig()
     currentConfig = config
     set({
+      aiRuntime: currentAIRuntime,
       backendStatus: null,
       config,
       error: null,
@@ -131,12 +160,21 @@ export const useConfigStore = create<ConfigStore>((set) => ({
     applyRuntimeConfig(config)
   },
   saveBackendConfig: async (update) => {
+    const epoch = ++backendConfigEpoch
     set({ error: null, isLoadingBackend: true })
     try {
       const backendStatus = await backendConfigApi.updateConfig(update)
-      set({ backendStatus, isLoadingBackend: false })
+      if (epoch !== backendConfigEpoch) return backendStatus
+      currentAIRuntime = {
+        ...currentAIRuntime,
+        keyConfigured: backendStatus.deepseek.configured,
+        routineModel: backendStatus.deepseek.model,
+      }
+      set({ aiRuntime: currentAIRuntime, backendStatus, isLoadingBackend: false })
+      applyRuntimeConfig(currentConfig)
       return backendStatus
     } catch (error) {
+      if (epoch !== backendConfigEpoch) throw error
       const message = error instanceof Error ? error.message : 'Unable to save backend config'
       set({ error: message, isLoadingBackend: false })
       throw error
@@ -155,6 +193,14 @@ export const useConfigStore = create<ConfigStore>((set) => ({
         useConfigStore.setState({ error: message })
       })
     }
+    return saved
+  },
+  saveSchedulingPreferences: async (scheduling) => {
+    const saved = RuntimeConfigSchema.parse({ ...currentConfig, scheduling })
+    await savePreferences({ scheduling: saved.scheduling })
+    currentConfig = saved
+    set({ config: saved, error: null })
+    applyRuntimeConfig(saved)
     return saved
   },
 }))

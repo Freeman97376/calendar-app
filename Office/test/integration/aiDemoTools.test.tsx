@@ -1,5 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../support/mocks/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import App from '../../../src/App'
@@ -309,10 +311,69 @@ class MemoryClient implements LongTermMemoryClientContract {
 
 describe('AI demo tools and Todo long projects', () => {
   let memoryClient: MemoryClient
+  let stagedPlans: Array<Record<string, unknown>>
 
   beforeEach(() => {
     localStorage.clear()
     memoryClient = new MemoryClient()
+    stagedPlans = []
+    server.use(
+      http.get('*/api/memory/projects/:projectId/dashboard', ({ params }) =>
+        HttpResponse.json({
+          success: true,
+          dashboard: {
+            project: memoryClient.projects.find((item) => item.project_id === params.projectId),
+            goal: memoryClient.goals[0] ?? null,
+            actions: [],
+            milestones: [],
+            metrics: [],
+            dependencies: [],
+            effort: [],
+            policy: {
+              active_tier: 'standard',
+              weekly_capacity_minutes: 300,
+              buffer_percent: 20,
+              available_days: [],
+            },
+            health: { status: 'on_track', factors: [], confidence: 'high' },
+            critical_path: { action_ids: [], total_minutes: 0, has_cycle: false },
+            milestone_predictions: [],
+            review: {
+              recommend_replan: false,
+              recommend_pause: false,
+              triggers: [],
+              trigger_count: 0,
+              safety_warnings: [],
+              adjustment_question: '',
+            },
+            pending_check_in: null,
+            versions: [],
+            proposals: [],
+            threads: [],
+            usage: {
+              selected_mode: 'balanced',
+              effective_mode: 'balanced',
+              allowed_modes: ['balanced'],
+              degraded: false,
+            },
+          },
+        }),
+      ),
+      http.post('*/api/plan-change-proposals', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        stagedPlans.push(body)
+        return HttpResponse.json({
+          success: true,
+          proposal: {
+            ...body,
+            proposal_id: 'staged-tool-plan',
+            status: 'pending',
+            created_at: timestamp(),
+            updated_at: timestamp(),
+          },
+        })
+      }),
+    )
     configureConfigServices(new RuntimeConfigService(localStorage, 'test_ai_demo_runtime_config'))
     configureEventSync(null)
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_ai_demo_event_types'))
@@ -405,17 +466,33 @@ describe('AI demo tools and Todo long projects', () => {
 
     expect(await screen.findByText(/Route this to Strength Coach/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Dispatch' }))
+    await waitFor(() => expect(memoryClient.toolRuns).toHaveLength(1))
+    expect(useUIStore.getState().activeWorkspacePanel).toBe('ai')
+    expect(memoryClient.actions).toHaveLength(0)
+    expect(memoryClient.milestones).toHaveLength(0)
+    expect(stagedPlans).toHaveLength(1)
+    await openWorkspaceEntry(user, 'Active Tools')
 
     expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
-    expect(await screen.findByText('Baseline and habit setup')).toBeInTheDocument()
-    expect(screen.getByText('Latest Calendar Plan')).toBeInTheDocument()
-    expect(memoryClient.actions).toEqual(
+    expect(stagedPlans[0].diff).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          energy_needed: expect.stringMatching(/^(high|medium|low)$/),
-          estimated_minutes: 45,
-          priority: expect.stringMatching(/^(high|medium|low)$/),
-          title: 'Complete baseline workout',
+          entity: 'milestone',
+          after: expect.objectContaining({ title: 'Baseline and habit setup' }),
+        }),
+      ]),
+    )
+    expect(screen.getByText('Latest Calendar Plan')).toBeInTheDocument()
+    expect(stagedPlans[0].diff).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: 'action',
+          after: expect.objectContaining({
+            energy_needed: expect.stringMatching(/^(high|medium|low)$/),
+            estimated_minutes: 45,
+            priority: expect.stringMatching(/^(high|medium|low)$/),
+            title: 'Complete baseline workout',
+          }),
         }),
       ]),
     )
@@ -426,13 +503,14 @@ describe('AI demo tools and Todo long projects', () => {
       expect(useEventStore.getState().events).toHaveLength(5)
     })
     expect(await screen.findByText('Applied 5 calendar events.')).toBeInTheDocument()
+    const appliedIds = useEventStore.getState().events.map((event) => event.id)
     await user.click(screen.getByRole('button', { name: 'Apply to calendar' }))
     await waitFor(() => {
       expect(useEventStore.getState().events).toHaveLength(5)
     })
-    expect(
-      await screen.findByText('Applied 0 calendar events. Skipped 5 duplicates.'),
-    ).toBeInTheDocument()
+    // Replaying the same batch returns its original result and entity IDs.
+    expect(await screen.findByText('Applied 5 calendar events.')).toBeInTheDocument()
+    expect(useEventStore.getState().events.map((event) => event.id)).toEqual(appliedIds)
     expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain('Fitness AI')
   }, 15_000)
 
@@ -460,8 +538,21 @@ describe('AI demo tools and Todo long projects', () => {
     await submitAIChat(user, 'Make a full-week SEO learning plan with 5 sessions.')
     expect(await screen.findByText(/Route this to SEO Coach/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Dispatch' }))
+    await waitFor(() => expect(memoryClient.toolRuns).toHaveLength(1))
+    expect(useUIStore.getState().activeWorkspacePanel).toBe('ai')
+    expect(memoryClient.actions).toHaveLength(0)
+    expect(memoryClient.milestones).toHaveLength(0)
+    expect(stagedPlans).toHaveLength(1)
+    await openWorkspaceEntry(user, 'Active Tools')
 
-    expect(await screen.findByText('SEO foundations and keyword research')).toBeInTheDocument()
+    expect(stagedPlans[0].diff).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: 'milestone',
+          after: expect.objectContaining({ title: 'SEO foundations and keyword research' }),
+        }),
+      ]),
+    )
     expect(screen.getByText('SEO learning block: baseline audit')).toBeInTheDocument()
     expect(memoryClient.toolRuns.map((toolRun) => toolRun.tool_name)).toContain(
       'Learning Assistant',

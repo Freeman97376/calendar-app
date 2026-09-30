@@ -12,6 +12,7 @@ export type TodoStore = {
   deleteTodo: (id: string) => Promise<void>
   loadTodos: () => Promise<Todo[]>
   reopenTodo: (id: string) => Promise<Todo>
+  reconcileBatch: (todos: Todo[], deletedIds?: string[]) => void
   reset: (todos?: Todo[]) => void
   updateTodo: (id: string, changes: TodoUpdate) => Promise<Todo>
 }
@@ -79,6 +80,15 @@ export const useTodoStore = create<TodoStore>((set, get) => ({
     get().updateTodo(id, {
       completedAt: undefined,
       status: 'todo',
+    }),
+  reconcileBatch: (upserted, deletedIds = []) =>
+    set((state) => {
+      const deleted = new Set(deletedIds)
+      const byId = new Map(
+        state.todos.filter((todo) => !deleted.has(todo.id)).map((todo) => [todo.id, todo]),
+      )
+      upserted.forEach((todo) => byId.set(todo.id, todo))
+      return { error: null, isLoading: false, todos: Array.from(byId.values()) }
     }),
   reset: (todos = []) => set({ error: null, isLoading: false, todos }),
   updateTodo: async (id, changes) => {

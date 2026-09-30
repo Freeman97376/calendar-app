@@ -11,8 +11,8 @@ function ModalHarness() {
   return (
     <>
       <button onClick={() => setIsOpen(true)}>Open plan editor</button>
-      <a href='#background'>Background link</a>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title='Plan editor'>
+      <a href="#background">Background link</a>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Plan editor">
         <label>
           Plan name
           <input autoFocus />

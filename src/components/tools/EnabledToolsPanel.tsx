@@ -15,6 +15,7 @@ import ToolPlanEditorDialog from './ToolPlanEditorDialog'
 import ToolRoadmapPanel from './ToolRoadmapPanel'
 import GoalControlDashboardPanel from './GoalControlDashboard'
 import ActiveToolResumeSummary from './ActiveToolResumeSummary'
+import GlobalSchedulePanel from './GlobalSchedulePanel'
 
 const actionStatuses: ActionItemStatus[] = ['todo', 'scheduled', 'done', 'blocked', 'skipped']
 const milestoneStatuses: MilestoneStatus[] = [
@@ -88,6 +89,21 @@ export default function EnabledToolsPanel() {
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
+        <GlobalSchedulePanel />
+        {enabledTools.pendingToolEdit ? (
+          <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+            <p>请先接受或放弃现有工具修改，再开始下一次编辑。</p>
+            <Button
+              onClick={() => {
+                const review = document.getElementById('global-schedule-review')
+                review?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                review?.focus()
+              }}
+            >
+              查看并处理现有提案
+            </Button>
+          </div>
+        ) : null}
         {enabledTools.instances.length ? (
           <section className="space-y-2">
             {enabledTools.instances.map((instance) => {
@@ -179,11 +195,14 @@ export default function EnabledToolsPanel() {
                         aria-label={`Active tool status for ${instance.instanceAlias}`}
                         className={`h-8 rounded-md border border-slate-200 px-2 text-xs ${statusClass(instance.status)}`}
                         onChange={(event) =>
-                          void enabledTools.updateProjectStatus(
-                            instance.projectId,
-                            event.target.value as ProjectStatus,
-                          )
+                          void enabledTools
+                            .updateProjectStatus(
+                              instance.projectId,
+                              event.target.value as ProjectStatus,
+                            )
+                            .catch(() => undefined)
                         }
+                        disabled={enabledTools.pendingToolEdit}
                         value={instance.status}
                       >
                         {projectStatuses.map((status) => (
@@ -251,7 +270,9 @@ export default function EnabledToolsPanel() {
                 onSubmit={(event) => {
                   event.preventDefault()
                   if (!activeInstance || !canSaveAlias) return
-                  void enabledTools.renameActiveTool(activeInstance, aliasDraft)
+                  void enabledTools
+                    .renameActiveTool(activeInstance, aliasDraft)
+                    .catch(() => undefined)
                 }}
               >
                 <label className="sr-only" htmlFor="active-tool-alias">
@@ -263,7 +284,7 @@ export default function EnabledToolsPanel() {
                   onChange={(event) => setAliasDraft(event.target.value)}
                   value={aliasDraft}
                 />
-                <Button disabled={!canSaveAlias} type="submit">
+                <Button disabled={!canSaveAlias || enabledTools.pendingToolEdit} type="submit">
                   {t('enabled.saveName')}
                 </Button>
               </form>
@@ -283,7 +304,11 @@ export default function EnabledToolsPanel() {
                     {activeInstance.adapterId ? ` · ${activeInstance.adapterId}` : ''}
                   </p>
                 </div>
-                <Button onClick={() => setIsPlanEditorOpen(true)} variant="ghost">
+                <Button
+                  disabled={enabledTools.pendingToolEdit}
+                  onClick={() => setIsPlanEditorOpen(true)}
+                  variant="ghost"
+                >
                   {t('enabled.editPlanAndFeatures')}
                 </Button>
               </div>
@@ -439,7 +464,16 @@ export default function EnabledToolsPanel() {
                     {t('enabled.calendarPreview')}
                   </h4>
                   <Button
-                    onClick={() => approvalDrawer.open('active-tool-calendar-drafts')}
+                    disabled={enabledTools.isDetailLoading || !enabledTools.calendarDraftToolRunId}
+                    onClick={() =>
+                      approvalDrawer.open({
+                        drafts: enabledTools.calendarDrafts,
+                        projectId: activeInstance.projectId,
+                        source: 'active-tool-calendar-drafts',
+                        toolName: activeInstance.toolName,
+                        toolRunId: enabledTools.calendarDraftToolRunId,
+                      })
+                    }
                     variant="primary"
                   >
                     {t('enabled.reviewPlan')}

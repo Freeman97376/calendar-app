@@ -1,6 +1,139 @@
 {
   "components": {
     "schemas": {
+      "AIConversationCreatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "title": {
+            "default": "New AI conversation",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "AIConversationCreatePayload",
+        "type": "object"
+      },
+      "AIConversationMessagePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "structured": {
+            "additionalProperties": true,
+            "title": "Structured",
+            "type": "object"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "AIConversationMessagePayload",
+        "type": "object"
+      },
+      "AIConversationUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "AIConversationUpdatePayload",
+        "type": "object"
+      },
+      "AIPlanReferencePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "messageId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Messageid",
+            "type": "string"
+          },
+          "threadId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Threadid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId",
+          "messageId"
+        ],
+        "title": "AIPlanReferencePayload",
+        "type": "object"
+      },
       "ActivationFunnelEventPayload": {
         "additionalProperties": false,
         "properties": {
@@ -156,6 +289,419 @@
           "image"
         ],
         "title": "Body_analyze_receipt_api_fridge_receipt_analyze_post",
+        "type": "object"
+      },
+      "CalendarActionBatchPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "create_event": "#/components/schemas/CalendarBatchCreateEventAction",
+                  "create_todo": "#/components/schemas/CalendarBatchCreateTodoAction",
+                  "delete_event": "#/components/schemas/CalendarBatchDeleteEventAction",
+                  "delete_todo": "#/components/schemas/CalendarBatchDeleteTodoAction",
+                  "schedule_todo": "#/components/schemas/CalendarBatchScheduleTodoAction",
+                  "update_event": "#/components/schemas/CalendarBatchUpdateEventAction",
+                  "update_todo": "#/components/schemas/CalendarBatchUpdateTodoAction"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CalendarBatchCreateEventAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchUpdateEventAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchDeleteEventAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchCreateTodoAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchUpdateTodoAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchDeleteTodoAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CalendarBatchScheduleTodoAction"
+                }
+              ]
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Actions",
+            "type": "array"
+          },
+          "aiPlanOperation": {
+            "anyOf": [
+              {
+                "enum": [
+                  "apply",
+                  "copy_to_todos"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aiplanoperation"
+          },
+          "aiPlanRef": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AIPlanReferencePayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "idempotencyKey": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          },
+          "source": {
+            "enum": [
+              "ai-action-plan",
+              "active-tool-calendar-drafts",
+              "global-schedule-proposal"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "toolRunId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolrunid"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "source",
+          "actions"
+        ],
+        "title": "CalendarActionBatchPayload",
+        "type": "object"
+      },
+      "CalendarBatchCreateEventAction": {
+        "additionalProperties": false,
+        "properties": {
+          "actionId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actionid"
+          },
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventCreatePayload"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          },
+          "skipIfDuplicate": {
+            "default": true,
+            "title": "Skipifduplicate",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "create_event",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "event"
+        ],
+        "title": "CalendarBatchCreateEventAction",
+        "type": "object"
+      },
+      "CalendarBatchCreateTodoAction": {
+        "additionalProperties": false,
+        "properties": {
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "todo": {
+            "$ref": "#/components/schemas/TodoCreatePayload"
+          },
+          "type": {
+            "const": "create_todo",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "todo"
+        ],
+        "title": "CalendarBatchCreateTodoAction",
+        "type": "object"
+      },
+      "CalendarBatchDeleteEventAction": {
+        "additionalProperties": false,
+        "properties": {
+          "actionId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actionid"
+          },
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "eventId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventid",
+            "type": "string"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          },
+          "type": {
+            "const": "delete_event",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "eventId"
+        ],
+        "title": "CalendarBatchDeleteEventAction",
+        "type": "object"
+      },
+      "CalendarBatchDeleteTodoAction": {
+        "additionalProperties": false,
+        "properties": {
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "todoId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Todoid",
+            "type": "string"
+          },
+          "type": {
+            "const": "delete_todo",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "todoId"
+        ],
+        "title": "CalendarBatchDeleteTodoAction",
+        "type": "object"
+      },
+      "CalendarBatchScheduleTodoAction": {
+        "additionalProperties": false,
+        "properties": {
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventCreatePayload"
+          },
+          "todoId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Todoid",
+            "type": "string"
+          },
+          "type": {
+            "const": "schedule_todo",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "todoId",
+          "event"
+        ],
+        "title": "CalendarBatchScheduleTodoAction",
+        "type": "object"
+      },
+      "CalendarBatchUpdateEventAction": {
+        "additionalProperties": false,
+        "properties": {
+          "actionId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actionid"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/EventUpdatePayload"
+          },
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "eventId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Eventid",
+            "type": "string"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectid"
+          },
+          "type": {
+            "const": "update_event",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "eventId",
+          "changes"
+        ],
+        "title": "CalendarBatchUpdateEventAction",
+        "type": "object"
+      },
+      "CalendarBatchUpdateTodoAction": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "$ref": "#/components/schemas/TodoUpdatePayload"
+          },
+          "clientActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Clientactionid",
+            "type": "string"
+          },
+          "todoId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Todoid",
+            "type": "string"
+          },
+          "type": {
+            "const": "update_todo",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientActionId",
+          "type",
+          "todoId",
+          "changes"
+        ],
+        "title": "CalendarBatchUpdateTodoAction",
         "type": "object"
       },
       "CheckInAnswerPayload": {
@@ -1449,6 +1995,110 @@
         "title": "MemoryProjectForGoalCreatePayload",
         "type": "object"
       },
+      "PersonalAIStatus": {
+        "properties": {
+          "baseUrl": {
+            "title": "Baseurl",
+            "type": "string"
+          },
+          "editable": {
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "keyConfigured": {
+            "title": "Keyconfigured",
+            "type": "boolean"
+          },
+          "personalKeyConfigured": {
+            "title": "Personalkeyconfigured",
+            "type": "boolean"
+          },
+          "planningModel": {
+            "title": "Planningmodel",
+            "type": "string"
+          },
+          "routineModel": {
+            "title": "Routinemodel",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "personal",
+              "server",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "editable",
+          "personalKeyConfigured",
+          "keyConfigured",
+          "source",
+          "baseUrl",
+          "routineModel",
+          "planningModel"
+        ],
+        "title": "PersonalAIStatus",
+        "type": "object"
+      },
+      "PersonalAIUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "apiKey": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikey"
+          },
+          "planningModel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "deepseek-chat",
+                  "deepseek-reasoner"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planningmodel"
+          },
+          "routineModel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "deepseek-chat",
+                  "deepseek-reasoner"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routinemodel"
+          }
+        },
+        "title": "PersonalAIUpdate",
+        "type": "object"
+      },
       "PreUpdateBackupPayload": {
         "additionalProperties": false,
         "properties": {
@@ -1652,6 +2302,16 @@
             ],
             "title": "Layoutpanelsizepercent"
           },
+          "scheduling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchedulingPreferencesPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "timezoneOverride": {
             "anyOf": [
               {
@@ -1810,6 +2470,457 @@
           "frequency"
         ],
         "title": "RecurrenceRulePayload",
+        "type": "object"
+      },
+      "RegistrationPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "inviteCode": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Invitecode",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 12,
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "inviteCode"
+        ],
+        "title": "RegistrationPayload",
+        "type": "object"
+      },
+      "SchedulingActionPatchPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "actionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Actionid",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "dueDate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duedate"
+          },
+          "estimatedMinutes": {
+            "anyOf": [
+              {
+                "maximum": 100800.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimatedminutes"
+          },
+          "executionTier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "minimum",
+                  "standard",
+                  "stretch"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executiontier"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "actionId"
+        ],
+        "title": "SchedulingActionPatchPayload",
+        "type": "object"
+      },
+      "SchedulingDependencyPatchPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "predecessorActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Predecessoractionid",
+            "type": "string"
+          },
+          "successorActionId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Successoractionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "predecessorActionId",
+          "successorActionId"
+        ],
+        "title": "SchedulingDependencyPatchPayload",
+        "type": "object"
+      },
+      "SchedulingPolicyPatchPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "availableDays": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 7,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availabledays"
+          },
+          "bufferPercent": {
+            "anyOf": [
+              {
+                "maximum": 95.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bufferpercent"
+          },
+          "weeklyCapacityMinutes": {
+            "anyOf": [
+              {
+                "maximum": 10080.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weeklycapacityminutes"
+          }
+        },
+        "title": "SchedulingPolicyPatchPayload",
+        "type": "object"
+      },
+      "SchedulingPreferencesPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "maxBlockMinutes": {
+            "default": 120,
+            "maximum": 480.0,
+            "minimum": 15.0,
+            "title": "Maxblockminutes",
+            "type": "integer"
+          },
+          "minBlockMinutes": {
+            "default": 30,
+            "maximum": 240.0,
+            "minimum": 5.0,
+            "title": "Minblockminutes",
+            "type": "integer"
+          },
+          "setupCompleted": {
+            "default": false,
+            "title": "Setupcompleted",
+            "type": "boolean"
+          },
+          "workWindows": {
+            "items": {
+              "$ref": "#/components/schemas/SchedulingWindowPayload"
+            },
+            "maxItems": 28,
+            "title": "Workwindows",
+            "type": "array"
+          }
+        },
+        "title": "SchedulingPreferencesPayload",
+        "type": "object"
+      },
+      "SchedulingProjectChangesPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SchedulingActionPatchPayload"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "dependencies": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SchedulingDependencyPatchPayload"
+                },
+                "maxItems": 2000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependencies"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchedulingPolicyPatchPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "paused",
+                  "completed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "SchedulingProjectChangesPayload",
+        "type": "object"
+      },
+      "SchedulingProjectPatchPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "baseVersionId": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseversionid"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/SchedulingProjectChangesPayload"
+          },
+          "projectId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Projectid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "changes"
+        ],
+        "title": "SchedulingProjectPatchPayload",
+        "type": "object"
+      },
+      "SchedulingRecomputePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "projectPatch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchedulingProjectPatchPayload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "default": "manual",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "SchedulingRecomputePayload",
+        "type": "object"
+      },
+      "SchedulingResolvePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "accept",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "inputFingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Inputfingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "inputFingerprint"
+        ],
+        "title": "SchedulingResolvePayload",
+        "type": "object"
+      },
+      "SchedulingWindowPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ],
+            "title": "Day",
+            "type": "string"
+          },
+          "end": {
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "start",
+          "end"
+        ],
+        "title": "SchedulingWindowPayload",
         "type": "object"
       },
       "SnapshotEventPayload": {
@@ -3103,6 +4214,714 @@
         "summary": "Proxy Ai"
       }
     },
+    "/api/ai/conversations": {
+      "get": {
+        "operationId": "list_ai_conversations_api_ai_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Ai Conversations Api Ai Conversations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Ai Conversations"
+      },
+      "post": {
+        "operationId": "create_ai_conversation_api_ai_conversations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIConversationCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Ai Conversation Api Ai Conversations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Ai Conversation"
+      }
+    },
+    "/api/ai/conversations/{thread_id}": {
+      "delete": {
+        "operationId": "delete_ai_conversation_api_ai_conversations__thread_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Ai Conversation Api Ai Conversations  Thread Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Ai Conversation"
+      },
+      "get": {
+        "operationId": "get_ai_conversation_api_ai_conversations__thread_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ai Conversation Api Ai Conversations  Thread Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ai Conversation"
+      },
+      "patch": {
+        "operationId": "update_ai_conversation_api_ai_conversations__thread_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIConversationUpdatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Ai Conversation Api Ai Conversations  Thread Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Ai Conversation"
+      }
+    },
+    "/api/ai/conversations/{thread_id}/messages": {
+      "post": {
+        "operationId": "add_ai_conversation_message_api_ai_conversations__thread_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIConversationMessagePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Ai Conversation Message Api Ai Conversations  Thread Id  Messages Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Ai Conversation Message"
+      }
+    },
+    "/api/ai/conversations/{thread_id}/messages/{message_id}/action-plan/dismiss": {
+      "post": {
+        "operationId": "dismiss_ai_action_plan_api_ai_conversations__thread_id__messages__message_id__action_plan_dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dismiss Ai Action Plan Api Ai Conversations  Thread Id  Messages  Message Id  Action Plan Dismiss Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Ai Action Plan"
+      }
+    },
+    "/api/ai/settings": {
+      "delete": {
+        "operationId": "personal_ai_remove_api_ai_settings_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalAIStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Personal Ai Remove"
+      },
+      "get": {
+        "operationId": "personal_ai_status_api_ai_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalAIStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Personal Ai Status"
+      },
+      "patch": {
+        "operationId": "personal_ai_save_api_ai_settings_patch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalAIUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalAIStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Personal Ai Save"
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",
@@ -3267,6 +5086,46 @@
         "summary": "Me"
       }
     },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Register Api Auth Register Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register"
+      }
+    },
     "/api/bootstrap": {
       "get": {
         "operationId": "bootstrap_api_bootstrap_get",
@@ -3327,6 +5186,78 @@
           }
         },
         "summary": "Bootstrap"
+      }
+    },
+    "/api/calendar/action-batches": {
+      "post": {
+        "operationId": "apply_calendar_action_batch_api_calendar_action_batches_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarActionBatchPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Calendar Action Batch Api Calendar Action Batches Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Calendar Action Batch"
       }
     },
     "/api/calendar/event-types": {
@@ -8853,6 +10784,221 @@
           }
         },
         "summary": "Rollback Version"
+      }
+    },
+    "/api/scheduling/proposals/current": {
+      "get": {
+        "operationId": "current_schedule_proposal_api_scheduling_proposals_current_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Current Schedule Proposal Api Scheduling Proposals Current Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Current Schedule Proposal"
+      }
+    },
+    "/api/scheduling/proposals/recompute": {
+      "post": {
+        "operationId": "recompute_schedule_api_scheduling_proposals_recompute_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingRecomputePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Recompute Schedule Api Scheduling Proposals Recompute Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recompute Schedule"
+      }
+    },
+    "/api/scheduling/proposals/{proposal_id}/resolve": {
+      "post": {
+        "operationId": "resolve_schedule_proposal_api_scheduling_proposals__proposal_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Desktop-Token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Desktop-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Session",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "calendar_csrf",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Calendar Csrf",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingResolvePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Schedule Proposal Api Scheduling Proposals  Proposal Id  Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Schedule Proposal"
       }
     },
     "/api/tool-presets": {

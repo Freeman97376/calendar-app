@@ -12,6 +12,7 @@ afterEach(() => {
   configureApiRuntime({ baseUrl: 'http://127.0.0.1:8787', csrfToken: '', desktopToken: '' })
   setApiUnauthorizedHandler(null)
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 describe('authenticatedFetch', () => {
@@ -148,5 +149,72 @@ describe('LongTermMemoryClient', () => {
       project: { title: 'Project' },
     })
     expect(result.project.goal_id).toBe(result.goal.goal_id)
+  })
+})
+
+describe('deployment base paths', () => {
+  async function clientFor(base: string, override = '', legacyOverride = '') {
+    vi.stubEnv('BASE_URL', base)
+    vi.stubEnv('VITE_API_BASE_URL', override)
+    vi.stubEnv('VITE_FRIDGE_API_BASE_URL', legacyOverride)
+    vi.resetModules()
+    return import('../../../../src/services/appApiClient')
+  }
+
+  it('keeps root builds on the same-origin API', async () => {
+    const client = await clientFor('/')
+    expect(client.apiUrl('/api/bootstrap')).toBe('/api/bootstrap')
+  })
+
+  it('routes every API family through the deployment path when override fields are blank', async () => {
+    const client = await clientFor('/calendar/', '  ', '')
+    for (const endpoint of [
+      '/api/bootstrap',
+      '/api/auth/register',
+      '/api/auth/login',
+      '/api/calendar/events',
+      '/api/memory/goals',
+      '/api/fridge/items',
+      '/api/ai/chat/completions',
+      '/api/data/export',
+    ]) {
+      expect(client.apiUrl(endpoint)).toBe(`/calendar${endpoint}`)
+    }
+  })
+
+  it('sends registration to the subpath with same-origin credentials', async () => {
+    const client = await clientFor('/calendar/')
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          { success: true, user: { id: 'synthetic-id', username: 'test-user', role: 'user' } },
+          { status: 201 },
+        ),
+      )
+    vi.stubGlobal('fetch', fetcher)
+    await client.registerRequest('test-user', 'synthetic-password', 'synthetic-invite')
+    expect(fetcher.mock.calls[0][0]).toBe('/calendar/api/auth/register')
+    expect(fetcher.mock.calls[0][1].credentials).toBe('include')
+  })
+
+  it('keeps explicit API and legacy overrides available', async () => {
+    const explicit = await clientFor(
+      '/calendar/',
+      'https://api.example.test/app/',
+      'https://legacy.example.test/',
+    )
+    expect(explicit.apiUrl('/api/bootstrap')).toBe('https://api.example.test/app/api/bootstrap')
+    const legacy = await clientFor('/calendar/', '', 'https://legacy.example.test/')
+    expect(legacy.apiUrl('/api/bootstrap')).toBe('https://legacy.example.test/api/bootstrap')
+  })
+
+  it('lets the desktop runtime replace the web deployment path', async () => {
+    const client = await clientFor('/calendar/')
+    client.configureApiRuntime({
+      baseUrl: 'http://127.0.0.1:45678/',
+      desktopToken: 'synthetic-launch',
+    })
+    expect(client.apiUrl('/api/bootstrap')).toBe('http://127.0.0.1:45678/api/bootstrap')
   })
 })

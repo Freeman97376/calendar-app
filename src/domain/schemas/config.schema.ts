@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SchedulingPreferencesSchema } from './scheduling.schema'
 
 export const AIProviderSchema = z.preprocess(
   (value) => {
@@ -35,6 +36,12 @@ export const RuntimeConfigSchema = z.object({
   defaultTodoPriority: z.enum(['high', 'medium', 'low']).default('medium'),
   fridgeApiBaseUrl: z.string().trim().default(''),
   timezoneOverride: z.string().trim().default(''),
+  scheduling: SchedulingPreferencesSchema.default({
+    setupCompleted: false,
+    workWindows: [],
+    minBlockMinutes: 30,
+    maxBlockMinutes: 120,
+  }),
   deepseekApiKey: z.string().default(''),
   deepseekModel: z.string().trim().min(1).default('deepseek-chat'),
   ollamaBaseUrl: z.string().trim().min(1).default('http://localhost:11434'),

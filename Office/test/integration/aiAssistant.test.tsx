@@ -35,9 +35,11 @@ import { configureTodoService, useTodoStore } from '../../../src/store/todoStore
 import {
   configureLongTermMemoryClient,
   type LongTermMemoryClientContract,
+  useLongTermMemoryStore,
 } from '../../../src/store/longTermMemoryStore'
 import { useUIStore } from '../../../src/store/uiStore'
 import { server } from '../support/mocks/server'
+import { configureMockBatchTodoPersistence } from '../support/mocks/handlers'
 
 const suggestion: AIBreakdownResult = {
   goal: 'Prepare for interview',
@@ -221,6 +223,7 @@ async function submitComposer(
 
 async function reviewPlan() {
   await screen.findByRole('button', { name: 'Review plan' })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review plan' })).toBeEnabled())
   await userEvent.setup().click(screen.getByRole('button', { name: 'Review plan' }))
 }
 
@@ -383,6 +386,16 @@ describe('AI Assistant - integration', () => {
     configureEventSync(null)
     configureEventTypeService(new LocalEventTypeService(localStorage, 'test_ai_event_types'))
     configureTodoService(new LocalTodoService(localStorage, 'test_ai_todos'))
+    configureMockBatchTodoPersistence((upserts, deletedIds) => {
+      const stored = JSON.parse(localStorage.getItem('test_ai_todos') ?? '[]') as Array<
+        Record<string, unknown>
+      >
+      const replaced = new Set([...deletedIds, ...upserts.map((todo) => String(todo.id))])
+      localStorage.setItem(
+        'test_ai_todos',
+        JSON.stringify([...stored.filter((todo) => !replaced.has(String(todo.id))), ...upserts]),
+      )
+    })
     configureLongTermMemoryClient(createMemoryClient().client)
     useAIStore.getState().reset()
     useCalendarStore.getState().reset({ focusedDate: '2026-05-25', view: 'month' })
@@ -534,6 +547,57 @@ describe('AI Assistant - integration', () => {
     )
   })
 
+  it('turns a chat delete request into approval and deletes only after apply', async () => {
+    const eventToDelete = await useEventStore.getState().createEvent({
+      title: 'Canceled lunch',
+      startAt: '2026-05-25T18:00:00.000Z',
+      endAt: '2026-05-25T19:00:00.000Z',
+    })
+    configureAIService(
+      new MockAIService(
+        async () => suggestion,
+        undefined,
+        true,
+        async () => ({
+          reply: 'I prepared Canceled lunch for deletion. Review it before applying.',
+          actionPlan: {
+            summary: 'Delete canceled lunch.',
+            actions: [
+              {
+                type: 'delete_event',
+                eventId: eventToDelete.id,
+                reason: 'Matched the only event titled Canceled lunch.',
+              },
+            ],
+            warnings: [],
+          },
+        }),
+      ),
+    )
+    const user = await openPanel()
+
+    await submitComposer(user, 'chat', 'Delete Canceled lunch.')
+
+    expect(await screen.findByText('Delete canceled lunch.')).toBeInTheDocument()
+    expect(useEventStore.getState().events.some((event) => event.id === eventToDelete.id)).toBe(
+      true,
+    )
+
+    await reviewPlan()
+    expect(screen.getByText(`Delete event ${eventToDelete.id}`)).toBeInTheDocument()
+    expect(useEventStore.getState().events.some((event) => event.id === eventToDelete.id)).toBe(
+      true,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Apply Actions' }))
+
+    await waitFor(() => {
+      expect(useEventStore.getState().events.some((event) => event.id === eventToDelete.id)).toBe(
+        false,
+      )
+    })
+  })
+
   it('plans and applies todo create, update, delete, and schedule actions', async () => {
     const todoToUpdate = await useTodoStore.getState().createTodo({ title: 'Draft proposal' })
     const todoToDelete = await useTodoStore.getState().createTodo({ title: 'Old task' })
@@ -603,25 +667,15 @@ describe('AI Assistant - integration', () => {
     )
   })
 
-  it('plans and applies an action with the local provider when no API key is configured', async () => {
+  it('shows backend-managed AI truth without offering a local provider switch', async () => {
+    configureAIService(new MockAIService(async () => suggestion))
     const user = await openPanel()
 
     await user.click(screen.getByText('Chat settings'))
-    await user.selectOptions(screen.getByLabelText('AI provider'), 'local')
-    await submitComposer(user, 'plan', 'add dinner with friend tomorrow at 7pm')
-    await reviewPlan()
-    await user.click(await screen.findByLabelText('I reviewed and confirmed the near-term times.'))
-    await user.click(await screen.findByRole('button', { name: 'Apply Actions' }))
 
-    await waitFor(() => {
-      expect(useEventStore.getState().events).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            title: expect.stringContaining('dinner with friend'),
-          }),
-        ]),
-      )
-    })
+    expect(screen.getAllByText(/Backend managed/i).length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('AI provider')).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Local' })).not.toBeInTheDocument()
   })
 
   it('requires confirmation before applying near-term event times', async () => {
@@ -1080,6 +1134,53 @@ describe('AI Assistant - integration', () => {
     expect(await screen.findByText('Active Tool Route')).toBeInTheDocument()
     expect(screen.getAllByText(/Fitness AI plan \| Fitness AI/).length).toBeGreaterThan(0)
     expect(screen.queryByRole('heading', { name: 'Enable Fitness AI?' })).not.toBeInTheDocument()
+  })
+
+  it('keeps an explicit Active Tool in the conversation and clears it once after removal', async () => {
+    const goal = goalFixture('goal-fitness-context', 'Fitness AI context')
+    const project = projectFixture(
+      'project-fitness-context',
+      goal.goal_id,
+      'Fitness AI context',
+      createActiveToolMetadata({
+        activationSummary: 'Persistent fitness context',
+        instanceAlias: 'Fitness AI context',
+        parentTemplateId: 'fitness-ai',
+        parentTemplateLabel: 'Fitness AI',
+        routeTags: ['fitness'],
+        sourceToolId: 'fitness-ai',
+        templateId: 'fitness-ai',
+        toolKind: 'fitness',
+        toolName: 'Fitness AI',
+      }),
+    )
+    const memory = createMemoryClient([goal], [project])
+    configureLongTermMemoryClient(memory.client)
+    const originalSelect = useAIStore.getState().setSelectedEnabledToolProjectId
+    const selectProject = vi.fn(originalSelect)
+    useAIStore.setState({ setSelectedEnabledToolProjectId: selectProject })
+
+    try {
+      const user = await openPanel()
+      const selector = await screen.findByLabelText('当前对话工具上下文')
+      expect(screen.getByRole('option', { name: 'Fitness AI context · Fitness AI' })).toBeVisible()
+
+      await user.selectOptions(selector, project.project_id)
+
+      expect(selector).toHaveValue(project.project_id)
+      expect(screen.getByText('当前工具结果与审批')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: '全局工具排程提案' })).toBeInTheDocument()
+
+      memory.state.projects = []
+      await useLongTermMemoryStore.getState().loadOverview()
+
+      await waitFor(() => expect(selector).toHaveValue(''))
+      expect(screen.queryByText('当前工具结果与审批')).not.toBeInTheDocument()
+      await useLongTermMemoryStore.getState().loadOverview()
+      expect(selectProject.mock.calls.filter(([value]) => value === null)).toHaveLength(1)
+    } finally {
+      useAIStore.setState({ setSelectedEnabledToolProjectId: originalSelect })
+    }
   })
 
   it('continues ordinary chat when the user declines a matched template', async () => {

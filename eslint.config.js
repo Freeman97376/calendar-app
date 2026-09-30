@@ -42,6 +42,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist',
+      'dist-server',
       'dist-desktop',
       'build',
       'coverage',

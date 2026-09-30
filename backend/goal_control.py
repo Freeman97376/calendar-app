@@ -41,6 +41,9 @@ from .database import (
     create_session_factory,
     initialize_schema,
 )
+from .scheduling_rules import DAY_CODES, canonical_day
+from .user_transaction import user_write_transaction
+from .ai_plan_review import new_review, plan_message
 
 
 USAGE_MODES = ("economy", "balanced", "quality")
@@ -108,11 +111,12 @@ DEFAULT_REPLAN_THRESHOLDS = {
     "consecutiveRequiredActionMisses": 3,
 }
 
+# Reasoning planning budgets cover both reasoning tokens and the final JSON.
 MODE_LIMITS = {
     "economy": {
         "routine": {"input": 2500, "output": 400},
         "review": {"input": 2500, "output": 400},
-        "planning": {"input": 10000, "output": 2000},
+        "planning": {"input": 10000, "output": 2000, "reasoningOutput": 8192},
         "route": {"input": 1200, "output": 160},
         "recentMessages": 2,
         "recentCheckIns": 1,
@@ -120,7 +124,7 @@ MODE_LIMITS = {
     "balanced": {
         "routine": {"input": 4000, "output": 800},
         "review": {"input": 6000, "output": 1000},
-        "planning": {"input": 16000, "output": 3000},
+        "planning": {"input": 16000, "output": 3000, "reasoningOutput": 16384},
         "route": {"input": 1500, "output": 200},
         "recentMessages": 6,
         "recentCheckIns": 2,
@@ -128,7 +132,7 @@ MODE_LIMITS = {
     "quality": {
         "routine": {"input": 8000, "output": 1200},
         "review": {"input": 10000, "output": 1600},
-        "planning": {"input": 24000, "output": 4000},
+        "planning": {"input": 24000, "output": 4000, "reasoningOutput": 24576},
         "route": {"input": 2500, "output": 300},
         "recentMessages": 12,
         "recentCheckIns": 4,
@@ -248,7 +252,7 @@ def _activation_date(value: object, field: str) -> None:
         if date.fromisoformat(text).isoformat() != text:
             raise ValueError(text)
     except ValueError as error:
-        raise GoalControlValidationError(f"{field} must use YYYY-MM-DD.") from error
+        raise GoalControlValidationError(f"{field} 必须使用 YYYY-MM-DD。") from error
 
 
 def validate_activation_plan_payload(payload: dict[str, Any]) -> None:
@@ -560,7 +564,13 @@ class GoalControlService:
             raise GoalControlNotFoundError(thread_id)
         return record
 
-    def list_threads(self, *, project_id: str | None = None, include_archived: bool = False) -> list[dict[str, Any]]:
+    def list_threads(
+        self,
+        *,
+        project_id: str | None = None,
+        include_archived: bool = False,
+        kind: str | None = None,
+    ) -> list[dict[str, Any]]:
         with self.session_factory() as session:
             query = select(ConversationThreadRecord).where(ConversationThreadRecord.user_id == self.user_id)
             if project_id:
@@ -568,13 +578,17 @@ class GoalControlService:
                 query = query.where(ConversationThreadRecord.project_id == project_id)
             if not include_archived:
                 query = query.where(ConversationThreadRecord.status != "archived")
+            if kind:
+                query = query.where(ConversationThreadRecord.kind == kind)
             records = session.scalars(query.order_by(ConversationThreadRecord.updated_at.desc())).all()
             return [thread_dict(record) for record in records]
 
     def create_thread(self, payload: dict[str, Any]) -> dict[str, Any]:
         timestamp = now_iso()
         thread_id = str(payload.get("thread_id") or new_id("thread"))
-        kind = str(payload.get("kind") or "goal_draft")
+        kind = str(payload.get("kind") or "goal_draft").strip()[:24]
+        if not kind:
+            raise GoalControlValidationError("Conversation kind is required.")
         status = str(payload.get("status") or "draft")
         if status not in THREAD_STATUSES:
             raise GoalControlValidationError("Invalid conversation status.")
@@ -584,7 +598,12 @@ class GoalControlService:
         if not isinstance(metadata, dict):
             raise GoalControlValidationError("metadata must be an object.")
         journey_id = str(metadata.get("journeyId") or "").strip()
-        with self.session_factory.begin() as session:
+        with user_write_transaction(self.session_factory, self.user_id) as session:
+            existing_thread = session.scalar(select(ConversationThreadRecord).where(ConversationThreadRecord.user_id == self.user_id, ConversationThreadRecord.thread_id == thread_id))
+            if existing_thread is not None:
+                if existing_thread.kind != kind or existing_thread.title != str(payload.get("title") or "New long-term goal")[:200]:
+                    raise GoalControlConflictError("Conversation ID already belongs to different content.")
+                return thread_dict(existing_thread)
             if journey_id:
                 candidates = session.scalars(
                     select(ConversationThreadRecord).where(
@@ -645,6 +664,35 @@ class GoalControlService:
             ).all()
             return {**thread_dict(record), "messages": [message_dict(message) for message in messages]}
 
+    def get_thread_of_kind(self, thread_id: str, kind: str) -> dict[str, Any]:
+        value = self.get_thread(thread_id)
+        if value["kind"] != kind:
+            raise GoalControlNotFoundError(thread_id)
+        return value
+
+    def delete_thread(self, thread_id: str, *, kind: str | None = None) -> None:
+        with self.session_factory.begin() as session:
+            record = self._thread(session, thread_id)
+            if kind and record.kind != kind:
+                raise GoalControlNotFoundError(thread_id)
+            session.delete(record)
+
+    def validate_ai_context(
+        self,
+        *,
+        project_id: str | None,
+        thread_id: str | None,
+    ) -> None:
+        with self.session_factory() as session:
+            project = self._project(session, project_id) if project_id else None
+            thread = self._thread(session, thread_id) if thread_id else None
+            if thread is not None and thread.status == "archived":
+                raise GoalControlConflictError("Archived conversations cannot be used as AI context.")
+            if project is not None and thread is not None and thread.project_id != project.project_id:
+                raise GoalControlValidationError(
+                    "thread_id does not belong to the selected project."
+                )
+
     def update_thread(self, thread_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self.session_factory.begin() as session:
             record = self._thread(session, thread_id)
@@ -703,10 +751,26 @@ class GoalControlService:
         if len(summary_update) > 12000:
             raise GoalControlValidationError("summaryUpdate is too long.")
         timestamp = now_iso()
-        with self.session_factory.begin() as session:
+        with user_write_transaction(self.session_factory, self.user_id) as session:
             thread = self._thread(session, thread_id)
+            if thread.kind == "assistant_chat" and thread.status == "archived":
+                raise GoalControlConflictError("Archived conversations cannot receive new messages.")
+            structured.pop("actionPlanReview", None)
+            message_id = str(payload.get("message_id") or new_id("msg"))
+            existing = session.scalar(select(ConversationMessageRecord).where(
+                ConversationMessageRecord.user_id == self.user_id,
+                ConversationMessageRecord.message_id == message_id,
+            ))
+            if existing is not None:
+                saved = copy.deepcopy(existing.structured_json or {})
+                saved.pop("actionPlanReview", None)
+                if existing.thread_id != thread_id or existing.role != role or existing.content != content or saved != structured:
+                    raise GoalControlConflictError("Message ID already belongs to different content.")
+                return message_dict(existing)
+            if thread.kind == "assistant_chat" and role == "assistant" and isinstance(structured.get("actionPlan"), dict):
+                structured["actionPlanReview"] = new_review()
             record = ConversationMessageRecord(
-                message_id=str(payload.get("message_id") or new_id("msg")),
+                message_id=message_id,
                 user_id=self.user_id,
                 thread_id=thread_id,
                 role=role,
@@ -721,6 +785,20 @@ class GoalControlService:
                 thread.rolling_summary = summary_update
                 thread.summary_through_message_id = record.message_id
         return message_dict(record)
+
+    def dismiss_ai_action_plan(self, thread_id: str, message_id: str) -> dict[str, Any]:
+        with user_write_transaction(self.session_factory, self.user_id) as session:
+            try:
+                record, _thread, body, review = plan_message(session, self.user_id, {"threadId": thread_id, "messageId": message_id})
+            except KeyError as exc:
+                raise GoalControlNotFoundError(message_id) from exc
+            except ValueError as exc:
+                raise GoalControlConflictError(str(exc)) from exc
+            review["dismissed"] = True
+            body["actionPlanReview"] = review
+            record.structured_json = body
+            record.updated_at = now_iso()
+            return message_dict(record)
 
     def record_funnel_event(
         self,
@@ -1351,18 +1429,19 @@ class GoalControlService:
         actions: list[dict[str, Any]],
         policy: dict[str, Any],
         target_date: str | None = None,
+        today_value: date | None = None,
     ) -> None:
         usage = cls._standard_capacity_usage(actions, policy)
         available = usage["available_minutes"]
         if usage["unscheduled_action_ids"]:
             raise GoalControlValidationError(
-                "Minimum and Standard actions require a valid due_date before plan activation: "
-                + ", ".join(usage["unscheduled_action_ids"][:5])
+                "以下 Minimum/Standard 行动缺少有效日期："
+                + "、".join(usage["unscheduled_action_ids"][:5])
             )
         try:
             target = date.fromisoformat(target_date) if target_date else None
         except ValueError as error:
-            raise GoalControlValidationError("Plan dates must use YYYY-MM-DD.") from error
+            raise GoalControlValidationError("计划日期必须使用 YYYY-MM-DD。") from error
         if target:
             outside = [
                 str(item.get("action_id") or item.get("title") or "action")
@@ -1371,15 +1450,138 @@ class GoalControlService:
             ]
             if outside:
                 raise GoalControlValidationError(
-                    f"Actions cannot be scheduled after the target date {target.isoformat()}: "
-                    + ", ".join(outside[:5])
+                    f"行动日期不能晚于目标日期 {target.isoformat()}："
+                    + "、".join(outside[:5])
                 )
-        for week_start, bucket in sorted(usage["weeks"].items()):
-            if bucket["planned_minutes"] > available:
+        today = today_value or date.today()
+        configured_days = policy.get("available_days") or []
+        if not isinstance(configured_days, (list, tuple, set)):
+            configured_days = []
+        available_days = {
+            value
+            for item in configured_days
+            if (value := canonical_day(item))
+        } or {"sun"}
+        days_per_capacity_period = len(available_days)
+        required: list[tuple[date, int, str]] = []
+        for item in actions:
+            if (
+                str(item.get("execution_tier") or "standard") not in {"minimum", "standard"}
+                or str(item.get("status") or "todo") in {"done", "skipped"}
+            ):
+                continue
+            due = date.fromisoformat(str(item.get("due_date")))
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            is_user_fixed = str(metadata.get("due_date_source") or "") == "user_fixed"
+            if due < today:
+                if is_user_fixed:
+                    raise GoalControlValidationError(
+                        f"{item.get('title') or item.get('action_id') or '行动'} 使用了已过去的固定日期 {due.isoformat()}。"
+                    )
+                due = today + timedelta(days=28)
+            required.append((due, max(0, int(item.get("estimated_minutes", 30))), str(item.get("action_id") or item.get("title") or "action")))
+        required.sort(key=lambda value: value[0])
+        cumulative_minutes = 0
+        cumulative_actions: list[str] = []
+        for due, minutes, action_id in required:
+            cumulative_minutes += minutes
+            cumulative_actions.append(action_id)
+            span_days = (due - today).days + 1
+            full_weeks, remainder = divmod(max(0, span_days), 7)
+            executable_days = full_weeks * days_per_capacity_period + sum(
+                1
+                for offset in range(remainder)
+                if DAY_CODES[(today.weekday() + offset) % 7] in available_days
+            )
+            total_available = math.floor(
+                available * executable_days / days_per_capacity_period
+            )
+            if cumulative_minutes > total_available:
+                if executable_days:
+                    minimum_weekly = math.ceil(
+                        cumulative_minutes
+                        * days_per_capacity_period
+                        / executable_days
+                        / max(0.01, 1 - float(policy.get("buffer_percent", 20)) / 100)
+                    )
+                    capacity_option = f"每周容量至少需要 {minimum_weekly} 分钟。"
+                else:
+                    capacity_option = "截止日前没有配置的可执行日，请调整可执行日或期限。"
                 raise GoalControlValidationError(
-                    f"Week {week_start} requires {bucket['planned_minutes']} Minimum/Standard minutes, "
-                    f"exceeding the buffered weekly capacity of {available} minutes "
-                    f"for {', '.join(bucket['action_ids'][:5])}."
+                    f"截至 {due.isoformat()} 的必要行动共需 {cumulative_minutes} 分钟，"
+                    f"超过 {executable_days} 个可执行日可用的 {total_available} 分钟；"
+                    f"{capacity_option}受影响行动：{'、'.join(cumulative_actions[:5])}。"
+                )
+
+    @staticmethod
+    def _normalize_system_action_dates(
+        actions: list[dict[str, Any]],
+        today_value: date,
+    ) -> None:
+        """Move only expired system-generated required-action dates into a new rolling window."""
+        for item in actions:
+            if (
+                str(item.get("execution_tier") or "standard") not in {"minimum", "standard"}
+                or str(item.get("status") or "todo") in {"done", "skipped"}
+            ):
+                continue
+            try:
+                due = date.fromisoformat(str(item.get("due_date") or ""))
+            except ValueError:
+                continue
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            if due >= today_value or str(metadata.get("due_date_source") or "") == "user_fixed":
+                continue
+            item["due_date"] = (today_value + timedelta(days=28)).isoformat()
+            item["metadata"] = {
+                **copy.deepcopy(metadata),
+                "due_date_source": "system_planned",
+                "due_date_flexibility": "flexible",
+            }
+
+    @staticmethod
+    def _normalize_system_milestone_dates(
+        milestones: list[dict[str, Any]],
+        today_value: date,
+        target_date: str | None,
+    ) -> None:
+        fallback = date.fromisoformat(target_date) if target_date else today_value + timedelta(days=28)
+        for item in milestones:
+            try:
+                due = date.fromisoformat(str(item.get("due_date") or ""))
+            except ValueError:
+                continue
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            if due >= today_value or str(metadata.get("due_date_source") or "") == "user_fixed":
+                continue
+            item["due_date"] = fallback.isoformat()
+            item["metadata"] = {
+                **copy.deepcopy(metadata),
+                "due_date_source": "system_planned",
+                "due_date_flexibility": "flexible",
+            }
+
+    @staticmethod
+    def _validate_action_date_bounds(
+        actions: list[dict[str, Any]],
+        milestones: list[dict[str, Any]],
+        target_date: str | None,
+    ) -> None:
+        target = date.fromisoformat(target_date) if target_date else None
+        milestone_dates = {
+            str(item.get("milestone_id") or ""): date.fromisoformat(str(item["due_date"]))
+            for item in milestones
+            if item.get("milestone_id") and item.get("due_date")
+        }
+        for item in actions:
+            if not item.get("due_date"):
+                continue
+            due = date.fromisoformat(str(item["due_date"]))
+            bound = milestone_dates.get(str(item.get("milestone_id") or "")) or target
+            if bound and due > bound:
+                raise GoalControlValidationError(
+                    f"{item.get('title') or item.get('action_id') or '行动'} 的日期不能晚于"
+                    f"所属里程碑或项目目标日期 {bound.isoformat()}。"
                 )
 
     @staticmethod
@@ -1540,7 +1742,13 @@ class GoalControlService:
         check_in_age = (today_value - date.fromisoformat(last_check_in_at[:10])).days if last_check_in_at else 999
         factors.append({"key": "checkInFreshness", "label": "Days since Check-in", "value": check_in_age, "severity": "attention" if check_in_age > 3 else "good"})
         status = "paused" if project.status == "paused" else "on_track"
-        if status != "paused" and (overdue or capacity_percent > 120 or bool(review and review.get("recommend_replan"))):
+        replan_signal_count = int((review or {}).get("trigger_count") or 0)
+        factors.append({
+            "key": "replanSignals", "label": "Unresolved replan signals",
+            "value": replan_signal_count, "severity": "risk" if replan_signal_count else "good",
+            "details": copy.deepcopy((review or {}).get("triggers") or []),
+        })
+        if status != "paused" and (overdue or capacity_percent > 120 or replan_signal_count > 0):
             status = "at_risk"
         elif status != "paused" and (completion < 60 and actions or anomalies or blocked or unscheduled or check_in_age > 3):
             status = "attention"
@@ -2162,9 +2370,31 @@ class GoalControlService:
         return record_dict(restored, {"snapshot_json": "snapshot", "diff_json": "diff"})
 
     def _apply_snapshot(self, session: Any, project_id: str, snapshot: dict[str, Any]) -> None:
+        snapshot = copy.deepcopy(snapshot)
         project = self._project(session, project_id)
         policy_value = snapshot.get("policy") or {}
-        self._validate_standard_capacity(list(snapshot.get("actions") or []), policy_value)
+        snapshot_actions = list(snapshot.get("actions") or [])
+        snapshot_milestones = list(snapshot.get("milestones") or [])
+        user_today = self._user_today(session)
+        project_value = snapshot.get("project") or {}
+        project_metadata = (
+            project_value.get("metadata")
+            if isinstance(project_value.get("metadata"), dict)
+            else {}
+        )
+        snapshot_target = str(project_metadata.get("targetDate") or "")[:10] or None
+        self._normalize_system_milestone_dates(
+            snapshot_milestones, user_today, snapshot_target
+        )
+        self._normalize_system_action_dates(snapshot_actions, user_today)
+        snapshot["actions"] = snapshot_actions
+        snapshot["milestones"] = snapshot_milestones
+        self._validate_action_date_bounds(
+            snapshot_actions,
+            snapshot_milestones,
+            snapshot_target,
+        )
+        self._validate_standard_capacity(snapshot_actions, policy_value, today_value=user_today)
         action_ids = {str(item.get("action_id")) for item in snapshot.get("actions") or []}
         edges: list[tuple[str, str]] = []
         for value in snapshot.get("dependencies") or []:
@@ -2346,16 +2576,22 @@ class GoalControlService:
         template_label = str(payload.get("template_label") or "Goal Planner")
         tool_name = str(payload.get("tool_name") or "Goal Planner")
         tool_kind = payload.get("tool_kind")
-        milestones_input = payload.get("milestones") or []
-        actions_input = payload.get("actions") or []
+        milestones_input = copy.deepcopy(payload.get("milestones") or [])
+        actions_input = copy.deepcopy(payload.get("actions") or [])
         policy_input = payload.get("policy") or {}
-        planning_brief = policy_input.get("planning_brief") if isinstance(policy_input, dict) else {}
-        target_date = str(
-            payload.get("target_date")
-            or (planning_brief.get("deadline") if isinstance(planning_brief, dict) else "")
-            or ""
-        )[:10] or None
-        self._validate_standard_capacity(list(actions_input), policy_input, target_date)
+        target_date = str(payload.get("target_date") or "")[:10] or None
+        with self.session_factory() as session:
+            activation_today = self._user_today(session)
+        self._normalize_system_milestone_dates(
+            milestones_input, activation_today, target_date
+        )
+        self._normalize_system_action_dates(actions_input, activation_today)
+        self._validate_action_date_bounds(
+            list(actions_input), list(milestones_input), target_date
+        )
+        self._validate_standard_capacity(
+            list(actions_input), policy_input, target_date, today_value=activation_today
+        )
         implementation_path = payload.get("implementation_path") or [
             {"id": f"path-{index + 1}", "order": index + 1, "title": item.get("title", f"Milestone {index + 1}"), "description": item.get("description", "")}
             for index, item in enumerate(milestones_input)

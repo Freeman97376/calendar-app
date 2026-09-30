@@ -26,3 +26,5 @@ export function useI18n() {
 
   return { language, locale, setLanguage, t, translateForLanguage }
 }
+
+export type { TranslationKey } from '../domain/logic/i18n'

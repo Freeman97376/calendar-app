@@ -1,34 +1,27 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import type { AIAction, AIProvider, AIToolActivationField } from '../../domain/types'
-import { useApprovalDrawer } from '../../hooks/useApprovalDrawer'
+import type { AIAction, AIToolActivationField } from '../../domain/types'
 import { useAI, type AIComposerOptions } from '../../hooks/useAI'
 import { useI18n } from '../../hooks/useI18n'
 import { useRuntimeConfig } from '../../hooks/useRuntimeConfig'
 import { useWorkspacePanel } from '../../hooks/useWorkspacePanel'
 import { useActiveToolOnboardingPanel } from '../../hooks/useActiveToolOnboardingPanel'
+import { useAIAssistantToolContext } from '../../hooks/useAIAssistantToolContext'
 import Button from '../ui/Button'
 import AIMessageBubble from './AIMessageBubble'
 import AIScheduleSuggestion from './AIScheduleSuggestion'
 import GoalConversationPanel from './GoalConversationPanel'
+import GoalControlDashboardPanel from '../tools/GoalControlDashboard'
+import GlobalSchedulePanel from '../tools/GlobalSchedulePanel'
 
 type ComposerMode = 'chat' | 'plan' | 'goal' | 'tools'
 
-const providerLabels: Record<AIProvider, string> = {
-  api: 'API',
-  local: 'Local',
-}
-
 function setupMessage(
-  provider: AIProvider,
+  keyConfigured: boolean,
   model: string,
   t: ReturnType<typeof useI18n>['t'],
 ): string {
-  if (provider === 'local') {
-    return t('ai.providerLocalUnavailable')
-  }
-
-  return t('ai.noApiKey', { model })
+  return keyConfigured ? t('ai.backendUnavailable') : t('ai.noApiKey', { model })
 }
 
 function actionTitle(action: AIAction): string {
@@ -62,7 +55,8 @@ function fieldInputMode(field: AIToolActivationField): 'decimal' | undefined {
 
 export default function AIAssistantPanel() {
   const ai = useAI()
-  const approvalDrawer = useApprovalDrawer()
+  const toolContext = useAIAssistantToolContext()
+  const aiRuntime = toolContext.aiRuntime
   const runtimeConfig = useRuntimeConfig()
   const {
     clear: clearActiveToolOnboarding,
@@ -73,7 +67,6 @@ export default function AIAssistantPanel() {
   const { t } = useI18n()
   const [mode, setMode] = useState<ComposerMode>('chat')
   const [draft, setDraft] = useState('')
-  const [modelDraft, setModelDraft] = useState(ai.model)
   const [allowActiveToolRouting, setAllowActiveToolRouting] = useState(true)
   const [confirmActiveToolRouting, setConfirmActiveToolRouting] = useState(
     runtimeConfig.confirmEnabledToolRouting,
@@ -84,10 +77,6 @@ export default function AIAssistantPanel() {
   const [showGoalConversation, setShowGoalConversation] = useState(false)
   const [activationDraft, setActivationDraft] = useState<Record<string, string>>({})
   const [editingTemplateDetails, setEditingTemplateDetails] = useState(false)
-
-  useEffect(() => {
-    setModelDraft(ai.model)
-  }, [ai.model, ai.provider])
 
   useEffect(() => {
     if (onboardingSeed) setShowGoalConversation(true)
@@ -142,20 +131,6 @@ export default function AIAssistantPanel() {
     }
   }
 
-  function handleProviderChange(provider: AIProvider) {
-    ai.setProvider(provider)
-  }
-
-  function commitModel() {
-    const nextModel = modelDraft.trim()
-    if (!nextModel) {
-      setModelDraft(ai.model)
-      return
-    }
-
-    ai.setModel(nextModel)
-  }
-
   function beginTemplateOnboarding() {
     const pending = ai.pendingToolTemplateActivation
     if (!pending) return
@@ -197,7 +172,7 @@ export default function AIAssistantPanel() {
           <div>
             <h2 className="text-base font-semibold text-slate-950">{t('ai.header')}</h2>
             <p className="mt-1 text-xs text-slate-500">
-              {providerLabels[ai.provider]} / {ai.model}
+              {t('ai.backendManaged')} / {aiRuntime.routineModel}
             </p>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
@@ -221,42 +196,25 @@ export default function AIAssistantPanel() {
             {t('ai.settings')}
           </summary>
           <div className="mt-3 grid gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600" htmlFor="ai-provider">
-                {t('ai.provider')}
-              </label>
-              <select
-                className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                disabled={ai.loading}
-                id="ai-provider"
-                onChange={(event) => handleProviderChange(event.target.value as AIProvider)}
-                value={ai.provider}
-              >
-                <option value="api">API</option>
-                <option value="local">Local</option>
-              </select>
+            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600">
+              <p>
+                {t('ai.provider')}: DeepSeek-compatible ({t('ai.backendManaged')})
+              </p>
+              <p>
+                {t('ai.routineModel')}: {aiRuntime.routineModel}
+              </p>
+              <p>
+                {t('ai.planningModel')}: {aiRuntime.planningModel}
+              </p>
+              <p>
+                {t('ai.providerKey')}:{' '}
+                {aiRuntime.keyConfigured ? t('ai.configured') : t('ai.notConfigured')}
+              </p>
+              <p>
+                {t('ai.ruleFallback')}:{' '}
+                {aiRuntime.ruleBasedFallback ? t('ai.available') : t('ai.unavailable')}
+              </p>
             </div>
-
-            {ai.provider === 'api' ? (
-              <div>
-                <label className="block text-xs font-medium text-slate-600" htmlFor="ai-model">
-                  {t('ai.model')}
-                </label>
-                <input
-                  className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                  disabled={ai.loading}
-                  id="ai-model"
-                  onBlur={commitModel}
-                  onChange={(event) => setModelDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.currentTarget.blur()
-                    }
-                  }}
-                  value={modelDraft}
-                />
-              </div>
-            ) : null}
 
             <div className="grid gap-2">
               <label className="flex items-center gap-2 text-xs text-slate-700">
@@ -313,9 +271,30 @@ export default function AIAssistantPanel() {
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
+        <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <label className="text-xs font-semibold text-slate-700" htmlFor="ai-tool-context">
+            当前对话工具上下文
+          </label>
+          <select
+            className="mt-2 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm"
+            id="ai-tool-context"
+            onChange={(event) => toolContext.selectProject(event.target.value || null)}
+            value={toolContext.selectedProjectId ?? ''}
+          >
+            <option value="">自动建议（首次路由需确认）</option>
+            {toolContext.activeTools.map((tool) => (
+              <option key={tool.projectId} value={tool.projectId}>
+                {tool.instanceAlias} · {tool.toolName}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-slate-500">
+            明确选择后会在本次对话持续生效，不再重复询问路由。
+          </p>
+        </section>
         {!ai.isAvailable ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            {setupMessage(ai.provider, ai.model, t)}
+            {setupMessage(aiRuntime.keyConfigured, aiRuntime.routineModel, t)}
           </div>
         ) : null}
 
@@ -367,6 +346,18 @@ export default function AIAssistantPanel() {
             {t('ai.conversationPlaceholder')}
           </p>
         )}
+
+        {toolContext.selectedProjectId ? (
+          <details className="rounded-md border border-emerald-200 bg-emerald-50 p-3" open>
+            <summary className="cursor-pointer text-sm font-semibold text-emerald-950">
+              当前工具结果与审批
+            </summary>
+            <div className="mt-3 space-y-3">
+              <GoalControlDashboardPanel projectId={toolContext.selectedProjectId} />
+              <GlobalSchedulePanel />
+            </div>
+          </details>
+        ) : null}
 
         {ai.isLoading ? <p className="text-sm text-slate-500">{t('ai.thinking')}</p> : null}
         {ai.error ? (
@@ -560,27 +551,66 @@ export default function AIAssistantPanel() {
           </section>
         ) : null}
 
-        {ai.pendingActionPlan ? (
+        {ai.pendingActionPlan || ai.actionPlanRecord ? (
           <section className="space-y-3 rounded-md border border-slate-200 bg-white p-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-950">{t('ai.actionPlan')}</h3>
-              <p className="mt-1 text-sm text-slate-600">{ai.pendingActionPlan.summary}</p>
+              <p className="mt-1 text-sm text-slate-600">
+                {(ai.pendingActionPlan ?? ai.actionPlanRecord!.plan).summary}
+              </p>
             </div>
             <div className="space-y-1 text-xs text-slate-600">
-              {ai.pendingActionPlan.actions.slice(0, 3).map((action, index) => (
-                <p key={`${action.type}-${index}`}>
-                  {index + 1}. {actionTitle(action)}
+              {(ai.pendingActionPlan ?? ai.actionPlanRecord!.plan).actions
+                .slice(0, 3)
+                .map((action, index) => (
+                  <p key={`${action.type}-${index}`}>
+                    {index + 1}. {actionTitle(action)}
+                  </p>
+                ))}
+              {(ai.pendingActionPlan ?? ai.actionPlanRecord!.plan).actions.length > 3 ? (
+                <p>
+                  +{(ai.pendingActionPlan ?? ai.actionPlanRecord!.plan).actions.length - 3} more
+                  actions
                 </p>
-              ))}
-              {ai.pendingActionPlan.actions.length > 3 ? (
-                <p>+{ai.pendingActionPlan.actions.length - 3} more actions</p>
               ) : null}
             </div>
+            <p className="text-xs text-slate-600">
+              {ai.isSavingConversation
+                ? t('ai.savingPlan')
+                : ai.actionPlanRecord?.review?.dismissed
+                  ? t('ai.planDismissed')
+                  : ai.actionPlanRecord?.review?.operations.apply.status === 'applied'
+                    ? t('ai.planApplied')
+                    : ai.actionPlanRecord && !ai.actionPlanRecord.review
+                      ? t('ai.legacyPlan')
+                      : ''}
+            </p>
+            {ai.conversationSaveFailed ? (
+              <Button onClick={() => void ai.retryConversationSave()}>{t('ai.retrySave')}</Button>
+            ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => approvalDrawer.open('ai-action-plan')} variant="primary">
+              <Button
+                disabled={
+                  !ai.actionPlanRecord?.review ||
+                  ai.actionPlanRecord.review.dismissed ||
+                  ai.isSavingConversation ||
+                  ai.conversationSaveFailed
+                }
+                onClick={ai.reviewActionPlan}
+                variant="primary"
+              >
                 {t('ai.reviewPlan')}
               </Button>
-              <Button onClick={ai.clearActionPlan}>{t('ai.dismiss')}</Button>
+              <Button
+                disabled={
+                  !ai.actionPlanRecord?.review ||
+                  ai.actionPlanRecord.review.dismissed ||
+                  ai.isSavingConversation
+                }
+                onClick={ai.clearActionPlan}
+              >
+                {t('ai.dismiss')}
+              </Button>
             </div>
           </section>
         ) : null}

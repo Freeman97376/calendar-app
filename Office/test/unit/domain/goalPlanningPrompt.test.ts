@@ -41,6 +41,9 @@ describe('goal planning prompt framework', () => {
     expect(GOAL_PLANNING_SYSTEM_PROMPT).toContain('hidden reasoning')
     expect(GOAL_PLANNING_SYSTEM_PROMPT).toContain('current situation')
     expect(GOAL_PLANNING_SYSTEM_PROMPT).toContain('Never invent a numeric baseline')
+    expect(GOAL_PLANNING_SYSTEM_PROMPT).toContain(
+      'Every unfinished minimum or standard action must have a YYYY-MM-DD due_date',
+    )
   })
 
   it('keeps confirmed current-situation answers even in economy context', () => {

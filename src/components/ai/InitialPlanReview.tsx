@@ -53,15 +53,19 @@ export default function InitialPlanReview({
   busy,
   onActivate,
   onChange,
+  onRegenerate,
   onRevise,
   plan,
+  requiresPlanningDate,
 }: {
   blockingIssues: string[]
   busy: boolean
   onActivate: () => Promise<void> | void
   onChange: (plan: GoalActivationPlan) => void
-  onRevise: (instruction: string) => Promise<void> | void
+  onRegenerate?: () => Promise<void> | void
+  onRevise?: (instruction: string) => Promise<void> | void
   plan: GoalActivationPlan
+  requiresPlanningDate: (action: GoalPlanAction) => boolean
 }) {
   const [revision, setRevision] = useState('')
   const weeklyCapacity = Number(plan.policy.weekly_capacity_minutes ?? 0)
@@ -210,6 +214,7 @@ export default function InitialPlanReview({
             milestones={plan.milestones}
             onChange={(value) => update('actions', replaceAt(plan.actions, index, value))}
             onRemove={() => update('actions', withoutAt(plan.actions, index))}
+            requiresPlanningDate={requiresPlanningDate}
           />
         ))}
       </EditableList>
@@ -335,26 +340,34 @@ export default function InitialPlanReview({
         </label>
       ) : null}
 
-      <div className="rounded-md border border-sky-200 bg-sky-50 p-3">
-        <Field label="Revise with AI / 使用 AI 修改当前计划">
-          <textarea
-            className="min-h-20 w-full rounded border border-sky-200 bg-white p-3 text-sm"
-            onChange={(event) => setRevision(event.target.value)}
-            placeholder="Example: reduce weekly workload to three hours and preserve confirmed safety constraints."
-            value={revision}
-          />
-        </Field>
-        <Button
-          className="mt-2"
-          disabled={busy || !revision.trim()}
-          onClick={async () => {
-            await onRevise(revision)
-            setRevision('')
-          }}
-        >
-          Revise plan / 修改计划
+      {onRevise ? (
+        <div className="rounded-md border border-sky-200 bg-sky-50 p-3">
+          <Field label="Revise with AI / 使用 AI 修改当前计划">
+            <textarea
+              className="min-h-20 w-full rounded border border-sky-200 bg-white p-3 text-sm"
+              onChange={(event) => setRevision(event.target.value)}
+              placeholder="Example: reduce weekly workload to three hours and preserve confirmed safety constraints."
+              value={revision}
+            />
+          </Field>
+          <Button
+            className="mt-2"
+            disabled={busy || !revision.trim()}
+            onClick={async () => {
+              await onRevise(revision)
+              setRevision('')
+            }}
+          >
+            Revise plan / 修改计划
+          </Button>
+        </div>
+      ) : null}
+
+      {onRegenerate ? (
+        <Button disabled={busy} onClick={() => void onRegenerate()} variant="secondary">
+          Regenerate plan / 重新生成计划
         </Button>
-      </div>
+      ) : null}
     </section>
   )
 }
@@ -527,12 +540,16 @@ function ActionEditor({
   milestones,
   onChange,
   onRemove,
+  requiresPlanningDate,
 }: {
   item: GoalPlanAction
   milestones: GoalPlanMilestone[]
   onChange: (value: GoalPlanAction) => void
   onRemove: () => void
+  requiresPlanningDate: (action: GoalPlanAction) => boolean
 }) {
+  const missingRequiredDate = requiresPlanningDate(item) && !item.due_date
+  const systemPlannedDate = item.metadata?.due_date_source === 'system_planned'
   return (
     <div className="grid gap-2 rounded border border-slate-200 bg-slate-50 p-3 md:grid-cols-3">
       <Field label="Title / 标题">
@@ -561,13 +578,30 @@ function ActionEditor({
           ))}
         </select>
       </Field>
-      <Field label="Due date / 截止日期">
+      <Field label="Planning date / 计划完成日">
         <input
-          className="h-9 w-full rounded border border-slate-300 bg-white px-2 text-sm"
-          onChange={(event) => onChange({ ...item, due_date: event.target.value || null })}
+          aria-invalid={missingRequiredDate}
+          className={`h-9 w-full rounded border bg-white px-2 text-sm ${missingRequiredDate ? 'border-red-500' : 'border-slate-300'}`}
+          onChange={(event) => {
+            const value = event.target.value || null
+            const metadata = { ...(item.metadata ?? {}) }
+            if (value) {
+              metadata.due_date_source = 'user_fixed'
+              metadata.due_date_flexibility = 'fixed'
+            } else {
+              delete metadata.due_date_source
+              delete metadata.due_date_flexibility
+            }
+            onChange({ ...item, due_date: value, metadata })
+          }}
           type="date"
           value={item.due_date ?? ''}
         />
+        {missingRequiredDate ? (
+          <span className="block text-xs text-red-700">必要行动在激活前需要计划完成日。</span>
+        ) : systemPlannedDate ? (
+          <span className="block text-xs text-amber-700">系统建议日期，可在批准前调整。</span>
+        ) : null}
       </Field>
       <Field label="Description / 描述">
         <textarea

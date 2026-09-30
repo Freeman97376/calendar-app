@@ -29,7 +29,11 @@ from sqlalchemy.engine import Engine
 
 from .auth import AuthError, AuthService, Principal
 from .calendar import CalendarRepository
-from .calendar.repository import CalendarReferenceError, CalendarRowNotFoundError
+from .calendar.repository import (
+    CalendarBatchConflictError,
+    CalendarReferenceError,
+    CalendarRowNotFoundError,
+)
 from .database import (
     LOCAL_USER_ID,
     create_database_engine,
@@ -63,6 +67,14 @@ from .goal_control import (
 )
 from .goal_control_api import install_goal_control_routes, usage_capabilities
 from .memory import LongTermMemoryService, MemoryNotFoundError, MemoryValidationError
+from .scheduling import (
+    GlobalSchedulingService,
+    SchedulingConflictError,
+    SchedulingNotFoundError,
+    SchedulingStaleError,
+    SchedulingValidationError,
+)
+from .personal_ai import PersonalAIService, PersonalAIStatus, PersonalAIUpdate
 from .server_paths import PROJECT_ROOT, application_data_dir, project_env_paths
 from .update_backup import PreUpdateBackupError, create_pre_update_backup
 from .user_data import (
@@ -102,6 +114,12 @@ class StrictDto(BaseModel):
 class LoginPayload(StrictDto):
     username: str = Field(min_length=1, max_length=256)
     password: str = Field(min_length=1, max_length=256)
+
+
+class RegistrationPayload(StrictDto):
+    username: str = Field(min_length=1, max_length=256, strict=True)
+    password: str = Field(min_length=12, max_length=256, strict=True)
+    inviteCode: str = Field(min_length=1, max_length=256, strict=True)
 
 
 class RecurrenceEndNever(StrictDto):
@@ -262,6 +280,100 @@ class TodoUpdatePayload(StrictDto):
         return self
 
 
+class CalendarBatchCreateEventAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["create_event"]
+    event: EventCreatePayload
+    skipIfDuplicate: bool = True
+    projectId: str | None = Field(default=None, min_length=1, max_length=64)
+    actionId: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class CalendarBatchUpdateEventAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["update_event"]
+    eventId: str = Field(min_length=1, max_length=64)
+    changes: EventUpdatePayload
+    projectId: str | None = Field(default=None, min_length=1, max_length=64)
+    actionId: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class CalendarBatchDeleteEventAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["delete_event"]
+    eventId: str = Field(min_length=1, max_length=64)
+    projectId: str | None = Field(default=None, min_length=1, max_length=64)
+    actionId: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class CalendarBatchCreateTodoAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["create_todo"]
+    todo: TodoCreatePayload
+
+
+class CalendarBatchUpdateTodoAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["update_todo"]
+    todoId: str = Field(min_length=1, max_length=64)
+    changes: TodoUpdatePayload
+
+
+class CalendarBatchDeleteTodoAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["delete_todo"]
+    todoId: str = Field(min_length=1, max_length=64)
+
+
+class CalendarBatchScheduleTodoAction(StrictDto):
+    clientActionId: str = Field(min_length=1, max_length=64)
+    type: Literal["schedule_todo"]
+    todoId: str = Field(min_length=1, max_length=64)
+    event: EventCreatePayload
+
+
+CalendarBatchAction = Annotated[
+    CalendarBatchCreateEventAction
+    | CalendarBatchUpdateEventAction
+    | CalendarBatchDeleteEventAction
+    | CalendarBatchCreateTodoAction
+    | CalendarBatchUpdateTodoAction
+    | CalendarBatchDeleteTodoAction
+    | CalendarBatchScheduleTodoAction,
+    Field(discriminator="type"),
+]
+
+
+class AIPlanReferencePayload(StrictDto):
+    threadId: str = Field(min_length=1, max_length=64)
+    messageId: str = Field(min_length=1, max_length=64)
+
+
+class CalendarActionBatchPayload(StrictDto):
+    aiPlanRef: AIPlanReferencePayload | None = None
+    aiPlanOperation: Literal["apply", "copy_to_todos"] | None = None
+    idempotencyKey: str = Field(min_length=1, max_length=120)
+    source: Literal["ai-action-plan", "active-tool-calendar-drafts", "global-schedule-proposal"]
+    projectId: str | None = Field(default=None, min_length=1, max_length=64)
+    toolRunId: str | None = Field(default=None, min_length=1, max_length=64)
+    actions: list[CalendarBatchAction] = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def require_active_tool_context(self) -> "CalendarActionBatchPayload":
+        identifiers = [action.clientActionId for action in self.actions]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("Calendar batch clientActionId values must be unique.")
+        if self.source == "active-tool-calendar-drafts" and (
+            not self.projectId or not self.toolRunId
+        ):
+            raise ValueError("Active Tool calendar batches require projectId and toolRunId.")
+        if self.source == "global-schedule-proposal":
+            event_actions = [action for action in self.actions if action.type in {"create_event", "update_event", "delete_event"}]
+            if any(not action.projectId or not action.actionId for action in event_actions):
+                raise ValueError("Global schedule event actions require projectId and actionId.")
+        return self
+
+
 class EventTypeCreatePayload(StrictDto):
     id: str = Field(min_length=1, max_length=64, strict=True)
     label: str = Field(min_length=1, max_length=40, strict=True)
@@ -407,6 +519,39 @@ class FridgeItemUpdatePayload(BaseModel):
         return self
 
 
+class SchedulingWindowPayload(StrictDto):
+    day: Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    start: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    end: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+    @model_validator(mode="after")
+    def validate_range(self) -> "SchedulingWindowPayload":
+        if self.end <= self.start:
+            raise ValueError("工作时段结束时间必须晚于开始时间。")
+        return self
+
+
+class SchedulingPreferencesPayload(StrictDto):
+    setupCompleted: bool = False
+    workWindows: list[SchedulingWindowPayload] = Field(default_factory=list, max_length=28)
+    minBlockMinutes: int = Field(default=30, ge=5, le=240)
+    maxBlockMinutes: int = Field(default=120, ge=15, le=480)
+
+    @model_validator(mode="after")
+    def validate_windows(self) -> "SchedulingPreferencesPayload":
+        if self.minBlockMinutes > self.maxBlockMinutes:
+            raise ValueError("最小时间块不能大于最大时间块。")
+        by_day: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        for window in self.workWindows:
+            for start, end in by_day[window.day]:
+                if window.start < end and window.end > start:
+                    raise ValueError(f"{window.day} 的工作时段不能重叠。")
+            by_day[window.day].append((window.start, window.end))
+        if self.setupCompleted and not self.workWindows:
+            raise ValueError("完成排程设置前至少需要一个工作时段。")
+        return self
+
+
 class PreferenceUpdatePayload(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -430,6 +575,7 @@ class PreferenceUpdatePayload(BaseModel):
     layoutPanelPosition: Literal["left", "right", "top", "bottom"] | None = None
     layoutPanelSizePercent: int | None = Field(default=None, ge=15, le=40)
     timezoneOverride: str | None = Field(default=None, max_length=100)
+    scheduling: SchedulingPreferencesPayload | None = None
 
     @model_validator(mode="after")
     def reject_explicit_nulls(self) -> "PreferenceUpdatePayload":
@@ -437,6 +583,59 @@ class PreferenceUpdatePayload(BaseModel):
             if getattr(self, field_name) is None:
                 raise ValueError(f"{field_name} cannot be null.")
         return self
+
+
+class SchedulingPolicyPatchPayload(StrictDto):
+    weeklyCapacityMinutes: int | None = Field(default=None, ge=0, le=10_080)
+    bufferPercent: float | None = Field(default=None, ge=0, le=95)
+    availableDays: list[str] | None = Field(default=None, max_length=7)
+
+
+class SchedulingActionPatchPayload(StrictDto):
+    actionId: str = Field(min_length=1, max_length=64)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+    dueDate: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    estimatedMinutes: int | None = Field(default=None, ge=5, le=100_800)
+    executionTier: Literal["minimum", "standard", "stretch"] | None = None
+    priority: Literal["high", "medium", "low"] | None = None
+
+
+class SchedulingDependencyPatchPayload(StrictDto):
+    predecessorActionId: str = Field(min_length=1, max_length=64)
+    successorActionId: str = Field(min_length=1, max_length=64)
+
+
+class SchedulingProjectChangesPayload(StrictDto):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+    status: Literal["active", "paused", "completed"] | None = None
+    metadata: dict[str, Any] | None = None
+    policy: SchedulingPolicyPatchPayload | None = None
+    actions: list[SchedulingActionPatchPayload] | None = Field(default=None, max_length=500)
+    dependencies: list[SchedulingDependencyPatchPayload] | None = Field(default=None, max_length=2_000)
+
+    @model_validator(mode="after")
+    def require_change(self) -> "SchedulingProjectChangesPayload":
+        if not self.model_fields_set:
+            raise ValueError("计划变更不能为空。")
+        return self
+
+
+class SchedulingProjectPatchPayload(StrictDto):
+    projectId: str = Field(min_length=1, max_length=64)
+    baseVersionId: str | None = Field(default=None, min_length=1, max_length=64)
+    changes: SchedulingProjectChangesPayload
+
+
+class SchedulingRecomputePayload(StrictDto):
+    reason: str = Field(default="manual", min_length=1, max_length=80)
+    projectPatch: SchedulingProjectPatchPayload | None = None
+
+
+class SchedulingResolvePayload(StrictDto):
+    decision: Literal["accept", "reject"]
+    inputFingerprint: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
 
 
 class ToolPresetLlmOptionsPayload(BaseModel):
@@ -567,7 +766,7 @@ class RequestLimits:
     multipart: int
 
     def for_path(self, path: str) -> tuple[int, str]:
-        if path == "/api/auth/login":
+        if path in {"/api/auth/login", "/api/auth/register"}:
             return self.login, "login_request_too_large"
         if path == "/api/ai/chat/completions":
             return self.ai, "ai_request_too_large"
@@ -921,6 +1120,31 @@ def create_app(
             field_errors={"reference": [str(exc)]},
         )
 
+    @api.exception_handler(CalendarBatchConflictError)
+    async def _calendar_batch_conflict(
+        _request: Request, exc: CalendarBatchConflictError
+    ) -> JSONResponse:
+        return error_response("calendar_batch_conflict", str(exc), 409, retryable=False)
+
+    @api.exception_handler(SchedulingStaleError)
+    async def _scheduling_stale(_request: Request, exc: SchedulingStaleError) -> JSONResponse:
+        return error_response(
+            "schedule_proposal_stale", str(exc), 409, retryable=True,
+            details={"latestProposal": exc.latest},
+        )
+
+    @api.exception_handler(SchedulingNotFoundError)
+    async def _scheduling_not_found(_request: Request, exc: SchedulingNotFoundError) -> JSONResponse:
+        return error_response("schedule_proposal_not_found", clean_key_error(exc), 404, retryable=False)
+
+    @api.exception_handler(SchedulingConflictError)
+    async def _scheduling_conflict(_request: Request, exc: SchedulingConflictError) -> JSONResponse:
+        return error_response("schedule_proposal_conflict", str(exc), 409, retryable=False, details={"latestProposal": exc.latest} if exc.latest else None)
+
+    @api.exception_handler(SchedulingValidationError)
+    async def _scheduling_validation(_request: Request, exc: SchedulingValidationError) -> JSONResponse:
+        return error_response("schedule_validation_error", str(exc), 422, retryable=False)
+
     @api.exception_handler(MemoryNotFoundError)
     async def _memory_not_found(_request: Request, exc: MemoryNotFoundError) -> JSONResponse:
         return error_response("memory_not_found", clean_key_error(exc), 404)
@@ -1000,6 +1224,14 @@ def create_app(
     def bootstrap(principal: Principal | None = Depends(optional_principal)) -> dict[str, Any]:
         preferences = PreferenceRepository(state.engine, principal.user_id).get() if principal else {}
         ai_usage = usage_capabilities(state.mode)
+        fallback_model = os.getenv("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL).strip() or DEEPSEEK_DEFAULT_MODEL
+        planning_model = os.getenv("AI_PLANNING_MODEL", fallback_model).strip() or fallback_model
+        routine_model = os.getenv("AI_ROUTINE_MODEL", fallback_model).strip() or fallback_model
+        configured_ai_key = local_ai_key() if state.mode == "desktop" else os.getenv("DEEPSEEK_API_KEY", "").strip()
+        personal_status = PersonalAIService(state.engine, principal.user_id).status() if state.mode == "server" and principal else None
+        if personal_status:
+            planning_model = personal_status.planningModel
+            routine_model = personal_status.routineModel
         return {
             "success": True,
             "mode": state.mode,
@@ -1007,11 +1239,25 @@ def create_app(
             "user": principal_payload(principal) if principal else None,
             "csrfToken": principal.csrf_token if principal else "",
             "preferences": preferences,
+            "aiRuntime": {
+                "editable": False,
+                "keyConfigured": personal_status.keyConfigured if personal_status else bool(configured_ai_key),
+                "mode": "backend-managed",
+                "planningModel": planning_model,
+                "provider": "deepseek-compatible",
+                "routineModel": routine_model,
+                "ruleBasedFallback": False,
+            },
             "capabilities": {
-                "registration": False,
+                "registration": state.mode == "server" and state.auth.registration_enabled(),
                 "serverManagedAI": True,
+                "personalAIConfig": state.mode == "server",
                 "dataPortability": True,
                 "backendConfigEditable": state.mode == "desktop",
+                "calendarActionBatches": True,
+                "globalScheduling": True,
+                "aiConversationHistory": True,
+                "specializedToolHandoff": True,
                 "aiUsage": ai_usage,
                 "aiUsageModes": ai_usage["allowedModes"],
                 "aiDefaultUsageMode": ai_usage["defaultMode"],
@@ -1019,6 +1265,22 @@ def create_app(
                 "aiBudgetEditable": ai_usage["budgetEditable"],
             },
         }
+
+    @api.post("/api/auth/register", status_code=201)
+    def register(payload: RegistrationPayload, request: Request) -> dict[str, Any]:
+        if state.mode != "server":
+            raise AuthError("registration_disabled", "Desktop mode does not support registration.", 403)
+        origin = request.headers.get("Origin")
+        trusted_origins = {str(request.base_url).rstrip("/"), *allowed_origins}
+        if (origin and origin not in trusted_origins) or (
+            not origin and request.headers.get("Sec-Fetch-Site") == "cross-site"
+        ):
+            raise AuthError("registration_origin_invalid", "Register from the Calendar website.", 403)
+        user = state.auth.register(
+            payload.username, payload.password, payload.inviteCode,
+            client_ip=login_client_ip(request),
+        )
+        return {"success": True, "user": user}
 
     @api.post("/api/auth/login")
     def login(payload: LoginPayload, response: Response, request: Request) -> dict[str, Any]:
@@ -1069,7 +1331,30 @@ def create_app(
 
     @api.get("/api/config")
     def config_status(_principal: Principal = Depends(current_principal)) -> dict[str, Any]:
-        return backend_config_status(state.mode)
+        result = backend_config_status(state.mode)
+        if state.mode == "server":
+            personal = PersonalAIService(state.engine, _principal.user_id).status()
+            result["deepseek"] = {"configured": personal.keyConfigured, "base_url": personal.baseUrl, "model": personal.routineModel}
+        return result
+
+    @api.get("/api/ai/settings", response_model=PersonalAIStatus)
+    def personal_ai_status(response: Response, principal: Principal = Depends(current_principal)):
+        response.headers["Cache-Control"] = "no-store"
+        if state.mode != "server":
+            raise AuthError("personal_ai_server_only", "Use desktop AI settings in desktop mode.", 403)
+        return PersonalAIService(state.engine, principal.user_id).status()
+
+    @api.patch("/api/ai/settings", response_model=PersonalAIStatus)
+    def personal_ai_save(payload: PersonalAIUpdate, principal: Principal = Depends(current_principal)):
+        if state.mode != "server":
+            raise AuthError("personal_ai_server_only", "Use desktop AI settings in desktop mode.", 403)
+        return PersonalAIService(state.engine, principal.user_id).save(payload)
+
+    @api.delete("/api/ai/settings", response_model=PersonalAIStatus)
+    def personal_ai_remove(principal: Principal = Depends(current_principal)):
+        if state.mode != "server":
+            raise AuthError("personal_ai_server_only", "Use desktop AI settings in desktop mode.", 403)
+        return PersonalAIService(state.engine, principal.user_id).remove()
 
     @api.patch("/api/config")
     def config_update(
@@ -1163,6 +1448,50 @@ def create_app(
     def delete_event(event_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
         CalendarRepository(engine=state.engine).delete_event(event_id, principal.user_id)
         return {"success": True, "deleted": True, "eventId": event_id}
+
+    @api.post("/api/calendar/action-batches")
+    def apply_calendar_action_batch(
+        payload: CalendarActionBatchPayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        result = CalendarRepository(engine=state.engine).apply_action_batch(
+            payload.model_dump(mode="json", exclude_none=True),
+            principal.user_id,
+        )
+        return {"success": True, **result}
+
+    @api.post("/api/scheduling/proposals/recompute")
+    def recompute_schedule(
+        payload: SchedulingRecomputePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        proposal = GlobalSchedulingService(
+            state.engine, principal.user_id, client_timezone=principal.client_timezone,
+        ).recompute(
+            reason=payload.reason,
+            project_patch=payload.projectPatch.model_dump(mode="json", exclude_unset=True) if payload.projectPatch else None,
+        )
+        return {"success": True, "proposal": proposal}
+
+    @api.get("/api/scheduling/proposals/current")
+    def current_schedule_proposal(
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        proposal = GlobalSchedulingService(
+            state.engine, principal.user_id, client_timezone=principal.client_timezone,
+        ).current()
+        return {"success": True, "proposal": proposal}
+
+    @api.post("/api/scheduling/proposals/{proposal_id}/resolve")
+    def resolve_schedule_proposal(
+        proposal_id: str,
+        payload: SchedulingResolvePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        proposal = GlobalSchedulingService(
+            state.engine, principal.user_id, client_timezone=principal.client_timezone,
+        ).resolve(proposal_id, payload.decision, payload.inputFingerprint)
+        return {"success": True, "proposal": proposal}
 
     @api.get("/api/calendar/event-types")
     def list_event_types(principal: Principal = Depends(current_principal)) -> dict[str, Any]:
@@ -1329,6 +1658,11 @@ def create_app(
         with control.session_factory() as session:
             effective_timezone, _zone = control._user_timezone(session)
         provider_client = state.analyzer.deepseek_client
+        if state.mode == "server":
+            personal = PersonalAIService(state.engine, principal.user_id)
+            if personal.status().personalKeyConfigured:
+                provider = personal.resolve()
+                provider_client = DeepSeekClient(DeepSeekConfig(api_key=provider.api_key, base_url=provider.base_url, model=provider.routine_model))
         metered_client = (
             MeteredReceiptDeepSeekClient(provider_client, state, control)
             if provider_client is not None
@@ -1494,10 +1828,11 @@ def create_app(
     @api.post("/api/ai/chat/completions")
     async def proxy_ai(payload: dict[str, Any], principal: Principal = Depends(current_principal)) -> Response:
         enforce_ai_limit(state, principal.user_id)
-        api_key = local_ai_key() if state.mode == "desktop" else os.getenv("DEEPSEEK_API_KEY", "").strip()
+        personal_provider = PersonalAIService(state.engine, principal.user_id).resolve() if state.mode == "server" else None
+        api_key = personal_provider.api_key if personal_provider else local_ai_key()
         if not api_key:
             return error_response("deepseek_missing_api_key", "AI API key is not configured.", 503)
-        base_url = os.getenv("DEEPSEEK_BASE_URL", DEEPSEEK_DEFAULT_BASE_URL).rstrip("/")
+        base_url = personal_provider.base_url if personal_provider else os.getenv("DEEPSEEK_BASE_URL", DEEPSEEK_DEFAULT_BASE_URL).rstrip("/")
         requested_operation = str(payload.pop("_calendarOperation", "routine")).strip().lower()[:32]
         operation = AI_OPERATION_ALIASES.get(requested_operation, requested_operation)
         if operation not in AI_OPERATIONS:
@@ -1530,9 +1865,14 @@ def create_app(
             app_mode=state.mode,
             client_timezone=principal.client_timezone,
         )
+        control.validate_ai_context(project_id=project_id, thread_id=thread_id)
         usage = control.usage_summary(project_id)
         if usage["degraded"]:
-            return error_response("ai_monthly_hard_limit", "The monthly AI hard limit has been reached. Rule-based planning remains available.", 429)
+            return error_response(
+                "ai_monthly_hard_limit",
+                "The monthly AI hard limit has been reached. Contact the administrator or wait for the monthly reset.",
+                429,
+            )
         limit_kind = "planning" if operation in AI_PLANNING_OPERATIONS else "review" if operation == "review" else "route" if operation == "route" else "routine"
         operation_limits = usage["limits"][limit_kind]
         estimated_input_tokens = max(1, len(json.dumps(payload, ensure_ascii=False)) // 4)
@@ -1541,7 +1881,11 @@ def create_app(
         fallback_model = os.getenv("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL)
         model_env = "AI_PLANNING_MODEL" if operation in AI_PLANNING_OPERATIONS else "AI_ROUTINE_MODEL"
         allowed_model = os.getenv(model_env, fallback_model).strip() or fallback_model
-        requested_output = payload.get("max_tokens", operation_limits["output"])
+        if personal_provider:
+            allowed_model = personal_provider.planning_model if operation in AI_PLANNING_OPERATIONS else personal_provider.routine_model
+        reasoning_plan = operation in AI_PLANNING_OPERATIONS and allowed_model == "deepseek-reasoner"
+        output_limit = int(operation_limits["reasoningOutput" if reasoning_plan else "output"])
+        requested_output = payload.get("max_tokens", output_limit)
         if (
             isinstance(requested_output, bool)
             or not isinstance(requested_output, int)
@@ -1557,10 +1901,10 @@ def create_app(
         clean_payload = {
             **{key: value for key, value in payload.items() if not key.startswith("_calendar")},
             "model": allowed_model,
-            "max_tokens": min(max(1, requested_output), int(operation_limits["output"])),
+            "max_tokens": min(requested_output, output_limit),
         }
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=180 if reasoning_plan else 60) as client:
                 upstream = await client.post(
                     f"{base_url}/chat/completions",
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},

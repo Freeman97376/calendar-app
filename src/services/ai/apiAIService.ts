@@ -68,7 +68,10 @@ Return only a JSON object matching the requested schema.
 Use this conversation to clarify and adjust draft plans before the user applies them to the calendar.
 Every conversation is scoped to the supplied task context only. Do not use assumptions from other tasks or prior unrelated requests.
 If the user's request is unclear, set "reply" to 1-3 specific follow-up questions and omit "actionPlan".
-If enough details are available to schedule or update calendar/tasks, include "actionPlan" with explicit actions the UI can review and apply.
+If enough details are available to create, update, delete, or schedule calendar events or tasks, include "actionPlan" with explicit actions the UI can review and apply.
+If the user asks to delete, remove, or cancel an event or task and exactly one supplied context item matches, the actionPlan must contain delete_event or delete_todo with that item's exact id.
+If a delete target has no match or multiple plausible matches, omit actionPlan and ask a specific clarification question instead of guessing.
+Never claim that a mutation already happened. All actionPlan mutations are drafts until the user approves them in the UI.
 When todo steps are provided, convert selected unfinished or requested steps into schedulable calendar events or task actions when the user asks to plan/schedule/add them.
 When a draft action plan is provided, adjust that draft rather than inventing a new unrelated plan.
 Use the authoritative local time context for relative dates and near-term time questions.
@@ -203,23 +206,7 @@ const toolSessionJsonShape = `{
 
 const conversationJsonShape = `{
   "reply": "string",
-  "actionPlan": {
-    "summary": "optional string when enough details are available",
-    "actions": [
-      {
-        "type": "create_event",
-        "title": "string",
-        "description": "optional string",
-        "displayDetails": "optional string",
-        "startAt": "ISO datetime",
-        "endAt": "ISO datetime",
-        "allDay": false,
-        "eventTypeId": "optional existing event type id",
-        "reason": "optional string"
-      }
-    ],
-    "warnings": []
-  }
+  "actionPlan": ${actionJsonShape}
 }`
 
 const progressToolJsonShape = `{
@@ -501,7 +488,13 @@ export class ApiAIService implements IAIService {
           { role: 'system', content: system },
           { role: 'user', content },
         ],
-        max_tokens: maxTokens,
+        // The backend chooses the planning budget using the account's model and usage mode.
+        // Legacy direct-provider callers retain their explicit output cap.
+        max_tokens:
+          this.endpoint.endsWith('/api/ai/chat/completions') &&
+          !['routine', 'review', 'route'].includes(operation)
+            ? undefined
+            : maxTokens,
         response_format: { type: 'json_object' },
       }),
     })

@@ -1,6 +1,6 @@
 # Calendar App 核心算法说明
 
-> 更新日期：2026-08-10
+> 更新日期：2026-08-29
 > 目标：解释当前实现的输入、规则、边界和验证位置，不把 AI 输出描述为确定性事实。
 
 ## 1. 循环事件展开
@@ -109,8 +109,21 @@ Local provider 是有限确定性回退：可解析明确时间和常见动作�
 ### 容量
 
 - Actions 按 Minimum / Standard / Stretch 分层。
-- Standard + Minimum 不得超过扣除 buffer 后的周容量；默认 buffer 为 20%。
+- Standard + Minimum 不得超过扣除 buffer 后的周容量；默认 buffer 为 20%。截止日在当前周或跨周边界时，只按从用户当天到截止日之间实际出现的配置可执行日折算容量，不能因为跨过周一就获得完整的新一周额度；无有效 `available_days` 时沿用周日回退合同。
 - Effort entries 保存 planned/actual，用于容量偏差而不是覆盖原计划。
+
+### 激活前行动排程
+
+**实现**：`src/domain/logic/goalActionScheduling.ts`、`useActiveToolOnboarding.ts`。
+
+- 未完成的 Minimum / Standard action 必须在激活前拥有合法计划完成日；Stretch、Done、Skipped 可不设日期。
+- 已有合法日期保持不变。缺失日期按依赖拓扑排序，同级保持原顺序，并使用 `weekly_capacity_minutes × (1 - buffer_percent)` 计算每周可用容量。
+- 日期优先受所属 milestone 限制，否则受 goal `target_date` 限制；安排到最早可行周，并落在该周最后一个配置可执行日。`available_days` 无有效中英文星期值时回退到周日。
+- 明确没有硬截止日期时，`target_date` 保持为空，调度器使用滚动四周窗口；系统补齐的日期标记为 flexible/system-planned，低优先级且不阻塞必要后续行动的溢出项可转为 undated Stretch backlog。
+- 信息不足或约束冲突时，每个计划指纹最多产生一个汇总问题。回答后只运行确定性排程；仍不可行时显示行动与冲突，不调用激活接口。
+- 后端仍严格拒绝缺少合法日期的必要行动，作为绕过前端时的最终保护。
+
+**测试**：`goalActionScheduling.test.ts`、`activeToolOnboarding.test.ts`、`goalPlanner.test.tsx`、`test_goal_control.py`。
 
 ### 触发
 

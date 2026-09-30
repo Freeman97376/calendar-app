@@ -2,6 +2,7 @@ node_modules
 .venv
 .venv-test
 dist
+dist-server
 coverage
 playwright-report
 test-results

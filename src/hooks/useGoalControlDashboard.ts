@@ -6,6 +6,7 @@ import type {
   MetricDefinition,
 } from '../domain/types/goalControl'
 import { goalControlGateway } from '../store/goalControlStore'
+import { requestScheduleRecompute } from '../store/schedulingStore'
 
 export function useGoalControlDashboard(projectId: string) {
   const [dashboard, setDashboard] = useState<GoalControlDashboard | null>(null)
@@ -147,6 +148,7 @@ export function useGoalControlDashboard(projectId: string) {
         accept,
         accept ? (proposalSelections[proposalId] ?? []) : undefined,
       )
+      if (accept) requestScheduleRecompute('active_tool_plan_changed')
       await load()
     })
   }

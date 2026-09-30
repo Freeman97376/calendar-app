@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+import hashlib
+import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -7,12 +10,19 @@ from typing import Any, TypeVar
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..user_transaction import user_write_transaction
+from ..ai_plan_review import plan_message, operation_key, validate_actions, OPERATIONS
+
 from ..database import (
+    CalendarActionBatchRecord,
     EventRecord,
     EventTypeRecord,
+    ProjectRecord,
     TodoRecord,
+    ToolRunRecord,
     create_database_engine,
     create_session_factory,
     initialize_schema,
@@ -24,6 +34,10 @@ class CalendarRowNotFoundError(KeyError):
 
 
 class CalendarReferenceError(ValueError):
+    pass
+
+
+class CalendarBatchConflictError(ValueError):
     pass
 
 
@@ -144,16 +158,7 @@ class CalendarRepository:
 
     def delete_todo(self, todo_id: str, user_id: str = "local") -> None:
         with self.session_factory.begin() as session:
-            record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
-            session.execute(
-                update(EventRecord)
-                .where(
-                    EventRecord.user_id == user_id,
-                    EventRecord.linked_todo_id == todo_id,
-                )
-                .values(linked_todo_id=None, updated_at=now_iso())
-            )
-            session.delete(record)
+            self._delete_todo_in_session(session, todo_id, user_id)
 
     def list_events(self, start: str, end: str, user_id: str = "local") -> list[dict[str, Any]]:
         with self.session_factory() as session:
@@ -186,33 +191,225 @@ class CalendarRepository:
 
     def delete_event(self, event_id: str, user_id: str = "local") -> None:
         with self.session_factory.begin() as session:
-            record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
-            timestamp = now_iso()
-            session.execute(
-                update(TodoRecord)
-                .where(
-                    TodoRecord.user_id == user_id,
-                    TodoRecord.linked_event_id == event_id,
+            self._delete_event_in_session(session, event_id, user_id)
+
+    def apply_action_batch(self, payload: dict[str, Any], user_id: str = "local") -> dict[str, Any]:
+        payload = copy.deepcopy(payload)
+        is_ai = payload.get("source") == "ai-action-plan"
+        operation = payload.get("aiPlanOperation")
+        if is_ai:
+            reference = payload.get("aiPlanRef")
+            if not isinstance(reference, dict) or not reference.get("threadId") or not reference.get("messageId") or operation not in OPERATIONS:
+                raise CalendarBatchConflictError("Refresh the app: this AI plan needs a saved reference and operation.")
+            payload["idempotencyKey"] = operation_key(user_id, reference, operation)
+        canonical_payload = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        payload_hash = hashlib.sha256(canonical_payload.encode("utf-8")).hexdigest()
+        idempotency_key = str(payload["idempotencyKey"])
+
+        try:
+            with user_write_transaction(self.session_factory, user_id) as session:
+                message = body = review = None
+                if is_ai:
+                    try:
+                        message, thread, body, review = plan_message(session, user_id, reference)
+                    except KeyError as exc:
+                        raise CalendarRowNotFoundError("AI plan") from exc
+                    except ValueError as exc:
+                        raise CalendarBatchConflictError(str(exc)) from exc
+                existing = self._action_batch(session, user_id, idempotency_key)
+                if existing is not None:
+                    replay = self._replayed_batch(existing, payload_hash)
+                    if is_ai:
+                        replay["aiPlanReview"] = copy.deepcopy(review)
+                    return replay
+
+                if is_ai:
+                    if review.get("dismissed") or thread.status == "archived":
+                        raise CalendarBatchConflictError("This AI plan was dismissed or archived.")
+                    try:
+                        validate_actions(body, payload["actions"], operation)
+                    except ValueError as exc:
+                        raise CalendarBatchConflictError(str(exc)) from exc
+                    if review.get("operations", {}).get(operation, {}).get("status") == "applied":
+                        raise CalendarBatchConflictError("This operation was already applied.")
+                project_id = payload.get("projectId")
+                tool_run_id = payload.get("toolRunId")
+                self._validate_batch_context(session, user_id, project_id, tool_run_id)
+
+                events_upserted: list[dict[str, Any]] = []
+                todos_upserted: list[dict[str, Any]] = []
+                deleted_event_ids: list[str] = []
+                deleted_todo_ids: list[str] = []
+                results: list[dict[str, Any]] = []
+
+                for action in payload["actions"]:
+                    client_action_id = str(action["clientActionId"])
+                    action_type = str(action["type"])
+
+                    if action_type == "create_event":
+                        event_payload = copy.deepcopy(action["event"])
+                        duplicate = (
+                            self._duplicate_event(session, event_payload, user_id)
+                            if action.get("skipIfDuplicate", True)
+                            else None
+                        )
+                        if duplicate is not None:
+                            results.append(
+                                {
+                                    "clientActionId": client_action_id,
+                                    "entityId": duplicate.id,
+                                    "entityType": "event",
+                                    "status": "skipped_duplicate",
+                                }
+                            )
+                            continue
+                        event = self._create_event_in_session(session, event_payload, user_id)
+                        event_value = event_from_record(event)
+                        events_upserted.append(event_value)
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": event.id,
+                                "entityType": "event",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "update_event":
+                        event = self._update_event_in_session(
+                            session, str(action["eventId"]), action["changes"], user_id
+                        )
+                        events_upserted.append(event_from_record(event))
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": event.id,
+                                "entityType": "event",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "delete_event":
+                        event_id = str(action["eventId"])
+                        self._delete_event_in_session(session, event_id, user_id)
+                        deleted_event_ids.append(event_id)
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": event_id,
+                                "entityType": "event",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "create_todo":
+                        todo = self._create_todo_in_session(session, action["todo"], user_id)
+                        todos_upserted.append(todo_from_record(todo))
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": todo.id,
+                                "entityType": "todo",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "update_todo":
+                        todo = self._update_todo_in_session(
+                            session, str(action["todoId"]), action["changes"], user_id
+                        )
+                        todos_upserted.append(todo_from_record(todo))
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": todo.id,
+                                "entityType": "todo",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "delete_todo":
+                        todo_id = str(action["todoId"])
+                        self._delete_todo_in_session(session, todo_id, user_id)
+                        deleted_todo_ids.append(todo_id)
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": todo_id,
+                                "entityType": "todo",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    if action_type == "schedule_todo":
+                        todo_id = str(action["todoId"])
+                        todo = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
+                        event_payload = copy.deepcopy(action["event"])
+                        event_payload["linkedTodoId"] = todo_id
+                        event = self._create_event_in_session(session, event_payload, user_id)
+                        todo = self._update_todo_in_session(
+                            session, todo_id, {"linkedEventId": event.id}, user_id
+                        )
+                        events_upserted.append(event_from_record(event))
+                        todos_upserted.append(todo_from_record(todo))
+                        results.append(
+                            {
+                                "clientActionId": client_action_id,
+                                "entityId": event.id,
+                                "entityType": "event",
+                                "status": "applied",
+                            }
+                        )
+                        continue
+
+                    raise CalendarReferenceError(f"Unsupported calendar batch action: {action_type}")
+
+                timestamp = now_iso()
+                result = {
+                    "batchId": new_id("batch"),
+                    "deletedEventIds": deleted_event_ids,
+                    "deletedTodoIds": deleted_todo_ids,
+                    "eventsUpserted": events_upserted,
+                    "replayed": False,
+                    "results": results,
+                    "status": "committed",
+                    "todosUpserted": todos_upserted,
+                }
+                if is_ai:
+                    review["operations"][operation] = {"status": "applied", "batchId": result["batchId"], "appliedAt": timestamp}
+                    body["actionPlanReview"] = review
+                    message.structured_json = body
+                    message.updated_at = timestamp
+                    result["aiPlanReview"] = copy.deepcopy(review)
+                session.add(
+                    CalendarActionBatchRecord(
+                        batch_id=result["batchId"],
+                        user_id=user_id,
+                        idempotency_key=idempotency_key,
+                        source=str(payload["source"]),
+                        payload_hash=payload_hash,
+                        project_id=project_id,
+                        tool_run_id=tool_run_id,
+                        status="committed",
+                        result_json=copy.deepcopy(result),
+                        created_at=timestamp,
+                        updated_at=timestamp,
+                    )
                 )
-                .values(linked_event_id=None, updated_at=timestamp)
-            )
-            session.execute(
-                update(EventRecord)
-                .where(
-                    EventRecord.user_id == user_id,
-                    EventRecord.master_id == event_id,
-                )
-                .values(master_id=None, updated_at=timestamp)
-            )
-            session.execute(
-                update(EventRecord)
-                .where(
-                    EventRecord.user_id == user_id,
-                    EventRecord.exception_for == event_id,
-                )
-                .values(exception_for=None, updated_at=timestamp)
-            )
-            session.delete(record)
+                session.flush()
+                return result
+        except IntegrityError:
+            with self.session_factory() as session:
+                existing = self._action_batch(session, user_id, idempotency_key)
+                if existing is None:
+                    raise
+                return self._replayed_batch(existing, payload_hash)
 
     def list_event_types(self, user_id: str = "local") -> list[dict[str, Any]]:
         with self.session_factory() as session:
@@ -311,6 +508,15 @@ class CalendarRepository:
         session.add(record)
         return record
 
+    def _delete_todo_in_session(self, session: Session, todo_id: str, user_id: str) -> None:
+        record = self._required(session, TodoRecord, TodoRecord.id, todo_id, user_id, "todo")
+        session.execute(
+            update(EventRecord)
+            .where(EventRecord.user_id == user_id, EventRecord.linked_todo_id == todo_id)
+            .values(linked_todo_id=None, updated_at=now_iso())
+        )
+        session.delete(record)
+
     def _update_todo_in_session(
         self,
         session: Session,
@@ -348,6 +554,7 @@ class CalendarRepository:
         references: dict[str, set[str]] | None = None,
     ) -> EventRecord:
         self._validate_event_references(session, payload, user_id, references)
+        self._validate_event_time_range(payload["startAt"], payload["endAt"])
         timestamp = now_iso()
         record = EventRecord(
             id=str(payload.get("id") or new_id("event")),
@@ -384,6 +591,10 @@ class CalendarRepository:
     ) -> EventRecord:
         self._validate_event_references(session, payload, user_id, references)
         record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
+        self._validate_event_time_range(
+            payload.get("startAt", record.start_at),
+            payload.get("endAt", record.end_at),
+        )
         mapping = {
             "title": "title",
             "description": "description",
@@ -404,6 +615,100 @@ class CalendarRepository:
         self._apply_patch(record, payload, mapping)
         record.updated_at = str(payload.get("updatedAt", now_iso()))
         return record
+
+    def _delete_event_in_session(self, session: Session, event_id: str, user_id: str) -> None:
+        record = self._required(session, EventRecord, EventRecord.id, event_id, user_id, "event")
+        timestamp = now_iso()
+        session.execute(
+            update(TodoRecord)
+            .where(TodoRecord.user_id == user_id, TodoRecord.linked_event_id == event_id)
+            .values(linked_event_id=None, updated_at=timestamp)
+        )
+        session.execute(
+            update(EventRecord)
+            .where(EventRecord.user_id == user_id, EventRecord.master_id == event_id)
+            .values(master_id=None, updated_at=timestamp)
+        )
+        session.execute(
+            update(EventRecord)
+            .where(EventRecord.user_id == user_id, EventRecord.exception_for == event_id)
+            .values(exception_for=None, updated_at=timestamp)
+        )
+        session.delete(record)
+
+    @staticmethod
+    def _validate_event_time_range(start_at: Any, end_at: Any) -> None:
+        try:
+            start = datetime.fromisoformat(str(start_at).replace("Z", "+00:00"))
+            end = datetime.fromisoformat(str(end_at).replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise CalendarReferenceError("Event timestamps must be valid ISO datetimes.") from exc
+        if end <= start:
+            raise CalendarReferenceError("Event end time must be after start time.")
+
+    @staticmethod
+    def _action_batch(
+        session: Session, user_id: str, idempotency_key: str
+    ) -> CalendarActionBatchRecord | None:
+        return session.scalar(
+            select(CalendarActionBatchRecord).where(
+                CalendarActionBatchRecord.user_id == user_id,
+                CalendarActionBatchRecord.idempotency_key == idempotency_key,
+            )
+        )
+
+    @staticmethod
+    def _replayed_batch(record: CalendarActionBatchRecord, payload_hash: str) -> dict[str, Any]:
+        if record.payload_hash != payload_hash:
+            raise CalendarBatchConflictError(
+                "The idempotency key was already used for a different calendar action batch."
+            )
+        result = copy.deepcopy(record.result_json)
+        result["replayed"] = True
+        return result
+
+    @staticmethod
+    def _duplicate_event(
+        session: Session, payload: dict[str, Any], user_id: str
+    ) -> EventRecord | None:
+        return session.scalar(
+            select(EventRecord).where(
+                EventRecord.user_id == user_id,
+                EventRecord.title == str(payload["title"]),
+                EventRecord.start_at == str(payload["startAt"]),
+                EventRecord.end_at == str(payload["endAt"]),
+            )
+        )
+
+    @staticmethod
+    def _validate_batch_context(
+        session: Session,
+        user_id: str,
+        project_id: str | None,
+        tool_run_id: str | None,
+    ) -> None:
+        if project_id is not None:
+            project = session.scalar(
+                select(ProjectRecord).where(
+                    ProjectRecord.user_id == user_id,
+                    ProjectRecord.project_id == project_id,
+                )
+            )
+            if project is None:
+                raise CalendarRowNotFoundError(f"project not found: {project_id}")
+        if tool_run_id is not None:
+            tool_run = session.scalar(
+                select(ToolRunRecord).where(
+                    ToolRunRecord.user_id == user_id,
+                    ToolRunRecord.tool_run_id == tool_run_id,
+                )
+            )
+            if tool_run is None:
+                raise CalendarRowNotFoundError(f"tool run not found: {tool_run_id}")
+            if project_id is not None and tool_run.project_id != project_id:
+                raise CalendarReferenceError(
+                    "toolRunId does not belong to the selected project."
+                )
 
     def _upsert_event_type_in_session(
         self,

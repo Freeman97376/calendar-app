@@ -1,6 +1,6 @@
 # Deployment and Recovery Runbook
 
-> Updated: 2026-07-19. Server, desktop, and legacy migration commands are intentionally separate.
+> Updated: 2026-09-20. Server, desktop, and legacy migration commands are intentionally separate.
 
 ## MySQL server release
 
@@ -13,29 +13,37 @@ python -m venv .venv-server
 ```
 
 3. Set `CALENDAR_APP_MODE=server`, a MySQL 8.0+ `CALENDAR_DATABASE_URL`, HTTPS cookie settings, AI models/budgets, login throttle limits, and trusted proxy addresses. Server budget values come only from environment variables.
-4. Stop application writes, then apply the guardrail migration:
+4. Stop application writes, verify the backup can be restored, and inspect the current revision and the release head:
 
 ```powershell
+.\.venv-server\Scripts\python.exe -m alembic current
+.\.venv-server\Scripts\python.exe -m alembic heads
+```
+
+The current release has one head, `20260920_0012`. For an existing database older than `20260715_0006`, upgrade to that guardrail revision first, then run the integrity audit. If already at or beyond `0006`, skip the intermediate upgrade; never target an older revision. For a new empty database, upgrade directly to `head`.
+
+```powershell
+# Only for an existing database older than the guardrail revision:
 .\.venv-server\Scripts\python.exe -m alembic upgrade 20260715_0006
+# For every existing database:
 .\.venv-server\Scripts\python.exe -m backend.audit_integrity
 ```
 
-5. If the audit reports orphan records, archive the original row JSON before removing it from active tables, inspect the report, and rerun the audit:
+5. If the audit finds orphan or duplicate records, inspect the report and archive their original row JSON before repair. Run `python -m backend.audit_integrity --archive-and-repair` only against the intended, backed-up database, then rerun the audit. Inspect `data_integrity_repairs` before restoring writes. Once the audit is clean, apply all remaining release migrations:
 
 ```powershell
-.\.venv-server\Scripts\python.exe -m backend.audit_integrity --archive-and-repair
-.\.venv-server\Scripts\python.exe -m backend.audit_integrity
-.\.venv-server\Scripts\python.exe -m alembic upgrade 20260719_0008
+.\.venv-server\Scripts\python.exe -m alembic upgrade head
+.\.venv-server\Scripts\python.exe -m alembic current
+.\.venv-server\Scripts\python.exe -m alembic heads
 ```
 
-Inspect the deterministic relationship repairs and quarantined duplicate/orphan rows before restoring writes:
+6. Verify `current` equals the single release `head` and the backend's expected revision. Startup deliberately refuses stale MySQL schemas and never runs migrations or `create_all`. Do not stamp a database to bypass this check.
+7. Deploy the backend first, then the matching frontend. The AI review lifecycle adds no migration: it uses existing conversation JSON and batch records. Old browser pages without a saved AI plan reference are refused with a refresh message. Old history lacking review state remains read-only; generate a new plan to execute it. Create the first administrator through `python -m backend.manage_users`. Set the backend-only `CALENDAR_REGISTRATION_INVITE_CODE` to enable ordinary users to register with one shared, non-expiring code; blank disables new registrations. This feature adds no migration. When upgrading old clients, keep the code empty until the matching frontend is deployed, then enable it and restart the service; old clients only accept `registration: false`. See [Linux deployment](deployment-linux.md) for separate Calendar service and Nginx templates.
+8. Before restoring writes, use disposable test accounts to verify pause/resume, pending edits surviving recomputation, independent once-only AI apply/copy, refresh/retry behavior, and two-user isolation. Real MySQL and Server E2E require an explicitly approved disposable environment. Record skipped checks as release blockers rather than claiming production readiness. Monitor conflict and failed-save errors without logging conversation content or secrets.
 
-```sql
-SELECT * FROM data_integrity_repairs ORDER BY repaired_at DESC;
-```
+## Recovery
 
-6. Verify `alembic current` is `20260719_0008`; application startup intentionally refuses a stale MySQL schema and never runs Alembic or `create_all`.
-7. Deploy the backend first. Create or manage accounts only through `python -m backend.manage_users`; no registration route exists. Deploy the frontend, then sign into two accounts and verify event, Tool, goal, Check-in, preview/import, and AI isolation. Monitor normalized AI error codes and login 429 responses without logging secrets or request bodies.
+Retain the pre-release database backup and previous application release. If acceptance fails, stop writes and diagnose before rollback. Do not roll back only the backend while leaving the new frontend active. A schema rollback or backup restore requires a separately reviewed recovery operation; never blindly downgrade a populated database.
 
 ## Windows desktop release
 

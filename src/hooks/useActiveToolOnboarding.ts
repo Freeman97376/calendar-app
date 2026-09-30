@@ -6,6 +6,15 @@ import {
   fitnessSafetyWasConfirmed,
   planBlockingIssues,
 } from '../domain/logic/activeToolOnboarding'
+import {
+  actionNeedsPlanningDate,
+  actionScheduleQuestionContext,
+  actionScheduleQuestionWasAsked,
+  applyActionScheduleAnswer,
+  scheduleGoalPlan,
+  userConfirmedNoFixedDeadline,
+} from '../domain/logic/goalActionScheduling'
+import { getLocalTimeContext } from '../domain/logic/timeContext'
 import { GoalActivationPlanSchema } from '../domain/schemas/goalActivationPlan.schema'
 import type {
   ActivationFunnelEventInput,
@@ -17,14 +26,23 @@ import type {
   GoalConversationThread,
 } from '../domain/types/goalControl'
 import { goalControlGateway } from '../store/goalControlStore'
+import { useConfigStore } from '../store/configStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
-import { useUIStore } from '../store/uiStore'
+import { requestScheduleRecompute } from '../store/schedulingStore'
 import { useAuth } from './useAuth'
 
 function restoredPlan(messages: GoalConversationMessage[]): GoalActivationPlan | null {
   const message = [...messages].reverse().find((item) => item.structured.kind === 'plan_preview')
   const parsed = GoalActivationPlanSchema.safeParse(message?.structured.plan)
   return parsed.success ? (parsed.data as GoalActivationPlan) : null
+}
+
+function restoredScheduleIssues(messages: GoalConversationMessage[]): string[] {
+  const structured = messages.at(-1)?.structured
+  if (structured?.context !== 'action_schedule' || !Array.isArray(structured.issueMessages)) {
+    return []
+  }
+  return structured.issueMessages.filter((value): value is string => typeof value === 'string')
 }
 
 function seedMatchesThread(thread: GoalConversationThread, seed: ActiveToolOnboardingSeed) {
@@ -87,10 +105,13 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
   const [thread, setThread] = useState<GoalConversationThread | null>(null)
   const [messages, setMessages] = useState<GoalConversationMessage[]>([])
   const [plan, setPlan] = useState<GoalActivationPlan | null>(null)
+  const [scheduleIssues, setScheduleIssues] = useState<string[]>([])
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
+  const [activationMessage, setActivationMessage] = useState('')
   const editEventTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadOverview = useLongTermMemoryStore((state) => state.loadOverview)
+  const timezoneOverride = useConfigStore((state) => state.config.timezoneOverride)
   const selectedMode =
     (auth.preferences.aiUsageMode as AIUsageMode) ||
     auth.capabilities?.aiDefaultUsageMode ||
@@ -153,6 +174,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
           setThread(loaded.thread)
           setMessages(loaded.messages)
           setPlan(restoredPlan(loaded.messages))
+          setScheduleIssues(restoredScheduleIssues(loaded.messages))
           await recordEvent('template_recommendation_accepted', {
             threadId: existing.thread_id,
           })
@@ -199,6 +221,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
         setThread(created)
         setMessages([seedMessage, assistantMessage])
         setPlan(null)
+        setScheduleIssues([])
         await recordEvent('template_recommendation_accepted', { threadId: created.thread_id })
         if (questions.length) {
           await recordEvent('clarification_shown', {
@@ -220,16 +243,144 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
     }
   }, [recordEvent, recordFailure, seed])
 
+  function todayForPlan(candidate: GoalActivationPlan): string {
+    return getLocalTimeContext(new Date(), candidate.review_cadence.timezone || timezoneOverride)
+      .currentDate
+  }
+
+  async function persistPreparedPlan(
+    candidate: GoalActivationPlan,
+    baseMessages: GoalConversationMessage[],
+    previewLabel: 'Initial' | 'Revised' | 'Updated',
+    rollingOverride?: boolean,
+  ) {
+    if (!thread) return null
+    const rollingWithoutDeadline =
+      rollingOverride ?? userConfirmedNoFixedDeadline(baseMessages, seed.originalRequest)
+    const prepared = scheduleGoalPlan(candidate, {
+      rollingWithoutDeadline,
+      today: todayForPlan(candidate),
+    })
+    const preview = await goalControlGateway.addMessage(thread.thread_id, {
+      role: 'assistant',
+      content: `${previewLabel} plan preview: ${prepared.plan.summary}`,
+      structured: { kind: 'plan_preview', plan: prepared.plan },
+      summaryUpdate: prepared.plan.rollingSummary,
+    })
+    const nextMessages = [...baseMessages, preview]
+    if (prepared.question && prepared.questionContext) {
+      const question = await goalControlGateway.addMessage(thread.thread_id, {
+        role: 'assistant',
+        content:
+          'The plan needs one scheduling decision before activation. / 激活前还需要一个排程决定。',
+        structured: {
+          kind: 'question_batch',
+          questions: [prepared.question],
+          ...prepared.questionContext,
+        },
+      })
+      nextMessages.push(question)
+      await recordEvent('clarification_shown', {
+        metadata: { questionCount: 1 },
+        threadId: thread.thread_id,
+      })
+    }
+    setMessages(nextMessages)
+    setPlan(prepared.plan)
+    setScheduleIssues(prepared.issues.map((issue) => issue.message))
+    return prepared
+  }
+
   async function submitAnswers(answers: Record<string, unknown>) {
     if (!thread) return
     setBusy(true)
     setError('')
     try {
+      const activeScheduleContext = actionScheduleQuestionContext(messages.at(-1))
       const answer = await goalControlGateway.addMessage(thread.thread_id, {
         role: 'user',
         content: JSON.stringify(answers),
-        structured: { answers, kind: 'question_answers' },
+        structured: {
+          answers,
+          kind: 'question_answers',
+          ...(activeScheduleContext
+            ? {
+                context: 'action_schedule',
+                planFingerprint: activeScheduleContext.planFingerprint,
+              }
+            : {}),
+        },
       })
+      if (activeScheduleContext && plan) {
+        const rawAnswer = answers.action_schedule
+        const scheduleAnswer =
+          rawAnswer && typeof rawAnswer === 'object' && !Array.isArray(rawAnswer)
+            ? (rawAnswer as { custom?: string; selected?: string[] })
+            : {}
+        const resolution = applyActionScheduleAnswer(
+          plan,
+          scheduleAnswer,
+          activeScheduleContext,
+          todayForPlan(plan),
+        )
+        const answeredMessages = [...messages, answer]
+        await recordEvent('clarification_completed', {
+          metadata: { questionCount: 1, skippedCount: 0 },
+          threadId: thread.thread_id,
+        })
+        if (resolution.manual) {
+          const manual = await goalControlGateway.addMessage(thread.thread_id, {
+            role: 'assistant',
+            content:
+              resolution.error ||
+              '请在计划审阅中补齐标红的计划完成日；系统不会再次询问本次排程问题。',
+            structured: {
+              context: 'action_schedule',
+              issueMessages: resolution.error ? [resolution.error] : [],
+              kind: 'schedule_manual_entry',
+              planFingerprint: activeScheduleContext.planFingerprint,
+            },
+          })
+          setMessages([...answeredMessages, manual])
+          setPlan(resolution.plan)
+          setScheduleIssues([])
+          if (resolution.error) setError(resolution.error)
+          return
+        }
+        const prepared = scheduleGoalPlan(resolution.plan, {
+          rollingWithoutDeadline:
+            resolution.rollingWithoutDeadline ||
+            userConfirmedNoFixedDeadline(answeredMessages, seed.originalRequest),
+          today: todayForPlan(resolution.plan),
+        })
+        const preview = await goalControlGateway.addMessage(thread.thread_id, {
+          role: 'assistant',
+          content: `Updated plan preview: ${prepared.plan.summary}`,
+          structured: { kind: 'plan_preview', plan: prepared.plan },
+          summaryUpdate: prepared.plan.rollingSummary,
+        })
+        const resolvedMessages = [...answeredMessages, preview]
+        setPlan(prepared.plan)
+        setScheduleIssues(prepared.issues.map((issue) => issue.message))
+        if (prepared.status === 'needs_clarification') {
+          const issueMessages = prepared.issues.map((issue) => issue.message)
+          const blocked = await goalControlGateway.addMessage(thread.thread_id, {
+            role: 'assistant',
+            content: `排程仍不可行：${issueMessages.join(' ')}`,
+            structured: {
+              context: 'action_schedule',
+              issueMessages,
+              kind: 'schedule_blocked',
+              planFingerprint: prepared.fingerprint,
+            },
+          })
+          setMessages([...resolvedMessages, blocked])
+          setError(`排程仍不可行：${issueMessages.join(' ')}`)
+          return
+        }
+        setMessages(resolvedMessages)
+        return
+      }
       const ready = await goalControlGateway.addMessage(thread.thread_id, {
         role: 'assistant',
         content:
@@ -267,14 +418,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
         threadTitle: thread.title,
       })
       const normalized = normalizePlan(generated, seed, messages)
-      const preview = await goalControlGateway.addMessage(thread.thread_id, {
-        role: 'assistant',
-        content: `Initial plan preview: ${normalized.summary}`,
-        structured: { kind: 'plan_preview', plan: normalized },
-        summaryUpdate: normalized.rollingSummary,
-      })
-      setMessages((current) => [...current, preview])
-      setPlan(normalized)
+      await persistPreparedPlan(normalized, messages, 'Initial')
       await recordEvent('initial_plan_generated', { threadId: thread.thread_id })
     } catch (planningError) {
       await recordFailure('generation', planningError, thread.thread_id)
@@ -303,14 +447,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
         threadId: thread.thread_id,
       })
       const normalized = normalizePlan(revised, seed, nextMessages)
-      const preview = await goalControlGateway.addMessage(thread.thread_id, {
-        role: 'assistant',
-        content: `Revised plan preview: ${normalized.summary}`,
-        structured: { kind: 'plan_preview', plan: normalized },
-        summaryUpdate: normalized.rollingSummary,
-      })
-      setMessages([...nextMessages, preview])
-      setPlan(normalized)
+      await persistPreparedPlan(normalized, nextMessages, 'Revised')
       await recordEvent('initial_plan_ai_revision', {
         metadata: { revisionCount: 1 },
         threadId: thread.thread_id,
@@ -326,6 +463,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
   const editPlan = useCallback(
     (nextPlan: GoalActivationPlan) => {
       setPlan(nextPlan)
+      setScheduleIssues([])
       if (!thread) return
       if (editEventTimer.current) clearTimeout(editEventTimer.current)
       editEventTimer.current = setTimeout(() => {
@@ -340,26 +478,84 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
 
   async function activate() {
     if (!thread || !plan) return
-    const issues = planBlockingIssues(plan)
-    if (issues.length) {
-      setError(issues.join(' '))
-      return
-    }
     setBusy(true)
     setError('')
     try {
+      const prepared = scheduleGoalPlan(plan, {
+        rollingWithoutDeadline: userConfirmedNoFixedDeadline(messages, seed.originalRequest),
+        today: todayForPlan(plan),
+      })
+      setPlan(prepared.plan)
+      setScheduleIssues(prepared.issues.map((issue) => issue.message))
+      if (prepared.status === 'needs_clarification') {
+        if (
+          prepared.question &&
+          prepared.questionContext &&
+          !actionScheduleQuestionWasAsked(messages, prepared.fingerprint)
+        ) {
+          const nextMessages = [...messages]
+          if (prepared.changed) {
+            const preview = await goalControlGateway.addMessage(thread.thread_id, {
+              role: 'assistant',
+              content: `Updated plan preview: ${prepared.plan.summary}`,
+              structured: { kind: 'plan_preview', plan: prepared.plan },
+              summaryUpdate: prepared.plan.rollingSummary,
+            })
+            nextMessages.push(preview)
+          }
+          const question = await goalControlGateway.addMessage(thread.thread_id, {
+            role: 'assistant',
+            content:
+              'The plan needs one scheduling decision before activation. / 激活前还需要一个排程决定。',
+            structured: {
+              kind: 'question_batch',
+              questions: [prepared.question],
+              ...prepared.questionContext,
+            },
+          })
+          nextMessages.push(question)
+          setMessages(nextMessages)
+          await recordEvent('clarification_shown', {
+            metadata: { questionCount: 1 },
+            threadId: thread.thread_id,
+          })
+        } else {
+          setError(`计划仍无法激活：${prepared.issues.map((issue) => issue.message).join(' ')}`)
+        }
+        return
+      }
+      if (prepared.changed) {
+        const preview = await goalControlGateway.addMessage(thread.thread_id, {
+          role: 'assistant',
+          content: `Updated plan preview: ${prepared.plan.summary}`,
+          structured: { kind: 'plan_preview', plan: prepared.plan },
+          summaryUpdate: prepared.plan.rollingSummary,
+        })
+        setMessages([...messages, preview])
+        setScheduleIssues([])
+        setError('系统已补齐可调整的计划完成日，请检查后再次批准。')
+        return
+      }
+      const issues = planBlockingIssues(prepared.plan)
+      if (issues.length) {
+        setError(issues.join(' '))
+        return
+      }
       await recordEvent('initial_plan_approved', { threadId: thread.thread_id })
-      const result = await goalControlGateway.activate(thread.thread_id, plan)
+      const result = await goalControlGateway.activate(thread.thread_id, prepared.plan)
       await recordEvent('active_tool_created', {
         projectId: result.project.project_id,
         threadId: thread.thread_id,
       })
       await loadOverview()
-      useUIStore.getState().clearActiveToolOnboarding()
-      useUIStore.getState().openEnabledToolsPanel(result.project.project_id)
+      requestScheduleRecompute('active_tool_activated')
+      setActivationMessage(
+        `${prepared.plan.title} 已激活；最新全局排程会生成审核提案，确认前不会写入日历。`,
+      )
     } catch (activationError) {
       await recordFailure('activation', activationError, thread.thread_id)
       setError(activationError instanceof Error ? activationError.message : String(activationError))
+    } finally {
       setBusy(false)
     }
   }
@@ -371,10 +567,14 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
           typeof activeToolClarificationQuestions
         >)
       : null
-  const blockingIssues = useMemo(() => (plan ? planBlockingIssues(plan) : []), [plan])
+  const blockingIssues = useMemo(
+    () => (plan ? [...planBlockingIssues(plan), ...scheduleIssues] : []),
+    [plan, scheduleIssues],
+  )
 
   return {
     activate,
+    activationMessage,
     blockingIssues,
     busy,
     error,
@@ -383,6 +583,7 @@ export function useActiveToolOnboarding(seed: ActiveToolOnboardingSeed) {
     pendingQuestions,
     plan,
     planReady: messages.at(-1)?.structured.kind === 'planning_ready',
+    requiresPlanningDate: actionNeedsPlanningDate,
     revisePlan,
     selectedMode,
     setPlan: editPlan,

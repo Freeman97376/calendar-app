@@ -16,10 +16,12 @@ from backend.user_data import BackupValidationError, DataPortabilityService, che
 
 
 def mock_plan() -> dict:
+    # Reusable valid plan dates must not expire with the wall clock.
+    today = date.today()
     return {
         "title": "12-week strength plan",
         "summary": "Increase strength without exceeding four hours per week.",
-        "target_date": "2026-10-15",
+        "target_date": (today + timedelta(weeks=12)).isoformat(),
         "goal_id": "shared-goal",
         "project_id": "shared-project",
         "template_id": "fitness",
@@ -30,10 +32,10 @@ def mock_plan() -> dict:
             {"metric_id": "completion", "name": "Training completion", "role": "leading", "unit": "%", "direction": "increase", "baseline_value": 50, "target_value": 85, "cadence": "weekly", "is_required": True},
             {"metric_id": "bench", "name": "Bench press", "role": "lagging", "unit": "kg", "direction": "increase", "baseline_value": 60, "target_value": 75, "cadence": "weekly"},
         ],
-        "milestones": [{"milestone_id": "base", "title": "Base phase", "due_date": "2026-08-15"}],
+        "milestones": [{"milestone_id": "base", "title": "Base phase", "due_date": (today + timedelta(weeks=4)).isoformat()}],
         "actions": [
-            {"action_id": "train", "title": "Complete three sessions", "milestone_id": "base", "due_date": "2026-08-08", "estimated_minutes": 180, "execution_tier": "minimum"},
-            {"action_id": "review", "title": "Review weekly load", "milestone_id": "base", "due_date": "2026-08-15", "estimated_minutes": 30, "execution_tier": "standard"},
+            {"action_id": "train", "title": "Complete three sessions", "milestone_id": "base", "due_date": (today + timedelta(weeks=1)).isoformat(), "estimated_minutes": 180, "execution_tier": "minimum"},
+            {"action_id": "review", "title": "Review weekly load", "milestone_id": "base", "due_date": (today + timedelta(weeks=2)).isoformat(), "estimated_minutes": 30, "execution_tier": "standard"},
         ],
         "dependencies": [{"predecessor_action_id": "train", "successor_action_id": "review"}],
         "policy": {"weekly_capacity_minutes": 300, "buffer_percent": 20, "active_tier": "standard", "ai_usage_mode": "quality", "planning_brief": {"summary": "Five-hour strength plan"}},
@@ -142,13 +144,62 @@ class GoalControlTests(unittest.TestCase):
         thread = self.alice.create_thread({"title": "Overloaded plan"})
         plan = mock_plan()
         plan["policy"]["weekly_capacity_minutes"] = 200
-        with self.assertRaisesRegex(GoalControlValidationError, "buffered weekly capacity"):
+        due = date.today() + timedelta(days=7 - date.today().weekday())
+        plan["target_date"] = due.isoformat()
+        plan["milestones"][0]["due_date"] = due.isoformat()
+        for action in plan["actions"]:
+            action["due_date"] = due.isoformat()
+            action["metadata"] = {"due_date_source": "user_fixed"}
+        with self.assertRaisesRegex(GoalControlValidationError, "每周容量至少需要"):
             self.alice.activate_thread(thread["thread_id"], plan)
+
+    def test_capacity_prorates_partial_week_using_configured_days(self) -> None:
+        with self.assertRaisesRegex(
+            GoalControlValidationError,
+            "1 个可执行日可用的 100 分钟",
+        ):
+            self.alice._validate_standard_capacity(
+                [
+                    {
+                        "action_id": "partial-week",
+                        "title": "Partial week action",
+                        "due_date": "2026-08-31",
+                        "estimated_minutes": 120,
+                        "execution_tier": "minimum",
+                        "status": "todo",
+                    }
+                ],
+                {
+                    "weekly_capacity_minutes": 300,
+                    "buffer_percent": 0,
+                    "available_days": ["周一", "Wed", "Friday"],
+                },
+                today_value=date(2026, 8, 30),
+            )
+
+    def test_activation_rejects_unscheduled_required_actions_but_allows_undated_stretch(self) -> None:
+        thread = self.alice.create_thread({"title": "Unscheduled required plan"})
+        plan = mock_plan()
+        plan["actions"][0]["due_date"] = None
+        with self.assertRaisesRegex(
+            GoalControlValidationError,
+            "缺少有效日期",
+        ):
+            self.alice.activate_thread(thread["thread_id"], plan)
+
+        stretch_thread = self.alice.create_thread({"title": "Undated stretch plan"})
+        stretch_plan = mock_plan()
+        stretch_plan["actions"][0]["due_date"] = None
+        stretch_plan["actions"][0]["execution_tier"] = "stretch"
+        stretch_plan["dependencies"] = []
+        activated = self.alice.activate_thread(stretch_thread["thread_id"], stretch_plan)
+        self.assertEqual(activated["project"]["project_id"], "shared-project")
 
     def test_twelve_week_plan_is_checked_per_week_not_as_one_week(self) -> None:
         thread = self.alice.create_thread({"title": "Twelve week plan"})
         plan = mock_plan()
-        start = date(2026, 7, 20)
+        today = date.today()
+        start = today - timedelta(days=today.weekday())
         plan["target_date"] = (start + timedelta(weeks=12)).isoformat()
         plan["milestones"] = [{"milestone_id": "long", "title": "Long plan", "due_date": plan["target_date"]}]
         plan["actions"] = [
@@ -166,6 +217,42 @@ class GoalControlTests(unittest.TestCase):
         plan["policy"]["weekly_capacity_minutes"] = 180
         activated = self.alice.activate_thread(thread["thread_id"], plan)
         self.assertEqual(activated["project"]["project_id"], "shared-project")
+
+    def test_descriptive_planning_deadline_never_becomes_target_date(self) -> None:
+        thread = self.alice.create_thread({"title": "Open-ended plan"})
+        plan = mock_plan()
+        due = date.today() + timedelta(days=21)
+        plan["target_date"] = None
+        plan["policy"]["planning_brief"] = {"deadline": "长期、无硬期限"}
+        plan["milestones"][0]["due_date"] = due.isoformat()
+        for action in plan["actions"]:
+            action["due_date"] = due.isoformat()
+        activated = self.alice.activate_thread(thread["thread_id"], plan)
+        self.assertIsNone(activated["project"]["metadata"]["targetDate"])
+
+    def test_zero_of_five_without_hard_risk_is_attention_not_at_risk(self) -> None:
+        thread = self.alice.create_thread({"title": "Fresh plan"})
+        plan = mock_plan()
+        due = date.today() + timedelta(days=35)
+        plan["target_date"] = due.isoformat()
+        plan["milestones"][0]["due_date"] = due.isoformat()
+        plan["actions"] = [
+            {
+                "action_id": f"fresh-{index}",
+                "title": f"Fresh action {index}",
+                "milestone_id": "base",
+                "due_date": due.isoformat(),
+                "estimated_minutes": 30,
+                "execution_tier": "standard",
+            }
+            for index in range(5)
+        ]
+        plan["dependencies"] = []
+        activated = self.alice.activate_thread(thread["thread_id"], plan)
+        dashboard = self.alice.dashboard(activated["project"]["project_id"])
+        self.assertEqual(dashboard["health"]["status"], "attention")
+        factor = next(item for item in dashboard["health"]["factors"] if item["key"] == "replanSignals")
+        self.assertEqual(factor["value"], 0)
 
     def test_check_in_uses_project_timezone_and_updates_rolling_summary(self) -> None:
         thread = self.alice.create_thread({"thread_id": "timezone-thread", "title": "Timezone plan"})

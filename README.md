@@ -4,7 +4,7 @@ React/Vite calendar app with a FastAPI backend. It supports a MySQL multi-user s
 
 ## Run modes
 
-- `server`: MySQL 8.0+ is the only data source. Users sign in with accounts created by the operator; registration does not exist.
+- `server`: MySQL 8.0+ is the only data source. Administrators are created by the operator; ordinary users can register with the shared invitation code when it is configured.
 - `desktop`: Tauri starts a bundled FastAPI/PyInstaller sidecar on a random `127.0.0.1` port. SQLite lives in `%LOCALAPPDATA%\CalendarApp`, or `data\` beside a portable build.
 
 The modes do not synchronize automatically. Move personal data only with the versioned backup export/import in Settings.
@@ -17,6 +17,7 @@ Set backend-only values in the service environment. Never put AI keys or databas
 CALENDAR_APP_MODE=server
 CALENDAR_DATABASE_URL=mysql+pymysql://calendar_user:CHANGE_ME@127.0.0.1:3306/calendar_app?charset=utf8mb4
 CALENDAR_COOKIE_SECURE=true
+CALENDAR_REGISTRATION_INVITE_CODE=
 CALENDAR_ALLOWED_ORIGINS=
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
@@ -48,6 +49,20 @@ python -m venv .venv-server
 
 `manage_users` also provides `set-password`, `enable`, `disable`, `unlock`, and `list`. Password input is hidden and is never accepted as a command-line argument. Put the React build at `/` and reverse-proxy `/api` to `127.0.0.1:8787` on the same HTTPS origin. Validate with `GET /api/health`.
 
+## Shared invitation registration
+
+Set `CALENDAR_REGISTRATION_INVITE_CODE` only in the backend service environment to enable the server login page's **Create account** flow. One shared code may register multiple ordinary users and has no automatic expiry. Empty disables registration; change the value and restart the service to invalidate the old code. Existing accounts continue working. Never put the code in a URL, `VITE_*`, browser storage, logs, or committed configuration.
+
+Users choose a username (3–50 ASCII letters, digits, `.`, `_`, `-`; normalized to lowercase) and a password (12–256 characters), then sign in after successful registration. Self-registration cannot grant admin privileges. A lost response can be recovered by trying to sign in before retrying registration. Login and registration use separate database-backed throttle buckets; registration defaults to 10 requests per IP and 5 per username in 15 minutes. No schema migration is added by this feature.
+
+The confirmed Linux deployment target is `https://mantleofintelligence.com/calendar/`. Use `npm run build:server` and the isolated Calendar service/path snippet described in [the Linux runbook](Office/docs/deployment-linux.md); the first deployment and approved disposable MySQL/browser validation completed on 2026-09-20. Registration is enabled. Web users can open Settings → AI API settings to save their own DeepSeek key after the server credential-encryption key is configured. Personal keys take priority over the operator-provided service.
+
+## Personal AI API settings (web)
+
+Sign in, open **Settings → AI API settings**, paste a new DeepSeek API key, select the conversation/planning models and save. The key is written once over the authenticated API, encrypted on the server and never returned. The browser does not persist it. Leave the field empty to keep an existing key; removal requires confirmation and falls back to the operator-provided service when available. Saving makes no provider call and does not validate provider billing or connectivity. This version supports the official DeepSeek endpoint; arbitrary provider URLs are not accepted.
+
+The operator must set `CALENDAR_AI_ENCRYPTION_KEY` to a freshly generated Fernet key in the private service environment and restart Calendar. Generate it once, retain it across deployments, and back it up securely with the database. Never overwrite it during ordinary deployment: replacing it without re-encrypting stored credentials makes existing personal keys unreadable. Encrypted records are stored in `user_ai_settings` (migration `20260920_0012`), separate from preferences and excluded from user exports. The master key and shared `DEEPSEEK_API_KEY` must never be sent to clients or placed in `VITE_*` variables.
+
 ## Long-term goal control and AI usage
 
 Open `AI Assistant` and choose `New long-term goal / 新长期目标`. The recoverable goal conversation asks one to three selectable questions per turn. It creates a measurable plan preview only; the Goal, Project, metrics, Milestones, Actions, dependencies, control policy, Check-in schedule, and first version are written in one transaction after confirmation.
@@ -64,9 +79,11 @@ AI usage resolution is:
 goal override -> user global default -> server default -> administrator maximum clamp
 ```
 
-The Settings page shows Economy, Balanced, and Quality-first behavior, current monthly routine/planning tokens, Soft/Hard limits, and degraded status. Server users cannot change budgets or model names. Desktop users can change local budgets. Reaching the Hard limit stops model calls without blocking Check-ins, charts, manual edits, versions, or local data. AI usage events are not included in backup v2.
+The Settings page shows Economy, Balanced, and Quality-first behavior, current monthly routine/planning tokens, Soft/Hard limits, and degraded status. Server users cannot change operator budgets; they can choose the supported models for their own key in AI API configuration. Desktop users can change local budgets. Reaching the Hard limit stops model calls without blocking Check-ins, charts, manual edits, versions, or local data. AI usage events are not included in backup v2.
 
-The database migration head is `20260719_0008`. Existing servers first upgrade to `20260715_0006`, run `python -m backend.audit_integrity`, archive and repair any reported orphan records with `--archive-and-repair`, and only then upgrade explicitly to `head` while writes are stopped. Server startup never creates, stamps, or migrates the production schema.
+Planning requests using `deepseek-reasoner` allow up to 8,192 / 16,384 / 24,576 output tokens in Economy / Balanced / Quality mode, including reasoning and final JSON. Other planning models retain the 2,000 / 3,000 / 4,000 caps. Backend planning calls use the account model and effective usage mode; an explicit lower `max_tokens` remains respected. Reasoning planning waits up to 180 seconds for upstream reads (the server proxy allows 300 seconds). Truncated responses are metered, rejected as incomplete, and never automatically retried; the user must shorten or explicitly regenerate the request.
+
+The current database migration head is `20260920_0012`. With writes stopped and a verified backup, inspect `alembic current` and `alembic heads`. Existing databases older than `20260715_0006` first upgrade to that guardrail revision, run `python -m backend.audit_integrity`, and archive/repair reported orphan records before upgrading to `head`. Databases already at or beyond that revision must not target an older revision: audit their current state, then upgrade directly to `head`. Finally verify that `alembic current` equals the single release head. Server startup never creates, stamps, or migrates the production schema.
 
 Desktop SQLite uses a migration lock and SQLite online backup to build a separate migration candidate. Known layouts, including a false `0007` stamp missing its foreign keys, are repaired and fully migrated; unknown layouts stop with `recovery_required`. The candidate must pass integrity, foreign-key, schema-fingerprint, revision, and record-count checks before it atomically replaces the original. The original and checksummed snapshot remain untouched on failure.
 

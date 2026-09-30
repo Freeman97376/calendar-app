@@ -64,6 +64,24 @@ class ActivationFunnelEventPayload(StrictGoalControlDto):
     metadata: dict[str, bool | int] = Field(default_factory=dict, max_length=8)
 
 
+class AIConversationCreatePayload(StrictGoalControlDto):
+    thread_id: str | None = Field(default=None, min_length=1, max_length=64)
+    title: str = Field(default="New AI conversation", min_length=1, max_length=200)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AIConversationUpdatePayload(StrictGoalControlDto):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    status: Literal["active", "archived"] | None = None
+
+
+class AIConversationMessagePayload(StrictGoalControlDto):
+    message_id: str | None = Field(default=None, min_length=1, max_length=64)
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=20_000)
+    structured: dict[str, Any] = Field(default_factory=dict)
+
+
 def usage_capabilities(mode: str) -> dict[str, Any]:
     default_mode = clean_mode(os.getenv("AI_DEFAULT_USAGE_MODE", "balanced"))
     maximum_mode = clean_mode(os.getenv("AI_MAX_USAGE_MODE", "balanced"))
@@ -122,7 +140,86 @@ def install_goal_control_routes(
         include_archived: bool = Query(default=False),
         principal: Principal = Depends(current_principal),
     ) -> dict[str, Any]:
-        return {"success": True, "threads": control(principal).list_threads(project_id=project_id, include_archived=include_archived)}
+        threads = control(principal).list_threads(
+            project_id=project_id,
+            include_archived=include_archived,
+        )
+        return {
+            "success": True,
+            "threads": [thread for thread in threads if thread["kind"] != "assistant_chat"],
+        }
+
+    @api.get("/api/ai/conversations")
+    def list_ai_conversations(
+        include_archived: bool = Query(default=False),
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        return {
+            "success": True,
+            "threads": control(principal).list_threads(
+                include_archived=include_archived,
+                kind="assistant_chat",
+            ),
+        }
+
+    @api.post("/api/ai/conversations")
+    def create_ai_conversation(
+        payload: AIConversationCreatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        values = payload.model_dump()
+        values.update({"kind": "assistant_chat", "status": "active"})
+        return {"success": True, "thread": control(principal).create_thread(values)}
+
+    @api.get("/api/ai/conversations/{thread_id}")
+    def get_ai_conversation(
+        thread_id: str,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        value = control(principal).get_thread_of_kind(thread_id, "assistant_chat")
+        messages = value.pop("messages", [])
+        return {"success": True, "thread": value, "messages": messages}
+
+    @api.patch("/api/ai/conversations/{thread_id}")
+    def update_ai_conversation(
+        thread_id: str,
+        payload: AIConversationUpdatePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        service = control(principal)
+        service.get_thread_of_kind(thread_id, "assistant_chat")
+        return {
+            "success": True,
+            "thread": service.update_thread(
+                thread_id,
+                payload.model_dump(exclude_none=True, exclude_unset=True),
+            ),
+        }
+
+    @api.delete("/api/ai/conversations/{thread_id}")
+    def delete_ai_conversation(
+        thread_id: str,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        control(principal).delete_thread(thread_id, kind="assistant_chat")
+        return {"success": True, "deleted": True, "threadId": thread_id}
+
+    @api.post("/api/ai/conversations/{thread_id}/messages")
+    def add_ai_conversation_message(
+        thread_id: str,
+        payload: AIConversationMessagePayload,
+        principal: Principal = Depends(current_principal),
+    ) -> dict[str, Any]:
+        service = control(principal)
+        service.get_thread_of_kind(thread_id, "assistant_chat")
+        return {
+            "success": True,
+            "message": service.add_message(thread_id, payload.model_dump()),
+        }
+
+    @api.post("/api/ai/conversations/{thread_id}/messages/{message_id}/action-plan/dismiss")
+    def dismiss_ai_action_plan(thread_id: str, message_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+        return {"success": True, "message": control(principal).dismiss_ai_action_plan(thread_id, message_id)}
 
     @api.post("/api/goal-conversations")
     def create_goal_conversation(

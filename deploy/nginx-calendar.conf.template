@@ -1,0 +1,49 @@
+# TEMPLATE: replace every calendar.example.invalid after confirming the real subdomain.
+# Obtain the certificate using the server's existing certificate manager first.
+# Add as a new site; preserve the existing Mantle site and default server.
+server {
+    listen 80;
+    server_name calendar.example.invalid;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name calendar.example.invalid;
+    ssl_certificate /etc/letsencrypt/live/calendar.example.invalid/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/calendar.example.invalid/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    root /opt/projects/calendar-app/dist;
+    index index.html;
+    client_max_body_size 25m;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+
+    location /api/ {
+        # No trailing URI: preserve /api in the upstream request.
+        proxy_pass http://127.0.0.1:18787;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Replace client input; never trust an arbitrary incoming forwarding chain.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+        proxy_cache off;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}

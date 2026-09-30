@@ -36,6 +36,7 @@ from .database import (
     PlanVersionRecord,
     ProgressLogRecord,
     ProjectRecord,
+    ScheduleProposalRecord,
     TodoRecord,
     ToolPresetRecord,
     ToolRunRecord,
@@ -69,6 +70,7 @@ PORTABLE_PREFERENCE_KEYS = {
     "layoutPanelPosition",
     "layoutPanelSizePercent",
     "timezoneOverride",
+    "scheduling",
 }
 SERVER_MANAGED_PREFERENCE_KEYS = {"aiMonthlySoftLimit", "aiMonthlyHardLimit"}
 AI_USAGE_MODES = {"economy", "balanced", "quality"}
@@ -80,6 +82,7 @@ PERSONAL_MODELS = (
     PlanDependencyRecord,
     EffortEntryRecord,
     ActionEventLinkRecord,
+    ScheduleProposalRecord,
     PlanVersionRecord,
     CheckInScheduleRecord,
     MetricDefinitionRecord,
@@ -108,6 +111,7 @@ BACKUP_V2_MODELS: dict[str, tuple[Any, str]] = {
     "checkInSchedules": (CheckInScheduleRecord, "schedule_id"),
     "checkIns": (CheckInRecord, "check_in_id"),
     "planChangeProposals": (PlanChangeProposalRecord, "proposal_id"),
+    "scheduleProposals": (ScheduleProposalRecord, "proposal_id"),
     "planVersions": (PlanVersionRecord, "version_id"),
     "goalControlPolicies": (GoalControlPolicyRecord, "project_id"),
     "planDependencies": (PlanDependencyRecord, "dependency_id"),
@@ -748,6 +752,12 @@ class DataPortabilityService:
         events = identifiers("events", "id", EventRecord, EventRecord.id)
         threads = identifiers("conversationThreads", "thread_id", ConversationThreadRecord, ConversationThreadRecord.thread_id)
         metrics = identifiers("metricDefinitions", "metric_id", MetricDefinitionRecord, MetricDefinitionRecord.metric_id)
+        schedule_proposals = identifiers(
+            "scheduleProposals",
+            "proposal_id",
+            ScheduleProposalRecord,
+            ScheduleProposalRecord.proposal_id,
+        )
         event_types = identifiers('eventTypes', 'id', EventTypeRecord, EventTypeRecord.id)
         event_types.add('general')
         todos = identifiers('todos', 'id', TodoRecord, TodoRecord.id)
@@ -835,6 +845,12 @@ class DataPortabilityService:
         require_reference("actionEventLinks", "project_id", projects)
         require_reference("actionEventLinks", "action_id", actions)
         require_reference("actionEventLinks", "event_id", events)
+        require_reference(
+            "actionEventLinks",
+            "proposal_id",
+            schedule_proposals,
+            optional=True,
+        )
 
         for index, item in enumerate(items("actions")):
             project_id = item_value(item, "project_id")

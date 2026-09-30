@@ -5,6 +5,7 @@ import { activeToolsFromProjects, createActiveToolMetadata } from '../domain/log
 import { getConfiguredAIService } from '../store/aiStore'
 import { goalControlGateway } from '../store/goalControlStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
+import { requestScheduleRecompute } from '../store/schedulingStore'
 import { useUIStore } from '../store/uiStore'
 import { templateToolName, type ToolTemplateMetadata } from '../domain/logic/toolTemplateMetadata'
 import { useEnabledToolsPanel } from './useEnabledToolsPanel'
@@ -241,6 +242,7 @@ export function useToolTemplateActivation(activeTemplate: ToolTemplateMetadata |
         },
       })
       await loadOverview()
+      requestScheduleRecompute('active_tool_activated')
       setStatus(`Registered active tool ${alias}.`)
       activeToolsPanel.open(project.project_id)
     } catch (createError) {

@@ -441,7 +441,7 @@
     {
       "id": "AUD-20260812-008",
       "title": "Calendar hour intent and modal keyboard focus were incomplete",
-      "type": "accessibility",
+      "type": "correctness",
       "severity": "medium",
       "priority": "P2",
       "status": "resolved",

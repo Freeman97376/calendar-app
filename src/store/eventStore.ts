@@ -35,6 +35,7 @@ export type EventStore = {
     options?: RecurrenceMutationOptions,
   ) => Promise<Event>
   deleteEvent: (id: string, options?: RecurrenceMutationOptions) => Promise<void>
+  reconcileBatch: (events: Event[], deletedIds?: string[]) => void
   reset: (events?: Event[]) => void
 }
 
@@ -189,6 +190,9 @@ async function persistEventChanges(previousEvents: Event[], nextEvents: Event[])
       await eventSyncManager.deleteEvent(event.id)
     }
   }
+  void import('./schedulingStore').then(({ requestScheduleRecompute }) => {
+    requestScheduleRecompute('calendar_changed')
+  })
 }
 
 export const useEventStore = create<EventStore>((set, get) => ({
@@ -426,6 +430,17 @@ export const useEventStore = create<EventStore>((set, get) => ({
       events: nextEvents,
       error: null,
       isLoading: false,
+    })
+  },
+  reconcileBatch: (upserted, deletedIds = []) => {
+    invalidateEventLoads()
+    set((state) => {
+      const deleted = new Set(deletedIds)
+      const byId = new Map(
+        state.events.filter((event) => !deleted.has(event.id)).map((event) => [event.id, event]),
+      )
+      upserted.forEach((event) => byId.set(event.id, event))
+      return { error: null, events: Array.from(byId.values()), isLoading: false }
     })
   },
   reset: (events = []) => {

@@ -88,6 +88,13 @@ describe('longTermMemoryStore request ordering', () => {
 
     const loadA = useLongTermMemoryStore.getState().loadProjectDetails('project-a')
     const loadB = useLongTermMemoryStore.getState().loadProjectDetails('project-b')
+    expect(useLongTermMemoryStore.getState()).toMatchObject({
+      actions: [],
+      isDetailLoading: true,
+      loadedProjectId: '',
+      selectedProjectId: 'project-b',
+      toolRuns: [],
+    })
     actionsB.resolve([projectAction('project-b')])
     await loadB
     actionsA.resolve([projectAction('project-a')])
@@ -97,6 +104,7 @@ describe('longTermMemoryStore request ordering', () => {
       actions: [{ project_id: 'project-b' }],
       error: null,
       isDetailLoading: false,
+      loadedProjectId: 'project-b',
     })
   })
 

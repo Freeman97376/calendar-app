@@ -28,6 +28,7 @@ import { configureLongTermMemoryClient, useLongTermMemoryStore } from './store/l
 import { configureTodoService, useTodoStore } from './store/todoStore'
 import { configureToolPresetService, useToolSessionStore } from './store/toolSessionStore'
 import { resetUserSessionStores } from './store/resetUserSession'
+import { restoreLatestAIConversation } from './store/aiStore'
 
 function configureApiBackedServices() {
   const client = new CalendarApiClient(() => apiBaseUrl(), authenticatedFetch)
@@ -51,6 +52,7 @@ async function refreshUserSessionStores() {
     memory.loadOverview(),
     useToolSessionStore.getState().loadPresets(),
     useFridgeStore.getState().loadInventory(),
+    restoreLatestAIConversation(),
   ]
   if (memory.selectedProjectId) jobs.push(memory.loadProjectDetails(memory.selectedProjectId))
   const results = await Promise.allSettled(jobs)
@@ -88,9 +90,10 @@ async function start() {
   }
 
   configureRuntimeEnvironment({
+    aiRuntime: bootstrap?.aiRuntime,
     authoritativePreferences: true,
     persistPreferences: true,
-    serverManagedAI: bootstrap?.capabilities.serverManagedAI ?? false,
+    serverManagedAI: bootstrap?.capabilities.serverManagedAI ?? true,
   })
   const preAuthLanguage = useConfigStore.getState().config.language
   initializeRuntimeConfig({
@@ -99,6 +102,7 @@ async function start() {
       ? { language: preAuthLanguage }
       : {}),
   })
+  if (bootstrap?.user) await restoreLatestAIConversation()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

@@ -2,15 +2,20 @@ import '@testing-library/jest-dom/vitest'
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
 
 import { server } from './mocks/server'
+import { resetAIReviewMocks } from './mocks/handlers'
 import { configureApiRuntime } from '../../../src/services/appApiClient'
 import { useAuthStore } from '../../../src/store/authStore'
 import { configureRuntimeEnvironment } from '../../../src/store/configStore'
+import { resetScheduleRecomputeTimer, useSchedulingStore } from '../../../src/store/schedulingStore'
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' })
 })
 
 beforeEach(() => {
+  resetAIReviewMocks()
+  resetScheduleRecomputeTimer()
+  useSchedulingStore.getState().reset()
   // Node's fetch implementation requires an absolute URL. Keep API integration
   // tests deterministic instead of relying on another test to configure the
   // desktop sidecar origin first.
@@ -22,9 +27,14 @@ beforeEach(() => {
     authRequired: false,
     capabilities: {
       backendConfigEditable: true,
+      calendarActionBatches: false,
+      globalScheduling: false,
       dataPortability: true,
+      aiConversationHistory: false,
       registration: false,
       serverManagedAI: false,
+      personalAIConfig: false,
+      specializedToolHandoff: false,
     },
     error: null,
     isSubmitting: false,

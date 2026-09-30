@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -174,7 +175,11 @@ if (mode === 'desktop') {
     CALENDAR_DATABASE_URL: databaseUrl,
     CALENDAR_E2E_ALLOW_SEED: '1',
     CALENDAR_E2E_PASSWORD: password,
-    SESSION_COOKIE_SECURE: '0',
+    CALENDAR_COOKIE_SECURE: 'false',
+    DEEPSEEK_API_KEY: '',
+    CALENDAR_AI_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+    CALENDAR_REGISTRATION_INVITE_CODE:
+      process.env.CALENDAR_E2E_INVITE_CODE || 'Calendar-E2E-Shared-Invite',
   }
   if (validateOnly) {
     process.stdout.write('E2E_CONFIGURATION_VALID mode=server database=' + databaseName + '\n')

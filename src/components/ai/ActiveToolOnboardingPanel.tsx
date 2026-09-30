@@ -1,6 +1,7 @@
 import type { ActiveToolOnboardingSeed } from '../../domain/types/goalControl'
 import { useActiveToolOnboarding } from '../../hooks/useActiveToolOnboarding'
 import Button from '../ui/Button'
+import GlobalSchedulePanel from '../tools/GlobalSchedulePanel'
 import InitialPlanReview from './InitialPlanReview'
 import QuestionBatch from './QuestionBatch'
 
@@ -69,7 +70,7 @@ export default function ActiveToolOnboardingPanel({
           </section>
         ) : null}
 
-        {onboarding.plan ? (
+        {onboarding.plan && !onboarding.activationMessage ? (
           <InitialPlanReview
             blockingIssues={onboarding.blockingIssues}
             busy={onboarding.busy}
@@ -77,7 +78,21 @@ export default function ActiveToolOnboardingPanel({
             onChange={onboarding.setPlan}
             onRevise={onboarding.revisePlan}
             plan={onboarding.plan}
+            requiresPlanningDate={onboarding.requiresPlanningDate}
           />
+        ) : null}
+
+        {onboarding.activationMessage ? (
+          <>
+            <section className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <p className="font-semibold">激活成功</p>
+              <p className="mt-1">{onboarding.activationMessage}</p>
+              <Button className="mt-3" onClick={onClose} variant="primary">
+                返回当前对话
+              </Button>
+            </section>
+            <GlobalSchedulePanel />
+          </>
         ) : null}
 
         {onboarding.busy ? (

@@ -355,6 +355,9 @@ describe('Fridge tool template', () => {
 
     expect(await screen.findByText(/Route this to Fridge Coach/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Dispatch' }))
+    await waitFor(() => expect(memoryClient.toolRuns).toHaveLength(1))
+    expect(useUIStore.getState().activeWorkspacePanel).toBe('ai')
+    await openWorkspaceEntry(user, 'Active Tools')
 
     expect(await screen.findByRole('heading', { name: 'Active Tools' })).toBeInTheDocument()
     expect(

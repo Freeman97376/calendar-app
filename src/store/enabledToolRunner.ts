@@ -1,10 +1,6 @@
 import { AIProgressToolRequestSchema } from '../domain/schemas/ai.schema'
 import type { AICalendarContext, AIProgressToolResult } from '../domain/types'
-import type {
-  LongTermActionItem,
-  LongTermMilestone,
-  LongTermToolRun,
-} from '../domain/types/longTermMemory'
+import type { LongTermToolRun } from '../domain/types/longTermMemory'
 import type { ActiveTool } from '../domain/logic/enabledTools'
 import { buildActiveToolPromptFramework } from '../domain/logic/activeToolPrompt'
 import type { IAIService } from '../services/ai/IAIService'
@@ -19,14 +15,6 @@ export type EnabledToolDispatchResult = {
 
 function titleMatches(left: string, right: string): boolean {
   return left.trim().toLowerCase() === right.trim().toLowerCase()
-}
-
-function milestoneByTitle(milestones: LongTermMilestone[], title: string) {
-  return milestones.find((milestone) => titleMatches(milestone.title, title))
-}
-
-function actionByTitle(actions: LongTermActionItem[], title: string) {
-  return actions.find((action) => titleMatches(action.title, title))
 }
 
 function compactToolRuns(toolRuns: LongTermToolRun[]) {
@@ -155,7 +143,7 @@ async function stageProgressToolProposal(
           estimated_minutes: proposed.estimatedMinutes,
           priority: proposed.priority,
           energy_needed: proposed.energyNeeded,
-          execution_tier: 'standard',
+          execution_tier: 'standard' as const,
           metadata: instance.project.metadata,
           created_at: now,
           updated_at: now,
@@ -204,84 +192,8 @@ async function persistProgressToolResult(
   userInstruction: string,
 ) {
   const store = useLongTermMemoryStore.getState()
-  const metadata = instance.project.metadata
-  const current = useLongTermMemoryStore.getState()
-  const milestonesByTitle = new Map<string, LongTermMilestone>()
-  let proposalId: string | null = null
-  let handledByProposalApi = false
-
-  try {
-    const staged = await stageProgressToolProposal(instance, output, userInstruction)
-    handledByProposalApi = staged.handled
-    proposalId = staged.proposalId
-  } catch {
-    // Compatibility for old/local API fixtures. Current backends always expose the proposal API.
-  }
-
-  for (const milestone of handledByProposalApi ? [] : output.milestones) {
-    const existing =
-      (milestone.existingMilestoneId
-        ? current.milestones.find(
-            (candidate) => candidate.milestone_id === milestone.existingMilestoneId,
-          )
-        : undefined) ?? milestoneByTitle(current.milestones, milestone.title)
-    const changes = {
-      description: milestone.description,
-      due_date: milestone.dueDate,
-      metadata,
-      project_id: instance.projectId,
-      status: milestone.status,
-      title: milestone.title,
-    }
-    const saved = existing
-      ? await store.updateMilestone(existing.milestone_id, changes)
-      : await store.createMilestone(changes)
-
-    milestonesByTitle.set(milestone.title.trim().toLowerCase(), saved)
-  }
-
-  const latestMilestones = useLongTermMemoryStore.getState().milestones
-
-  for (const action of handledByProposalApi ? [] : output.actions) {
-    const latestActions = useLongTermMemoryStore.getState().actions
-    const existing =
-      (action.existingActionId
-        ? latestActions.find((candidate) => candidate.action_id === action.existingActionId)
-        : undefined) ?? actionByTitle(latestActions, action.title)
-    const matchedMilestone = action.milestoneTitle
-      ? (milestonesByTitle.get(action.milestoneTitle.trim().toLowerCase()) ??
-        milestoneByTitle(latestMilestones, action.milestoneTitle))
-      : undefined
-    const changes = {
-      description: action.description,
-      due_date: action.dueDate,
-      energy_needed: action.energyNeeded,
-      estimated_minutes: action.estimatedMinutes,
-      metadata,
-      milestone_id: matchedMilestone?.milestone_id,
-      priority: action.priority,
-      project_id: instance.projectId,
-      status: action.status,
-      title: action.title,
-    }
-
-    if (existing) {
-      await store.updateAction(existing.action_id, changes)
-    } else {
-      await store.createAction(changes)
-    }
-  }
-
-  if (output.progressLog && !handledByProposalApi) {
-    await store.createProgress({
-      details: output.progressLog.details,
-      goal_id: instance.goalId,
-      log_type: output.progressLog.logType,
-      metadata,
-      project_id: instance.projectId,
-      summary: output.progressLog.summary,
-    })
-  }
+  const staged = await stageProgressToolProposal(instance, output, userInstruction)
+  const proposalId = staged.proposalId
 
   await store.createToolRun({
     input: {
@@ -342,7 +254,7 @@ async function recordGenericDispatch(instance: ActiveTool, userInstruction: stri
   })
 
   return {
-    assistantReply: `${summary} Open Active Tools to continue with this active tool.`,
+    assistantReply: `${summary} 后续结果和审批会保留在当前对话中。`,
     calendarEventCount: 0,
     summary,
   }
@@ -405,7 +317,7 @@ export async function dispatchEnabledToolInstance(
   return {
     assistantReply:
       output.assistantReply ??
-      `${output.summary}${output.calendarEvents.length ? ' Calendar drafts are waiting in Active Tools.' : ''}`,
+      `${output.summary}${output.calendarEvents.length ? ' 日历草稿审批已显示在当前对话。' : ''}`,
     calendarEventCount: output.calendarEvents.length,
     summary: output.summary,
   }

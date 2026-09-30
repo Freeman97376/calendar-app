@@ -201,3 +201,31 @@ describe('auth session lifecycle', () => {
     })
   })
 })
+
+describe('registration session boundaries', () => {
+  it('rejects registration from an authenticated account without sending a request', async () => {
+    const fetcher = vi.fn()
+    vi.stubGlobal('fetch', fetcher)
+    useAuthStore.setState({
+      status: 'authenticated',
+      user: { id: 'alice', username: 'alice', role: 'user' },
+    })
+    await expect(
+      useAuthStore.getState().register('bob', 'password-12345', 'invite'),
+    ).rejects.toThrow('signed-out')
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().user?.id).toBe('alice')
+  })
+
+  it('preserves server registration capability after logout', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+    useAuthStore.setState({
+      status: 'authenticated',
+      user: { id: 'alice', username: 'alice', role: 'user' },
+      capabilities: { ...useAuthStore.getState().capabilities!, registration: true },
+    })
+    await useAuthStore.getState().logout()
+    expect(useAuthStore.getState().status).toBe('unauthenticated')
+    expect(useAuthStore.getState().capabilities?.registration).toBe(true)
+  })
+})

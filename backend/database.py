@@ -14,13 +14,15 @@ from sqlalchemy.pool import NullPool
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = PROJECT_ROOT / "backend" / "data" / "calendar_app.sqlite3"
 LOCAL_USER_ID = "local"
-ALEMBIC_HEAD = "20260819_0009"
+ALEMBIC_HEAD = "20260920_0012"
 
 
 _RUNTIME_SCHEMA_LOCKS: WeakSet[Engine] = WeakSet()
 
 _CRITICAL_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     'users': ('id',),
+    'user_ai_settings': ('user_id',),
+    'user_ai_settings': ('user_id',),
     'sessions': ('id',),
 }
 
@@ -35,6 +37,14 @@ _CRITICAL_UNIQUE_KEYS: dict[str, set[tuple[str, ...]]] = {
         ('user_id', 'project_id', 'goal_id'),
     },
     'activation_funnel_events': {('user_id', 'event_id'), ('user_id', 'journey_id', 'dedupe_key')},
+    'calendar_action_batches': {
+        ('user_id', 'batch_id'),
+        ('user_id', 'idempotency_key'),
+    },
+    'schedule_proposals': {
+        ('user_id', 'proposal_id'),
+    },
+    'tool_runs': {('user_id', 'tool_run_id')},
     'conversation_threads': {('user_id', 'thread_id')},
 }
 
@@ -64,6 +74,18 @@ _CRITICAL_FOREIGN_KEYS: dict[
             ('user_id', 'project_id', 'goal_id'),
             'projects',
             ('user_id', 'project_id', 'goal_id'),
+        ),
+    },
+    'calendar_action_batches': {
+        (
+            ('user_id', 'project_id'),
+            'projects',
+            ('user_id', 'project_id'),
+        ),
+        (
+            ('user_id', 'tool_run_id'),
+            'tool_runs',
+            ('user_id', 'tool_run_id'),
         ),
     },
 }
@@ -310,6 +332,18 @@ class DataIntegrityRepairRecord(Base):
     repaired_at: Mapped[str] = mapped_column(String(40), nullable=False)
 
 
+class UserAISettingRecord(Base):
+    __tablename__ = "user_ai_settings"
+    __table_args__ = (ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE", name="fk_user_ai_settings_user"),)
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    encrypted_api_key: Mapped[str] = mapped_column(Text, nullable=False)
+    routine_model: Mapped[str] = mapped_column(String(64), nullable=False)
+    planning_model: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+
+
 class UserPreferenceRecord(Base):
     __tablename__ = "user_preferences"
 
@@ -379,6 +413,37 @@ class EventRecord(Base):
     exception_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
     deleted_occurrences_json: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     sync_status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    created_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+
+
+class CalendarActionBatchRecord(Base):
+    __tablename__ = "calendar_action_batches"
+    __table_args__ = (
+        UniqueConstraint("user_id", "batch_id", name="uq_calendar_batches_user_external"),
+        UniqueConstraint("user_id", "idempotency_key", name="uq_calendar_batches_user_idempotency"),
+        ForeignKeyConstraint(
+            ["user_id", "project_id"],
+            ["projects.user_id", "projects.project_id"],
+            name="fk_calendar_batches_project",
+        ),
+        ForeignKeyConstraint(
+            ["user_id", "tool_run_id"],
+            ["tool_runs.user_id", "tool_runs.tool_run_id"],
+            name="fk_calendar_batches_tool_run",
+        ),
+    )
+
+    row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    source: Mapped[str] = mapped_column(String(48), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tool_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="committed")
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[str] = mapped_column(String(40), nullable=False)
     updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
 
@@ -778,6 +843,23 @@ class PlanChangeProposalRecord(Base):
     updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
 
 
+class ScheduleProposalRecord(Base):
+    __tablename__ = "schedule_proposals"
+    __table_args__ = (
+        UniqueConstraint("user_id", "proposal_id", name="uq_schedule_proposals_user_external"),
+    )
+
+    row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    input_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    resolved_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+
+
 class GoalControlPolicyRecord(Base):
     __tablename__ = "goal_control_policies"
     __table_args__ = (
@@ -874,6 +956,11 @@ class ActionEventLinkRecord(Base):
         ForeignKeyConstraint(["user_id", "project_id"], ["projects.user_id", "projects.project_id"], name="fk_action_links_project", ondelete="CASCADE"),
         ForeignKeyConstraint(["user_id", "action_id"], ["action_items.user_id", "action_items.action_id"], name="fk_action_links_action", ondelete="CASCADE"),
         ForeignKeyConstraint(["user_id", "event_id"], ["events.user_id", "events.id"], name="fk_action_links_event", ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["user_id", "proposal_id"],
+            ["schedule_proposals.user_id", "schedule_proposals.proposal_id"],
+            name="fk_action_links_schedule_proposal",
+        ),
     )
 
     row_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -882,6 +969,8 @@ class ActionEventLinkRecord(Base):
     project_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     action_id: Mapped[str] = mapped_column(String(64), nullable=False)
     event_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    managed_by: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    proposal_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), nullable=False)
 
 

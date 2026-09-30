@@ -10,6 +10,8 @@ Treat current stage, recent evidence, known measurements, constraints, available
 Never invent a numeric baseline. If a needed baseline is unknown, keep baseline_value null and add a short measurement or calibration action before progression.
 Create a measurable plan that fits the stated weekly capacity. Standard actions must use no more than 80% of capacity.
 Use three execution tiers: minimum is essential, standard includes minimum, and stretch includes both.
+Every unfinished minimum or standard action must have a YYYY-MM-DD due_date. Stretch, done, and skipped actions may use null.
+When the user confirms there is no hard deadline, keep target_date null, plan only the near-term rolling horizon, and use flexible system-planned dates for required work.
 Metrics need a leading or lagging role, unit, baseline when known, target, cadence, direction, acceptable range, and safety bounds when relevant.
 Never auto-apply a plan, calendar change, pause, or safety action. Safety concerns produce warnings and a pause recommendation for user confirmation.
 Dependencies must not be cyclic. Prefer a small plan with explicit estimated minutes over a long generic checklist.`
@@ -167,7 +169,8 @@ export function buildGoalPlanningPrompt(input: {
               title: 'string',
               description: 'string',
               milestone_title: 'string|null',
-              due_date: 'YYYY-MM-DD|null',
+              due_date:
+                'YYYY-MM-DD for unfinished minimum/standard; null only for stretch/done/skipped',
               estimated_minutes: 'integer',
               priority: 'high|medium|low',
               energy_needed: 'high|medium|low',

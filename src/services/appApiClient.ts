@@ -1,4 +1,8 @@
-import { BootstrapResponseSchema, LoginResponseSchema } from '../domain/schemas/auth.schema'
+import {
+  BootstrapResponseSchema,
+  LoginResponseSchema,
+  RegistrationResponseSchema,
+} from '../domain/schemas/auth.schema'
 import type { BootstrapResponse } from '../domain/types'
 
 type ApiRuntime = {
@@ -9,8 +13,9 @@ type ApiRuntime = {
 
 const runtime: ApiRuntime = {
   baseUrl: (
-    import.meta.env.VITE_API_BASE_URL ??
-    import.meta.env.VITE_FRIDGE_API_BASE_URL ??
+    import.meta.env.VITE_API_BASE_URL?.trim() ||
+    import.meta.env.VITE_FRIDGE_API_BASE_URL?.trim() ||
+    import.meta.env.BASE_URL ||
     ''
   ).replace(/\/$/, ''),
   csrfToken: '',
@@ -226,6 +231,16 @@ export async function loginRequest(username: string, password: string) {
   const parsed = LoginResponseSchema.parse(await response.json())
   configureApiRuntime({ csrfToken: parsed.csrfToken })
   return parsed
+}
+
+export async function registerRequest(username: string, password: string, inviteCode: string) {
+  const response = await authenticatedFetch(apiUrl('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username, password, inviteCode }),
+  })
+  if (!response.ok) throw await apiErrorFromResponse(response)
+  return RegistrationResponseSchema.parse(await response.json())
 }
 
 export async function logoutRequest(): Promise<void> {

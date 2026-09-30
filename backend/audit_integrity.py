@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import inspect, select
+from sqlalchemy import MetaData, Table, and_, delete, inspect, select, update
 
 from .auth import utc_iso
 from .database import (
@@ -109,29 +109,51 @@ RELATIONS = (
 )
 
 
-def record_payload(record: Any) -> dict[str, Any]:
-    return {column.name: getattr(record, column.name) for column in record.__table__.columns}
+def record_payload(record: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(record)
 
 
-def collect_issues(session: Any) -> list[tuple[Relation, Any, str]]:
+def _reflected_tables(session: Any) -> dict[Any, Table]:
+    metadata = MetaData()
+    models = {
+        relation.model
+        for relation in RELATIONS
+    } | {
+        reference.parent_model
+        for relation in RELATIONS
+        for reference in relation.references
+    }
+    return {
+        model: Table(model.__tablename__, metadata, autoload_with=session.get_bind())
+        for model in models
+    }
+
+
+def collect_issues(session: Any) -> list[tuple[Relation, Table, dict[str, Any], str]]:
+    tables = _reflected_tables(session)
     parent_keys: dict[tuple[Any, str], set[tuple[str, str]]] = {}
     for relation in RELATIONS:
         for reference in relation.references:
             key = (reference.parent_model, reference.parent_field)
             if key not in parent_keys:
+                parent = tables[reference.parent_model]
                 parent_keys[key] = {
-                    (str(record.user_id), str(getattr(record, reference.parent_field)))
-                    for record in session.scalars(select(reference.parent_model))
+                    (str(record["user_id"]), str(record[reference.parent_field]))
+                    for record in session.execute(
+                        select(parent.c.user_id, parent.c[reference.parent_field])
+                    ).mappings()
                 }
-    issues: list[tuple[Relation, Any, str]] = []
+    issues: list[tuple[Relation, Table, dict[str, Any], str]] = []
     for relation in RELATIONS:
-        for record in session.scalars(select(relation.model)):
+        table = tables[relation.model]
+        for row in session.execute(select(table)).mappings():
+            record = dict(row)
             for reference in relation.references:
-                value = getattr(record, reference.field)
+                value = record[reference.field]
                 if value is None and reference.optional:
                     continue
-                if value is None or (str(record.user_id), str(value)) not in parent_keys[(reference.parent_model, reference.parent_field)]:
-                    issues.append((relation, record, f"missing {reference.parent_model.__tablename__}.{reference.parent_field} for {reference.field}={value}"))
+                if value is None or (str(record["user_id"]), str(value)) not in parent_keys[(reference.parent_model, reference.parent_field)]:
+                    issues.append((relation, table, record, f"missing {reference.parent_model.__tablename__}.{reference.parent_field} for {reference.field}={value}"))
                     break
     return issues
 
@@ -155,13 +177,17 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
         with factory.begin() as session:
             issues = collect_issues(session)
             remaining_issue_count = len(issues)
-            for relation, record, reason in issues:
+            for relation, table, record, reason in issues:
                 details.append({
                     "table": relation.model.__tablename__,
-                    "externalId": str(getattr(record, relation.external_id_field)),
-                    "userId": str(record.user_id),
+                    "externalId": str(record[relation.external_id_field]),
+                    "userId": str(record["user_id"]),
                     "reason": reason,
                 })
+                identity = and_(
+                    table.c.user_id == record["user_id"],
+                    table.c[relation.external_id_field] == record[relation.external_id_field],
+                )
                 if repair:
                     nullable_reference = next(
                         (
@@ -173,19 +199,23 @@ def audit(database_url: str | None, repair: bool) -> dict[str, Any]:
                         None,
                     )
                     if nullable_reference is not None:
-                        setattr(record, nullable_reference.field, None)
+                        session.execute(
+                            update(table)
+                            .where(identity)
+                            .values({nullable_reference.field: None})
+                        )
                         repaired += 1
                         continue
                 if repair:
                     session.add(DataIntegrityQuarantineRecord(
-                        user_id=str(record.user_id),
+                        user_id=str(record["user_id"]),
                         source_table=relation.model.__tablename__,
-                        external_id=str(getattr(record, relation.external_id_field)),
+                        external_id=str(record[relation.external_id_field]),
                         reason=reason,
                         payload_json=record_payload(record),
                         quarantined_at=utc_iso(),
                     ))
-                    session.delete(record)
+                    session.execute(delete(table).where(identity))
                     archived += 1
         if not repair or not issues:
             break

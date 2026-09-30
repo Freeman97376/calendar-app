@@ -19,6 +19,8 @@
 | `unit/domain/event.schema.test.ts`           | Event 有效/无效形状                  | 不写数据库                  | 表单/API 返回校验                     |
 | `unit/domain/eventDeduplication.test.ts`     | existing/batch 去重                  | 不做语义相似度              | AI 批量日程防重复                     |
 | `unit/domain/goalPlanningPrompt.test.ts`     | Goal prompt、模式窗口、plan parse    | provider 为 mock            | 长期目标预览和 Check-in 摘要          |
+| `unit/domain/goalActionScheduling.test.ts`   | 必要行动日期、依赖、容量和滚动周期   | 纯规则，不调用模型或数据库  | 激活前自动排程与一次性冲突提问        |
+| `unit/domain/scheduling.schema.test.ts`      | 全局工作时段和时间块校验             | 纯 Zod schema               | 配置全局工具排程可用时间              |
 | `unit/domain/i18n.test.ts`                   | locale 和翻译 fallback               | 不截图所有文案              | 登录前/应用语言切换                   |
 | `unit/domain/progress.test.ts`               | action/milestone 进度                | 不等于效果指标              | Active Tool 进度条                    |
 | `unit/domain/recurrence.schema.test.ts`      | 循环规则 schema                      | 不展开实例                  | 表单/API 规则合法性                   |
@@ -61,24 +63,26 @@
 
 ## Integration（Vitest + RTL/jsdom）
 
-| 文件                                             | 验证目标                            | 边界                       | 实际场景                        |
-| ------------------------------------------------ | ----------------------------------- | -------------------------- | ------------------------------- |
-| `integration/aiAssistant.test.tsx`               | 对话、动作计划、审批、模板/工具路由 | mock AI/API                | 创建/修改事件和 Todo、拒绝冲突  |
-| `integration/aiDemoTools.test.tsx`               | Fitness/Learning tool 激活和路由    | fake memory/AI             | 创建独立 Active Tool 并记录进度 |
-| `integration/authGate.test.tsx`                  | 登录门、语言、无注册入口            | 不验证真实 cookie          | Server 未登录首屏               |
-| `integration/calendarViews.test.tsx`             | 月/周/日切换                        | jsdom 布局非真实像素       | 浏览不同日历视图                |
-| `integration/debugPanel.test.tsx`                | debug 信息与关闭                    | 仅开发 UI                  | 本地诊断状态                    |
-| `integration/dragDrop.test.tsx`                  | 日期/时间 drop 与循环 scope         | 模拟 dnd，不是浏览器坐标   | 拖动普通/循环事件               |
-| `integration/eventCRUD.test.tsx`                 | 表单创建、编辑、删除                | fake storage               | 用户完整管理事件                |
-| `integration/fridgePanel.test.tsx`               | Fridge 模板激活与 tool run          | fake analyzer/memory       | 建立冰箱 Active Tool            |
-| `integration/goalConversationAnchoring.test.tsx` | 当前情况优先提问与可审阅 anchor     | MSW，不调用模型            | 长期目标先确认起点              |
-| `integration/goalPlanner.test.tsx`               | 激活、路线编辑、Active Tools 视图   | fake memory/AI             | 创建和维护长期计划              |
-| `integration/recurringEvents.test.tsx`           | 创建/编辑/删除 this/following/all   | fake persistence           | 管理重复会议实例                |
-| `integration/settingsPanel.test.tsx`             | AI profile、local、后端设置         | mock API/localStorage      | 保存 DeepSeek 和运行时设置      |
-| `integration/syncManager.test.ts`                | 双 adapter 写入与失败行为           | legacy/fake adapter        | 兼容旧同步模块                  |
-| `integration/todoPanel.test.tsx`                 | 创建、类型、排程、步骤编辑          | fake services              | 从任务到日历、AI 步骤细化       |
-| `integration/toolsPanel.test.tsx`                | 工具模板/设置导航                   | 不执行真实工具             | 打开/关闭工具面板               |
-| `integration/workspaceLayout.test.tsx`           | 默认比例、聚焦、设置更新            | jsdom 无真实 resize engine | 工作区/日历布局切换             |
+| 文件                                             | 验证目标                               | 边界                       | 实际场景                         |
+| ------------------------------------------------ | -------------------------------------- | -------------------------- | -------------------------------- |
+| `integration/aiAssistant.test.tsx`               | 对话、动作计划、审批、工具路由和上下文 | mock AI/API                | 创建动作、选择并保持 Active Tool |
+| `integration/aiDemoTools.test.tsx`               | Fitness/Learning tool 激活和路由       | fake memory/AI             | 创建独立 Active Tool 并记录进度  |
+| `integration/authGate.test.tsx`                  | 登录门、语言、无注册入口               | 不验证真实 cookie          | Server 未登录首屏                |
+| `integration/calendarViews.test.tsx`             | 月/周/日切换                           | jsdom 布局非真实像素       | 浏览不同日历视图                 |
+| `integration/debugPanel.test.tsx`                | debug 信息与关闭                       | 仅开发 UI                  | 本地诊断状态                     |
+| `integration/dragDrop.test.tsx`                  | 日期/时间 drop 与循环 scope            | 模拟 dnd，不是浏览器坐标   | 拖动普通/循环事件                |
+| `integration/eventCRUD.test.tsx`                 | 表单创建、编辑、删除                   | fake storage               | 用户完整管理事件                 |
+| `integration/fridgePanel.test.tsx`               | Fridge 模板激活与 tool run             | fake analyzer/memory       | 建立冰箱 Active Tool             |
+| `integration/goalConversationAnchoring.test.tsx` | 当前情况锚点、草稿入口与激活前排程阻断 | MSW，不调用模型            | 长期目标先确认起点并安全激活     |
+| `integration/goalPlanner.test.tsx`               | 激活、路线编辑、Active Tools 视图      | fake memory/AI             | 创建和维护长期计划               |
+| `integration/recurringEvents.test.tsx`           | 创建/编辑/删除 this/following/all      | fake persistence           | 管理重复会议实例                 |
+| `integration/settingsPanel.test.tsx`             | AI、后端、工作时段及排程设置           | mock API/localStorage      | 保存配置并触发一次全局重排       |
+| `integration/globalSchedulePanel.test.tsx`       | 提案加载、接受、拒绝和失败保留         | MSW，不写真实日历          | 在写入前审核全局排程影响         |
+| `integration/syncManager.test.ts`                | 双 adapter 写入与失败行为              | legacy/fake adapter        | 兼容旧同步模块                   |
+| `integration/todoPanel.test.tsx`                 | 创建、类型、排程、步骤编辑             | fake services              | 从任务到日历、AI 步骤细化        |
+| `integration/toolsPanel.test.tsx`                | 工具模板/设置导航                      | 不执行真实工具             | 打开/关闭工具面板                |
+| `integration/toolPlanEditor.test.tsx`            | 已激活工具排程字段、行内阻断与提案输入 | 组件级，不写数据库         | 编辑工具计划并审核全局影响       |
+| `integration/workspaceLayout.test.tsx`           | 默认比例、聚焦、设置更新               | jsdom 无真实 resize engine | 工作区/日历布局切换              |
 
 ## Backend（Python unittest）
 
@@ -92,6 +96,7 @@
 | `backend/test_desktop_migration.py`      | fresh/known/false stamp/corrupt migration                   | temp 文件，不覆盖用户库        | 桌面升级失败保护           |
 | `backend/test_fridge_pipeline.py`        | 上传、OCR、parser、cache、fallback、库存                    | fake OCR/DeepSeek              | 票据识别和保质期           |
 | `backend/test_goal_control.py`           | 容量、目标、指标、Check-in、版本、预算、隔离和备份 checksum | 临时 SQLite/冻结时间           | 长期目标与可移植备份       |
+| `backend/test_global_scheduling.py`      | 跨工具排程、固定占用、过期指纹、原子与幂等确认              | 临时 SQLite；不证明 MySQL 并发 | 全局工具排程提案与写入     |
 | `backend/test_integrity_audit.py`        | orphan、quarantine、repair                                  | temp DB                        | 运维审计并修复脏关系       |
 | `backend/test_legacy_migration.py`       | SQLite/JSON legacy import 幂等                              | 临时旧数据                     | 老版本迁入首个账号         |
 | `backend/test_memory_service.py`         | Project/Milestone/Action/Progress/ToolRun                   | temp DB                        | Active Tool 长期记忆       |

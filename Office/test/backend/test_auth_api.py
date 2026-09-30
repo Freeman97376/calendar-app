@@ -8,8 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import date
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -356,6 +357,84 @@ class AuthApiTests(unittest.TestCase):
                     self.assertIn(field_name, error['fieldErrors'])
 
         provider_client.assert_not_called()
+
+    def test_ai_planning_budget_accounts_for_reasoning_and_stays_bounded(self) -> None:
+        client, csrf = self.login('alice', 'alice-password-123')
+        cases = [
+            # mode, administrator cap, selected model, operation, requested total, expected total
+            ('economy', 'quality', 'deepseek-reasoner', 'goal_plan', None, 8192),
+            ('balanced', 'quality', 'deepseek-reasoner', 'goal_plan', None, 16384),
+            ('quality', 'quality', 'deepseek-reasoner', 'goal_plan', None, 24576),
+            ('quality', 'balanced', 'deepseek-reasoner', 'goal_plan', None, 16384),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'activation', None, 16384),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'calendar_plan', None, 16384),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'replan', None, 16384),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'weekly_review', None, 16384),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'planning', None, 16384),
+            ('balanced', 'balanced', 'deepseek-chat', 'goal_plan', None, 3000),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'routine', None, 800),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'goal_plan', 10**12, 16384),
+            ('balanced', 'balanced', 'deepseek-chat', 'goal_plan', 10**12, 3000),
+            ('balanced', 'balanced', 'deepseek-reasoner', 'goal_plan', 1024, 1024),
+        ]
+        upstream = AsyncMock()
+        upstream.post.return_value = httpx.Response(200, json={
+            'choices': [{'finish_reason': 'stop', 'message': {'content': '{"plan": "complete"}'}}],
+            'usage': {'prompt_tokens': 20, 'completion_tokens': 40},
+        })
+        for mode, maximum, model, operation, requested, expected in cases:
+            with self.subTest(case=(mode, maximum, model, operation, requested)), patch.dict('os.environ', {
+                'DEEPSEEK_API_KEY': 'synthetic-key', 'AI_PLANNING_MODEL': model,
+                'AI_ROUTINE_MODEL': model, 'AI_DEFAULT_USAGE_MODE': mode,
+                'AI_MAX_USAGE_MODE': maximum, 'AI_MONTHLY_HARD_LIMIT': '2000000',
+            }), patch('backend.server.httpx.AsyncClient') as factory:
+                factory.return_value.__aenter__.return_value = upstream
+                upstream.post.reset_mock()
+                payload = {'_calendarOperation': operation, 'model': 'untrusted-override',
+                           'messages': [{'role': 'user', 'content': 'Return a compact JSON plan.'}]}
+                if requested is not None:
+                    payload['max_tokens'] = requested
+                response = client.post('/api/ai/chat/completions', headers={'X-CSRF-Token': csrf}, json=payload)
+                self.assertEqual(response.status_code, 200, response.text)
+                upstream.post.assert_awaited_once()
+                sent = upstream.post.call_args.kwargs['json']
+                self.assertEqual(sent['model'], model)
+                self.assertEqual(sent['max_tokens'], expected)
+                self.assertNotIn('_calendarOperation', sent)
+                factory.assert_called_once_with(timeout=180 if model == 'deepseek-reasoner' and operation != 'routine' else 60)
+
+    def test_ai_truncation_is_metered_without_partial_plan_or_automatic_retry(self) -> None:
+        client, csrf = self.login('alice', 'alice-password-123')
+        upstream = AsyncMock()
+        upstream.post.return_value = httpx.Response(200, json={
+            'choices': [{'finish_reason': 'length', 'message': {'content': '{"partial":', 'reasoning_content': 'synthetic reasoning'}}],
+            'usage': {'prompt_tokens': 20, 'completion_tokens': 16384},
+        })
+        with patch.dict('os.environ', {
+            'DEEPSEEK_API_KEY': 'synthetic-key', 'AI_PLANNING_MODEL': 'deepseek-reasoner',
+            'AI_DEFAULT_USAGE_MODE': 'balanced', 'AI_MAX_USAGE_MODE': 'balanced',
+            'AI_MONTHLY_HARD_LIMIT': '16000',
+        }), patch('backend.server.httpx.AsyncClient') as factory:
+            factory.return_value.__aenter__.return_value = upstream
+            payload = {'_calendarOperation': 'goal_plan', 'messages': [{'role': 'user', 'content': 'JSON plan'}]}
+            response = client.post('/api/ai/chat/completions', headers={'X-CSRF-Token': csrf}, json=payload)
+            self.assertEqual(response.status_code, 422, response.text)
+            self.assertEqual(response.json()['error']['code'], 'ai_output_truncated')
+            self.assertEqual(response.json()['error']['details']['outputLimit'], 16384)
+            self.assertNotIn('choices', response.json())
+            self.assertNotIn('synthetic reasoning', response.text)
+            self.assertNotIn('partial', response.text)
+            upstream.post.assert_awaited_once()
+            control = GoalControlService(engine=self.app.state.calendar.engine, user_id=self.alice['id'], app_mode='server')
+            self.assertEqual(control.usage_summary()['planning_output_tokens'], 16384)
+            with control.session_factory() as session:
+                event = session.scalar(select(AIUsageEventRecord))
+                self.assertEqual(event.status, 'output_truncated')
+                self.assertFalse(event.estimated)
+            blocked = client.post('/api/ai/chat/completions', headers={'X-CSRF-Token': csrf}, json=payload)
+            self.assertEqual(blocked.status_code, 429, blocked.text)
+            self.assertEqual(blocked.json()['error']['code'], 'ai_monthly_hard_limit')
+            upstream.post.assert_awaited_once()
 
     def test_fridge_item_writes_use_strict_bounded_dtos(self) -> None:
         client, csrf = self.login('alice', 'alice-password-123')
@@ -1256,6 +1335,210 @@ class AuthApiTests(unittest.TestCase):
             f"/api/memory/projects/{project_id}"
         ).json()["project"]
         self.assertEqual(project["title"], "Valid memory project")
+
+    def test_bootstrap_reports_backend_ai_truth_and_atomic_capabilities(self) -> None:
+        client, _csrf = self.login("alice", "alice-password-123")
+
+        payload = client.get("/api/bootstrap").json()
+
+        self.assertEqual(payload["aiRuntime"]["mode"], "backend-managed")
+        self.assertEqual(payload["aiRuntime"]["provider"], "deepseek-compatible")
+        self.assertFalse(payload["aiRuntime"]["editable"])
+        self.assertFalse(payload["aiRuntime"]["keyConfigured"])
+        self.assertFalse(payload["aiRuntime"]["ruleBasedFallback"])
+        self.assertTrue(payload["capabilities"]["calendarActionBatches"])
+        self.assertTrue(payload["capabilities"]["globalScheduling"])
+        self.assertTrue(payload["capabilities"]["aiConversationHistory"])
+        self.assertTrue(payload["capabilities"]["specializedToolHandoff"])
+
+    def test_calendar_action_batch_is_atomic_idempotent_and_tenant_scoped(self) -> None:
+        alice_client, alice_csrf = self.login("alice", "alice-password-123")
+        alice_headers = {"X-CSRF-Token": alice_csrf}
+        def saved_batch(client, headers, batch):
+            thread = client.post("/api/ai/conversations", headers=headers, json={"title": "Batch review"}).json()["thread"]["thread_id"]
+            actions = []
+            for action in batch["actions"]:
+                raw = {"type": action["type"]}
+                raw.update(action.get("event", action.get("todo", {})))
+                for field in ("eventId", "todoId", "changes"):
+                    if field in action:
+                        raw[field] = action[field]
+                actions.append(raw)
+            response = client.post(f"/api/ai/conversations/{thread}/messages", headers=headers, json={"role": "assistant", "content": "Synthetic review", "structured": {"actionPlan": {"summary": "Batch", "actions": actions}}})
+            self.assertEqual(response.status_code, 200, response.text)
+            return {**batch, "aiPlanRef": {"threadId": thread, "messageId": response.json()["message"]["message_id"]}, "aiPlanOperation": "apply"}
+
+        first_event = {
+            "title": "Atomic review",
+            "startAt": "2026-08-30T17:00:00Z",
+            "endAt": "2026-08-30T18:00:00Z",
+            "allDay": False,
+        }
+        rollback_batch = {
+            "idempotencyKey": "rollback-on-second-action",
+            "source": "ai-action-plan",
+            "actions": [
+                {
+                    "clientActionId": "create-first",
+                    "type": "create_event",
+                    "event": first_event,
+                },
+                {
+                    "clientActionId": "fail-second",
+                    "type": "update_event",
+                    "eventId": "missing-event",
+                    "changes": {"title": "Must not persist"},
+                },
+            ],
+        }
+
+        rollback_batch = saved_batch(alice_client, alice_headers, rollback_batch)
+        rolled_back = alice_client.post(
+            "/api/calendar/action-batches",
+            headers=alice_headers,
+            json=rollback_batch,
+        )
+        self.assertEqual(rolled_back.status_code, 404, rolled_back.text)
+        self.assertEqual(alice_client.get("/api/calendar/events", params={"start": "2026-08-01T00:00:00Z", "end": "2026-09-30T00:00:00Z"}).json()["events"], [])
+
+        committed_batch = {
+            "idempotencyKey": "stable-double-click-key",
+            "source": "ai-action-plan",
+            "actions": [
+                {
+                    "clientActionId": "create-once",
+                    "type": "create_event",
+                    "event": first_event,
+                }
+            ],
+        }
+        committed_batch = saved_batch(alice_client, alice_headers, committed_batch)
+        committed = alice_client.post(
+            "/api/calendar/action-batches",
+            headers=alice_headers,
+            json=committed_batch,
+        )
+        replayed = alice_client.post(
+            "/api/calendar/action-batches",
+            headers=alice_headers,
+            json=committed_batch,
+        )
+        self.assertEqual(committed.status_code, 200, committed.text)
+        self.assertFalse(committed.json()["replayed"])
+        self.assertEqual(replayed.status_code, 200, replayed.text)
+        self.assertTrue(replayed.json()["replayed"])
+        self.assertEqual(len(alice_client.get("/api/calendar/events", params={"start": "2026-08-01T00:00:00Z", "end": "2026-09-30T00:00:00Z"}).json()["events"]), 1)
+
+        changed_payload = {
+            **committed_batch,
+            "actions": [
+                {
+                    **committed_batch["actions"][0],
+                    "event": {**first_event, "title": "Different payload"},
+                }
+            ],
+        }
+        conflict = alice_client.post(
+            "/api/calendar/action-batches",
+            headers=alice_headers,
+            json=changed_payload,
+        )
+        self.assertEqual(conflict.status_code, 409, conflict.text)
+        self.assertEqual(conflict.json()["error"]["code"], "calendar_batch_conflict")
+
+        event_id = committed.json()["eventsUpserted"][0]["id"]
+        invalid_time = alice_client.post(
+            "/api/calendar/action-batches",
+            headers=alice_headers,
+            json=saved_batch(alice_client, alice_headers, {
+                "idempotencyKey": "invalid-partial-time-update",
+                "source": "ai-action-plan",
+                "actions": [
+                    {
+                        "clientActionId": "invalid-time",
+                        "type": "update_event",
+                        "eventId": event_id,
+                        "changes": {"endAt": "2026-08-30T16:00:00Z"},
+                    }
+                ],
+            }),
+        )
+        self.assertEqual(invalid_time.status_code, 422, invalid_time.text)
+        self.assertEqual(
+            next(event for event in alice_client.get("/api/calendar/events", params={"start": "2026-08-01T00:00:00Z", "end": "2026-09-30T00:00:00Z"}).json()["events"] if event["id"] == event_id)["endAt"],
+            "2026-08-30T18:00:00Z",
+        )
+
+        bob_client, bob_csrf = self.login("bob", "bob-password-123")
+        bob_attempt = bob_client.post(
+            "/api/calendar/action-batches",
+            headers={"X-CSRF-Token": bob_csrf},
+            json=saved_batch(bob_client, {"X-CSRF-Token": bob_csrf}, {
+                "idempotencyKey": "bob-cannot-touch-alice",
+                "source": "ai-action-plan",
+                "actions": [
+                    {
+                        "clientActionId": "cross-tenant-update",
+                        "type": "update_event",
+                        "eventId": event_id,
+                        "changes": {"title": "Cross tenant"},
+                    }
+                ],
+            }),
+        )
+        self.assertEqual(bob_attempt.status_code, 404, bob_attempt.text)
+        self.assertEqual(bob_client.get("/api/calendar/events", params={"start": "2026-08-01T00:00:00Z", "end": "2026-09-30T00:00:00Z"}).json()["events"], [])
+
+    def test_ai_review_apply_copy_reload_and_dismiss(self) -> None:
+        client, csrf = self.login("alice", "alice-password-123")
+        headers = {"X-CSRF-Token": csrf}
+        thread = client.post("/api/ai/conversations", headers=headers, json={"thread_id": "review-chat", "title": "Review"})
+        self.assertEqual(thread.status_code, 200, thread.text)
+        saved = client.post("/api/ai/conversations/review-chat/messages", headers=headers, json={"message_id": "review-message", "role": "assistant", "content": "One task", "structured": {"actionPlan": {"summary": "One task", "actions": [{"type": "create_todo", "title": "One task"}]}}})
+        self.assertEqual(saved.status_code, 200, saved.text)
+        batch = {"source": "ai-action-plan", "idempotencyKey": "caller", "aiPlanRef": {"threadId": "review-chat", "messageId": "review-message"}, "aiPlanOperation": "apply", "actions": [{"clientActionId": "one", "type": "create_todo", "todo": {"title": "One task"}}]}
+        applied = client.post("/api/calendar/action-batches", headers=headers, json=batch)
+        self.assertEqual(applied.status_code, 200, applied.text)
+        self.assertFalse(applied.json()["replayed"])
+        self.assertTrue(client.post("/api/calendar/action-batches", headers=headers, json={**batch, "idempotencyKey": "another-browser"}).json()["replayed"])
+        loaded = client.get("/api/ai/conversations/review-chat").json()["messages"][0]
+        self.assertEqual(loaded["structured"]["actionPlanReview"]["operations"]["apply"]["status"], "applied")
+        copied = client.post("/api/calendar/action-batches", headers=headers, json={**batch, "aiPlanOperation": "copy_to_todos"})
+        self.assertEqual(copied.status_code, 200, copied.text)
+        self.assertEqual(len(client.get("/api/calendar/todos").json()["todos"]), 2)
+        dismissed = client.post("/api/ai/conversations/review-chat/messages/review-message/action-plan/dismiss", headers=headers)
+        self.assertEqual(dismissed.status_code, 200, dismissed.text)
+        self.assertTrue(dismissed.json()["message"]["structured"]["actionPlanReview"]["dismissed"])
+        legacy = client.post("/api/calendar/action-batches", headers=headers, json={key: value for key, value in batch.items() if key not in {"aiPlanRef", "aiPlanOperation"}})
+        self.assertEqual(legacy.status_code, 409, legacy.text)
+
+    def test_ai_conversation_history_is_reloadable_and_tenant_scoped(self) -> None:
+        alice_client, alice_csrf = self.login("alice", "alice-password-123")
+        alice_headers = {"X-CSRF-Token": alice_csrf}
+        created = alice_client.post(
+            "/api/ai/conversations",
+            headers=alice_headers,
+            json={"title": "Plan my week", "metadata": {"surface": "ai-assistant"}},
+        )
+        self.assertEqual(created.status_code, 200, created.text)
+        thread_id = created.json()["thread"]["thread_id"]
+        for role, content in (("user", "Plan my week"), ("assistant", "Here is a draft.")):
+            response = alice_client.post(
+                f"/api/ai/conversations/{thread_id}/messages",
+                headers=alice_headers,
+                json={"role": role, "content": content, "structured": {}},
+            )
+            self.assertEqual(response.status_code, 200, response.text)
+
+        reloaded = alice_client.get(f"/api/ai/conversations/{thread_id}")
+        self.assertEqual(
+            [message["content"] for message in reloaded.json()["messages"]],
+            ["Plan my week", "Here is a draft."],
+        )
+
+        bob_client, _bob_csrf = self.login("bob", "bob-password-123")
+        self.assertEqual(bob_client.get("/api/ai/conversations").json()["threads"], [])
+        self.assertEqual(bob_client.get(f"/api/ai/conversations/{thread_id}").status_code, 404)
 
 
 if __name__ == "__main__":

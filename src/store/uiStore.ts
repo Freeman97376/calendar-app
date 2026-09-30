@@ -1,7 +1,9 @@
 import { create } from 'zustand'
+import type { AIPlanRecord } from '../domain/schemas/aiPlanReview.schema'
+import type { CalendarBatchAction } from '../domain/schemas/calendarActionBatch.schema'
 
 import { todayISODate } from '../domain/logic/dateHelpers'
-import type { Event } from '../domain/types'
+import type { AICalendarActionPlan, AIProgressToolEventDraft, Event } from '../domain/types'
 import type { ActiveToolOnboardingSeed } from '../domain/types/goalControl'
 
 export type WorkspacePanelId =
@@ -16,6 +18,29 @@ export type WorkspacePanelId =
 
 export type WorkspaceMainMode = 'calendar' | 'panel'
 export type ApprovalDrawerSource = 'ai-action-plan' | 'active-tool-calendar-drafts'
+export type ApprovalDrawerOpenInput =
+  | {
+      plan: AICalendarActionPlan
+      record?: AIPlanRecord
+      applyActions?: CalendarBatchAction[]
+      taskActions?: CalendarBatchAction[]
+      sessionEpoch?: number
+      source: 'ai-action-plan'
+    }
+  | {
+      drafts: AIProgressToolEventDraft[]
+      projectId: string
+      source: 'active-tool-calendar-drafts'
+      toolName: string
+      toolRunId: string
+    }
+export type ApprovalDrawerContext =
+  | (Extract<ApprovalDrawerOpenInput, { source: 'ai-action-plan' }> & {
+      idempotencyKey: string
+    })
+  | (Extract<ApprovalDrawerOpenInput, { source: 'active-tool-calendar-drafts' }> & {
+      idempotencyKey: string
+    })
 
 type WorkspaceOpenOptions = {
   mainMode?: WorkspaceMainMode
@@ -44,6 +69,7 @@ export type UIStore = {
   workspaceMainMode: WorkspaceMainMode
   workspacePanelHistory: WorkspacePanelId[]
   approvalDrawerOpen: boolean
+  approvalDrawerContext: ApprovalDrawerContext | null
   approvalDrawerSource: ApprovalDrawerSource | null
   activeToolId: string
   activeEnabledToolProjectId: string
@@ -63,7 +89,7 @@ export type UIStore = {
   focusWorkspacePanel: () => void
   goBackWorkspacePanel: () => void
   openEnabledToolsPanel: (projectId?: string) => void
-  openApprovalDrawer: (source: ApprovalDrawerSource) => void
+  openApprovalDrawer: (input: ApprovalDrawerOpenInput) => void
   openWorkspacePanel: (panel: WorkspacePanelId, options?: WorkspaceOpenOptions) => void
   showWorkspaceCalendar: () => void
   toggleAIPanel: () => void
@@ -140,6 +166,7 @@ export const useUIStore = create<UIStore>((set) => ({
   workspaceMainMode: 'calendar',
   workspacePanelHistory: [],
   approvalDrawerOpen: false,
+  approvalDrawerContext: null,
   approvalDrawerSource: null,
   activeToolId: 'fitness-ai',
   activeEnabledToolProjectId: '',
@@ -222,7 +249,12 @@ export const useUIStore = create<UIStore>((set) => ({
         selectedStartTime: null,
       }
     }),
-  closeApprovalDrawer: () => set({ approvalDrawerOpen: false, approvalDrawerSource: null }),
+  closeApprovalDrawer: () =>
+    set({
+      approvalDrawerContext: null,
+      approvalDrawerOpen: false,
+      approvalDrawerSource: null,
+    }),
   closeTodoPanel: () => set(workspaceState('home')),
   closeWorkspacePanel: () => set(workspaceState('home')),
   focusWorkspacePanel: () =>
@@ -244,10 +276,16 @@ export const useUIStore = create<UIStore>((set) => ({
       ),
       activeEnabledToolProjectId: projectId || state.activeEnabledToolProjectId,
     })),
-  openApprovalDrawer: (approvalDrawerSource) =>
+  openApprovalDrawer: (input) =>
     set({
+      approvalDrawerContext: {
+        ...JSON.parse(JSON.stringify(input)),
+        idempotencyKey: `approval-${
+          globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
+        }`.slice(0, 120),
+      } as ApprovalDrawerContext,
       approvalDrawerOpen: true,
-      approvalDrawerSource,
+      approvalDrawerSource: input.source,
       workspaceMainMode: 'calendar',
     }),
   openToolsPanel: (activeToolId = 'fitness-ai') =>
@@ -359,6 +397,7 @@ export const useUIStore = create<UIStore>((set) => ({
       workspaceMainMode: 'calendar',
       workspacePanelHistory: [],
       approvalDrawerOpen: false,
+      approvalDrawerContext: null,
       approvalDrawerSource: null,
       activeToolId: 'fitness-ai',
       activeEnabledToolProjectId: '',

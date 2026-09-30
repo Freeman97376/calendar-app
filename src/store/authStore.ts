@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import type { TranslationKey } from '../domain/logic/i18n'
 import type { AppCapabilities, AppUser, BootstrapResponse } from '../domain/types'
 import {
   ApiError,
@@ -8,6 +9,7 @@ import {
   clearApiSessionCredentials,
   fetchBootstrap,
   loginRequest,
+  registerRequest,
   logoutRequest,
 } from '../services/appApiClient'
 
@@ -30,6 +32,7 @@ export type AuthStore = {
   user: AppUser | null
   bootstrap: () => Promise<BootstrapResponse>
   login: (username: string, password: string) => Promise<void>
+  register: (username: string, password: string, inviteCode: string) => Promise<void>
   logout: () => Promise<void>
   sessionExpired: (reason?: 'unauthorized' | 'csrf-invalid') => void
 }
@@ -84,6 +87,23 @@ function secureLoginMessage(error: unknown): string {
     if (error.status === 401) return 'The username or password is incorrect.'
   }
   return 'Unable to sign in right now. Check the connection and try again.'
+}
+
+export function registrationErrorKey(error: unknown): TranslationKey {
+  const messages: Record<string, TranslationKey> = {
+    invalid_invite_code: 'auth.invalidInvite',
+    registration_disabled: 'auth.registrationDisabled',
+    username_exists: 'auth.usernameExists',
+    invalid_username: 'auth.invalidUsername',
+    weak_password: 'auth.passwordHint',
+    invalid_password: 'auth.passwordHint',
+    register_rate_limited: 'auth.registrationLimited',
+    validation_error: 'auth.registrationInvalid',
+    registration_origin_invalid: 'auth.registrationOrigin',
+  }
+  return error instanceof ApiError
+    ? (messages[error.code] ?? 'auth.registrationUnknown')
+    : 'auth.registrationUnknown'
 }
 
 function isSameAccount(user: AppUser | null, username: string): boolean {
@@ -192,6 +212,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       throw error
     }
   },
+  register: async (username, password, inviteCode) => {
+    if (get().status !== 'unauthenticated' || get().isSubmitting) {
+      throw new Error('Registration requires an idle signed-out session.')
+    }
+    set({ error: null, isSubmitting: true, retryAfterSeconds: null })
+    try {
+      await registerRequest(username, password, inviteCode)
+    } catch (error) {
+      set({ retryAfterSeconds: error instanceof ApiError ? error.retryAfterSeconds : null })
+      throw error
+    } finally {
+      set({ isSubmitting: false })
+    }
+  },
   logout: async () => {
     set({ error: null, isSubmitting: true })
     try {
@@ -199,7 +233,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       abortApiRequests({ clearCsrf: true })
       clearAccountData?.()
       set({
-        capabilities: null,
         error: null,
         isSubmitting: false,
         preferences: {},
@@ -212,7 +245,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         abortApiRequests({ clearCsrf: true })
         clearAccountData?.()
         set({
-          capabilities: null,
           error: null,
           isSubmitting: false,
           preferences: {},

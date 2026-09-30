@@ -24,6 +24,58 @@ function json(method: 'POST' | 'PATCH', body: unknown): RequestInit {
 }
 
 export const goalControlClient = {
+  async listAIConversations() {
+    const payload = await request<{ threads: GoalConversationThread[] }>('/api/ai/conversations')
+    return payload.threads
+  },
+  async createAIConversation(input: {
+    thread_id?: string
+    title: string
+    metadata?: Record<string, unknown>
+  }) {
+    const payload = await request<{ thread: GoalConversationThread }>(
+      '/api/ai/conversations',
+      json('POST', input),
+    )
+    return payload.thread
+  },
+  async getAIConversation(threadId: string) {
+    return request<{ thread: GoalConversationThread; messages: GoalConversationMessage[] }>(
+      `/api/ai/conversations/${encodeURIComponent(threadId)}`,
+    )
+  },
+  async addAIConversationMessage(
+    threadId: string,
+    input: {
+      message_id?: string
+      role: 'user' | 'assistant'
+      content: string
+      structured?: Record<string, unknown>
+    },
+  ) {
+    const payload = await request<{ message: GoalConversationMessage }>(
+      `/api/ai/conversations/${encodeURIComponent(threadId)}/messages`,
+      json('POST', input),
+    )
+    return payload.message
+  },
+  async dismissAIActionPlan(threadId: string, messageId: string) {
+    const payload = await request<{ message: GoalConversationMessage }>(
+      `/api/ai/conversations/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}/action-plan/dismiss`,
+      json('POST', {}),
+    )
+    return payload.message
+  },
+  async updateAIConversation(
+    threadId: string,
+    input: { status?: 'active' | 'archived'; title?: string },
+  ) {
+    const payload = await request<{ thread: GoalConversationThread }>(
+      `/api/ai/conversations/${encodeURIComponent(threadId)}`,
+      json('PATCH', input),
+    )
+    return payload.thread
+  },
   async listThreads() {
     const payload = await request<{ threads: GoalConversationThread[] }>('/api/goal-conversations')
     return payload.threads

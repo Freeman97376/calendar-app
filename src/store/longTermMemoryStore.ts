@@ -64,6 +64,7 @@ export type LongTermMemoryStore = {
   goals: LongTermGoal[]
   isDetailLoading: boolean
   isLoading: boolean
+  loadedProjectId: string
   milestones: LongTermMilestone[]
   progress: LongTermProgressLog[]
   projects: LongTermProject[]
@@ -137,6 +138,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
   goals: [],
   isDetailLoading: false,
   isLoading: false,
+  loadedProjectId: '',
   milestones: [],
   progress: [],
   projects: [],
@@ -170,6 +172,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         goals: [goal, ...state.goals],
         isDetailLoading: false,
         isLoading: false,
+        loadedProjectId: '',
         milestones: [],
         progress: [],
         selectedGoalId: goal.goal_id,
@@ -193,6 +196,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         goals: [created.goal, ...state.goals],
         isDetailLoading: false,
         isLoading: false,
+        loadedProjectId: '',
         milestones: [],
         progress: [],
         projects: [created.project, ...state.projects],
@@ -248,6 +252,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         error: null,
         isDetailLoading: false,
         isLoading: false,
+        loadedProjectId: '',
         milestones: [],
         progress: [],
         projects: [project, ...state.projects],
@@ -328,6 +333,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         actions: [],
         error: null,
         isDetailLoading: false,
+        loadedProjectId: '',
         milestones: [],
         progress: [],
         toolRuns: [],
@@ -335,7 +341,16 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
       return
     }
 
-    set({ error: null, isDetailLoading: true })
+    set({
+      actions: [],
+      error: null,
+      isDetailLoading: true,
+      loadedProjectId: '',
+      milestones: [],
+      progress: [],
+      selectedProjectId: projectId,
+      toolRuns: [],
+    })
     try {
       const [milestones, actions, progress, toolRuns] = await Promise.all([
         getClient().listMilestones(projectId),
@@ -344,7 +359,15 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
         getClient().listToolRunsForProject(projectId),
       ])
       if (loadGeneration !== projectDetailLoadGeneration) return
-      set({ actions, error: null, isDetailLoading: false, milestones, progress, toolRuns })
+      set({
+        actions,
+        error: null,
+        isDetailLoading: false,
+        loadedProjectId: projectId,
+        milestones,
+        progress,
+        toolRuns,
+      })
     } catch (error) {
       if (loadGeneration !== projectDetailLoadGeneration) return
       set({ error: errorMessage(error, 'Unable to load project memory'), isDetailLoading: false })
@@ -360,6 +383,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
       goals: [],
       isDetailLoading: false,
       isLoading: false,
+      loadedProjectId: '',
       milestones: [],
       progress: [],
       projects: [],
@@ -374,6 +398,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
     set({
       actions: [],
       isDetailLoading: false,
+      loadedProjectId: '',
       milestones: [],
       progress: [],
       selectedGoalId: goalId,
@@ -387,6 +412,7 @@ export const useLongTermMemoryStore = create<LongTermMemoryStore>((set, get) => 
     set({
       actions: [],
       isDetailLoading: false,
+      loadedProjectId: '',
       milestones: [],
       progress: [],
       selectedProjectId: projectId,

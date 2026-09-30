@@ -73,6 +73,13 @@ export type QuestionBatchItem = {
 export type QuestionBatchValue = {
   kind: 'question_batch'
   questions: QuestionBatchItem[]
+  context?: 'action_schedule'
+  issueCodes?: string[]
+  issueMessages?: string[]
+  optionalActionTitles?: string[]
+  planFingerprint?: string
+  suggestedTargetDate?: string
+  suggestedWeeklyCapacity?: number
 }
 
 export type GoalConversationMessage = {
@@ -87,7 +94,7 @@ export type GoalConversationMessage = {
 
 export type GoalConversationThread = {
   thread_id: string
-  kind: 'goal_draft' | 'active_goal'
+  kind: 'goal_draft' | 'active_goal' | 'assistant_chat'
   status: 'draft' | 'active' | 'archived'
   title: string
   goal_id?: string | null
@@ -179,7 +186,8 @@ export type GoalControlDashboard = {
       title: string
       status: string
       estimated_minutes: number
-      execution_tier: string
+      execution_tier: 'minimum' | 'standard' | 'stretch'
+      priority: 'high' | 'medium' | 'low'
       due_date?: string | null
     }
   >
@@ -197,9 +205,15 @@ export type GoalControlDashboard = {
     active_tier: string
     weekly_capacity_minutes: number
     buffer_percent: number
+    available_days: string[]
     planning_brief?: Record<string, unknown>
   }
-  dependencies: Array<Record<string, unknown>>
+  dependencies: Array<
+    Record<string, unknown> & {
+      predecessor_action_id: string
+      successor_action_id: string
+    }
+  >
   effort: Array<Record<string, unknown> & { minutes: number; occurred_on: string }>
   health: {
     status: 'on_track' | 'attention' | 'at_risk' | 'paused'

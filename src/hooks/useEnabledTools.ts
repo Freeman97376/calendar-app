@@ -6,7 +6,6 @@ import {
   enabledToolProgress,
   type ActiveTool,
 } from '../domain/logic/enabledTools'
-import { splitUniqueEventDrafts } from '../domain/logic/eventDeduplication'
 import type { EventDraft } from '../domain/logic/eventUtils'
 import {
   buildToolRoadmap,
@@ -20,27 +19,68 @@ import type {
   MilestoneStatus,
   ProjectStatus,
 } from '../domain/types/longTermMemory'
+import type { GoalControlDashboard } from '../domain/types/goalControl'
+import { calendarActionBatchGateway } from '../store/calendarActionBatchStore'
 import { useEventStore } from '../store/eventStore'
 import { goalControlGateway } from '../store/goalControlStore'
+import { requestScheduleRecompute, useSchedulingStore } from '../store/schedulingStore'
 import { useLongTermMemoryStore } from '../store/longTermMemoryStore'
 import { useEnabledToolsPanel } from './useEnabledToolsPanel'
 
 type EnabledToolCalendarDraft = EventDraft & {
+  allDay: boolean
   endAt: string
   startAt: string
   title: string
 }
 
 export type ActiveToolPlanEditorValue = {
+  actions: Array<{
+    actionId: string
+    dependsOn: string[]
+    title: string
+    dueDate: string | null
+    estimatedMinutes: number
+    executionTier: 'minimum' | 'standard' | 'stretch'
+    priority: 'high' | 'medium' | 'low'
+  }>
   activationSummary: string
+  availableDays: string[]
+  bufferPercent: number
   implementationPathText: string
   longTermGoalLabel: string
   routeTags: string[]
+  targetDate: string | null
   toolFeatures: string[]
+  weeklyCapacityMinutes: number
 }
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function canonicalAvailableDays(values: string[]): string[] {
+  const aliases: Record<string, string> = {
+    monday: 'mon',
+    tuesday: 'tue',
+    wednesday: 'wed',
+    thursday: 'thu',
+    friday: 'fri',
+    saturday: 'sat',
+    sunday: 'sun',
+    周一: 'mon',
+    周二: 'tue',
+    周三: 'wed',
+    周四: 'thu',
+    周五: 'fri',
+    周六: 'sat',
+    周日: 'sun',
+  }
+  return [
+    ...new Set(
+      values.map((value) => aliases[value.toLowerCase()] ?? value.toLowerCase().slice(0, 3)),
+    ),
+  ].filter((value) => ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(value))
 }
 
 function calendarDraftFromUnknown(value: unknown): EnabledToolCalendarDraft | null {
@@ -79,19 +119,36 @@ export function latestCalendarDrafts(toolRuns: LongTermToolRun[]) {
     .filter((draft): draft is EnabledToolCalendarDraft => Boolean(draft))
 }
 
+export function latestCalendarDraftReview(toolRuns: LongTermToolRun[]) {
+  const run = toolRuns.find(
+    (entry) =>
+      entry.output &&
+      Array.isArray((entry.output as { calendarEvents?: unknown }).calendarEvents) &&
+      ((entry.output as { calendarEvents?: unknown[] }).calendarEvents?.length ?? 0) > 0,
+  )
+  return { drafts: latestCalendarDrafts(run ? [run] : []), toolRunId: run?.tool_run_id ?? '' }
+}
+
+export type ActiveToolCalendarApproval = {
+  drafts: EnabledToolCalendarDraft[]
+  idempotencyKey: string
+  projectId: string
+  toolName: string
+  toolRunId: string
+}
+
 export function useEnabledTools() {
   const panel = useEnabledToolsPanel()
   const actions = useLongTermMemoryStore((state) => state.actions)
   const createProgress = useLongTermMemoryStore((state) => state.createProgress)
-  const createToolRun = useLongTermMemoryStore((state) => state.createToolRun)
-  const createEvent = useEventStore((state) => state.createEvent)
-  const events = useEventStore((state) => state.events)
+  const reconcileEvents = useEventStore((state) => state.reconcileBatch)
   const error = useLongTermMemoryStore((state) => state.error)
   const goals = useLongTermMemoryStore((state) => state.goals)
   const isDetailLoading = useLongTermMemoryStore((state) => state.isDetailLoading)
   const isLoading = useLongTermMemoryStore((state) => state.isLoading)
   const loadOverview = useLongTermMemoryStore((state) => state.loadOverview)
   const loadProjectDetails = useLongTermMemoryStore((state) => state.loadProjectDetails)
+  const loadedProjectId = useLongTermMemoryStore((state) => state.loadedProjectId)
   const milestones = useLongTermMemoryStore((state) => state.milestones)
   const progress = useLongTermMemoryStore((state) => state.progress)
   const projects = useLongTermMemoryStore((state) => state.projects)
@@ -99,12 +156,21 @@ export function useEnabledTools() {
   const updateActionStatus = useLongTermMemoryStore((state) => state.updateActionStatus)
   const updateMilestoneStatus = useLongTermMemoryStore((state) => state.updateMilestoneStatus)
   const updateProject = useLongTermMemoryStore((state) => state.updateProject)
-  const updateProjectStatus = useLongTermMemoryStore((state) => state.updateProjectStatus)
+  const schedulingError = useSchedulingStore((state) => state.error)
+  const pendingToolEdit = useSchedulingStore((state) =>
+    Boolean(
+      state.proposal &&
+      ['pending', 'blocked'].includes(state.proposal.status) &&
+      state.proposal.proposal.planChange,
+    ),
+  )
+  const recomputeSchedule = useSchedulingStore((state) => state.recompute)
   const instances = useMemo(() => activeToolsFromProjects(projects, goals), [goals, projects])
   const activeInstance =
     instances.find((instance) => instance.projectId === panel.activeProjectId) ??
     instances[0] ??
     null
+  const [editorDashboard, setEditorDashboard] = useState<GoalControlDashboard | null>(null)
   const progressSummary = enabledToolProgress(actions, milestones)
   const roadmap = activeInstance
     ? buildToolRoadmap(
@@ -117,9 +183,22 @@ export function useEnabledTools() {
       )
     : null
   const planEditorValue: ActiveToolPlanEditorValue | null =
-    activeInstance && roadmap
+    activeInstance && roadmap && editorDashboard?.project.project_id === activeInstance.projectId
       ? {
+          actions: editorDashboard.actions.map((action) => ({
+            actionId: action.action_id,
+            dependsOn: editorDashboard.dependencies
+              .filter((dependency) => dependency.successor_action_id === action.action_id)
+              .map((dependency) => dependency.predecessor_action_id),
+            title: action.title,
+            dueDate: action.due_date ?? null,
+            estimatedMinutes: Number(action.estimated_minutes || 30),
+            executionTier: action.execution_tier,
+            priority: action.priority,
+          })),
           activationSummary: activeInstance.activationSummary || activeInstance.project.description,
+          availableDays: canonicalAvailableDays(editorDashboard.policy.available_days),
+          bufferPercent: Number(editorDashboard.policy.buffer_percent),
           implementationPathText: implementationPathToText(
             activeInstance.implementationPath.length
               ? activeInstance.implementationPath
@@ -130,13 +209,19 @@ export function useEnabledTools() {
             activeInstance.goal?.title ??
             activeInstance.project.title,
           routeTags: activeInstance.routeTags,
+          targetDate: optionalString(activeInstance.project.metadata.targetDate) ?? null,
           toolFeatures: activeInstance.toolFeatures.length
             ? activeInstance.toolFeatures
             : activeInstance.routeTags,
+          weeklyCapacityMinutes: Number(editorDashboard.policy.weekly_capacity_minutes),
         }
       : null
   const promptFramework = activeInstance ? buildActiveToolPromptFramework(activeInstance) : ''
-  const calendarDrafts = latestCalendarDrafts(toolRuns)
+  const calendarDraftReview =
+    activeInstance && loadedProjectId === activeInstance.projectId && !isDetailLoading
+      ? latestCalendarDraftReview(toolRuns)
+      : { drafts: [], toolRunId: '' }
+  const calendarDrafts = calendarDraftReview.drafts
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
   const [isApplyingCalendarDrafts, setIsApplyingCalendarDrafts] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -158,8 +243,23 @@ export function useEnabledTools() {
   }, [activeInstance, panel])
 
   useEffect(() => {
-    if (!activeInstance) return
+    if (!activeInstance) {
+      setEditorDashboard(null)
+      return
+    }
+    let cancelled = false
     loadProjectDetails(activeInstance.projectId).catch(() => undefined)
+    goalControlGateway
+      .dashboard(activeInstance.projectId)
+      .then((value) => {
+        if (!cancelled) setEditorDashboard(value)
+      })
+      .catch(() => {
+        if (!cancelled) setEditorDashboard(null)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [activeInstance, loadProjectDetails])
 
   async function toggleRouting(instance: ActiveTool) {
@@ -209,38 +309,68 @@ export function useEnabledTools() {
       toolName: instance.toolName,
     })
 
-    await updateProject(instance.projectId, {
-      metadata,
-      title: instanceAlias,
+    const dashboard = await goalControlGateway.dashboard(instance.projectId)
+    await recomputeSchedule('active_tool_rename', {
+      projectId: instance.projectId,
+      baseVersionId: dashboard.versions?.[0]?.version_id,
+      changes: { metadata, title: instanceAlias },
     })
-    await recordManualVersion(instance.projectId, 'Renamed active tool.')
-    await loadProjectDetails(instance.projectId)
+    setApplyStatus('已生成工具重命名及全局重排影响提案，确认前不会修改工具或日历。')
   }
 
   async function updateActiveToolPlan(instance: ActiveTool, changes: ActiveToolPlanEditorValue) {
-    const metadata = createActiveToolMetadata({
-      activationForm: instance.activationForm,
-      activationSummary: changes.activationSummary.trim(),
-      adapterId: instance.adapterId,
-      implementationPath: implementationPathFromText(changes.implementationPathText),
-      instanceAlias: instance.instanceAlias,
-      longTermGoalLabel: changes.longTermGoalLabel.trim(),
-      parentTemplateId: instance.parentTemplateId,
-      parentTemplateLabel: instance.parentTemplateLabel,
-      parentTemplateToolName: instance.parentTemplateToolName,
-      roadmapFormatVersion: instance.roadmapFormatVersion,
-      routeTags: changes.routeTags,
-      routingEnabled: instance.routingEnabled,
-      sourceToolId: instance.sourceToolId,
-      templateId: instance.templateId,
-      toolFeatures: changes.toolFeatures,
-      toolKind: instance.toolKind,
-      toolName: instance.toolName,
-    })
+    const metadata = {
+      ...instance.project.metadata,
+      ...createActiveToolMetadata({
+        activationForm: instance.activationForm,
+        activationSummary: changes.activationSummary.trim(),
+        adapterId: instance.adapterId,
+        implementationPath: implementationPathFromText(changes.implementationPathText),
+        instanceAlias: instance.instanceAlias,
+        longTermGoalLabel: changes.longTermGoalLabel.trim(),
+        parentTemplateId: instance.parentTemplateId,
+        parentTemplateLabel: instance.parentTemplateLabel,
+        parentTemplateToolName: instance.parentTemplateToolName,
+        roadmapFormatVersion: instance.roadmapFormatVersion,
+        routeTags: changes.routeTags,
+        routingEnabled: instance.routingEnabled,
+        sourceToolId: instance.sourceToolId,
+        templateId: instance.templateId,
+        toolFeatures: changes.toolFeatures,
+        toolKind: instance.toolKind,
+        toolName: instance.toolName,
+      }),
+      targetDate: changes.targetDate,
+    }
 
-    await updateProject(instance.projectId, { metadata })
-    await recordManualVersion(instance.projectId, 'Updated planning brief and implementation path.')
-    await loadProjectDetails(instance.projectId)
+    const dashboard = await goalControlGateway.dashboard(instance.projectId)
+    await recomputeSchedule('active_tool_plan_edit', {
+      projectId: instance.projectId,
+      baseVersionId: dashboard.versions?.[0]?.version_id,
+      changes: {
+        metadata,
+        policy: {
+          weeklyCapacityMinutes: changes.weeklyCapacityMinutes,
+          bufferPercent: changes.bufferPercent,
+          availableDays: changes.availableDays,
+        },
+        actions: changes.actions.map((action) => ({
+          actionId: action.actionId,
+          title: action.title,
+          dueDate: action.dueDate,
+          estimatedMinutes: action.estimatedMinutes,
+          executionTier: action.executionTier,
+          priority: action.priority,
+        })),
+        dependencies: changes.actions.flatMap((action) =>
+          action.dependsOn.map((predecessorActionId) => ({
+            predecessorActionId,
+            successorActionId: action.actionId,
+          })),
+        ),
+      },
+    })
+    setApplyStatus('已生成“计划变更＋全局重排影响”提案，确认前不会修改工具或日历。')
   }
 
   async function setActionStatus(actionId: string, title: string, status: ActionItemStatus) {
@@ -257,6 +387,7 @@ export function useEnabledTools() {
     })
     await recordManualVersion(activeInstance.projectId, `Updated action status: ${title}.`)
     await loadProjectDetails(activeInstance.projectId)
+    requestScheduleRecompute('active_tool_action_changed')
   }
 
   async function setMilestoneStatus(milestoneId: string, title: string, status: MilestoneStatus) {
@@ -272,76 +403,55 @@ export function useEnabledTools() {
     })
     await recordManualVersion(activeInstance.projectId, `Updated milestone status: ${title}.`)
     await loadProjectDetails(activeInstance.projectId)
+    requestScheduleRecompute('active_tool_milestone_changed')
   }
 
-  async function applyCalendarDrafts() {
-    if (!activeInstance || !calendarDrafts.length) return []
+  async function applyCalendarDrafts(approval?: ActiveToolCalendarApproval) {
+    const review =
+      approval ??
+      (activeInstance
+        ? {
+            drafts: calendarDrafts,
+            idempotencyKey: `active-tool-${Date.now()}`,
+            projectId: activeInstance.projectId,
+            toolName: activeInstance.toolName,
+            toolRunId: calendarDraftReview.toolRunId,
+          }
+        : null)
+    if (!review?.drafts.length || !review.projectId || !review.toolRunId) return []
 
     setApplyStatus(null)
     setLocalError(null)
     setIsApplyingCalendarDrafts(true)
 
     try {
-      const { duplicateDrafts, uniqueDrafts } = splitUniqueEventDrafts(calendarDrafts, events)
-      const created = []
-
-      for (const draft of uniqueDrafts) {
-        created.push(await createEvent(draft))
-      }
-
-      await createToolRun({
-        input: {
-          eventCount: calendarDrafts.length,
-          skippedDuplicateCount: duplicateDrafts.length,
-          sourceToolId: activeInstance.sourceToolId,
-        },
-        input_summary: `Apply ${calendarDrafts.length} ${activeInstance.instanceAlias} calendar event(s).`,
-        intent: `Apply ${activeInstance.instanceAlias} calendar preview`,
-        output: {
-          createdEventIds: created.map((event) => event.id),
-          skippedDuplicateCount: duplicateDrafts.length,
-          skippedDuplicates: duplicateDrafts.map((duplicate) => ({
-            existingEventId: duplicate.existingEventId,
-            reason: duplicate.reason,
-            title: duplicate.draft.title,
-          })),
-        },
-        output_summary: `Applied ${created.length} calendar event(s).${
-          duplicateDrafts.length ? ` Skipped ${duplicateDrafts.length} duplicate event(s).` : ''
-        }`,
-        related_goal_id: activeInstance.goalId,
-        related_project_id: activeInstance.projectId,
-        status: 'success',
-        tool_name: activeInstance.toolName,
+      const result = await calendarActionBatchGateway.apply({
+        actions: review.drafts.map((draft, index) => ({
+          clientActionId: `tool-${index + 1}`,
+          event: draft,
+          skipIfDuplicate: true,
+          type: 'create_event' as const,
+        })),
+        idempotencyKey: review.idempotencyKey,
+        projectId: review.projectId,
+        source: 'active-tool-calendar-drafts',
+        toolRunId: review.toolRunId,
       })
-      await createProgress({
-        details: [
-          ...uniqueDrafts.map(
-            (draft) => `Applied ${draft.title}: ${draft.startAt} - ${draft.endAt}`,
-          ),
-          ...duplicateDrafts.map(
-            (duplicate) =>
-              `Skipped duplicate ${duplicate.draft.title}: ${duplicate.draft.startAt} - ${duplicate.draft.endAt}`,
-          ),
-        ].join('\n'),
-        goal_id: activeInstance.goalId,
-        log_type: 'tool_result',
-        metadata: activeInstance.project.metadata,
-        project_id: activeInstance.projectId,
-        summary: `Applied ${created.length} calendar event(s) from ${activeInstance.instanceAlias}.${
-          duplicateDrafts.length ? ` Skipped ${duplicateDrafts.length} duplicate(s).` : ''
-        }`,
-      })
-      await loadProjectDetails(activeInstance.projectId)
+      reconcileEvents(result.eventsUpserted, result.deletedEventIds)
+      requestScheduleRecompute('calendar_batch_applied')
+      const appliedCount = result.results.filter((entry) => entry.status === 'applied').length
+      const skippedDuplicateCount = result.results.filter(
+        (entry) => entry.status === 'skipped_duplicate',
+      ).length
       setApplyStatus(
-        `Applied ${created.length} calendar event${created.length === 1 ? '' : 's'}.${
-          duplicateDrafts.length
-            ? ` Skipped ${duplicateDrafts.length} duplicate${duplicateDrafts.length === 1 ? '' : 's'}.`
+        `Applied ${appliedCount} calendar event${appliedCount === 1 ? '' : 's'}.${
+          skippedDuplicateCount
+            ? ` Skipped ${skippedDuplicateCount} duplicate${skippedDuplicateCount === 1 ? '' : 's'}.`
             : ''
         }`,
       )
 
-      return created
+      return result.eventsUpserted
     } catch (applyError) {
       const message =
         applyError instanceof Error ? applyError.message : 'Unable to apply calendar drafts'
@@ -358,8 +468,10 @@ export function useEnabledTools() {
     applyCalendarDrafts,
     applyStatus,
     calendarDrafts,
+    calendarDraftToolRunId: calendarDraftReview.toolRunId,
     close: panel.close,
-    error: localError ?? error,
+    error: localError ?? schedulingError ?? error,
+    pendingToolEdit,
     instances,
     isApplyingCalendarDrafts,
     isDetailLoading,
@@ -378,8 +490,13 @@ export function useEnabledTools() {
     toggleRouting,
     updateActiveToolPlan,
     updateProjectStatus: async (projectId: string, status: ProjectStatus) => {
-      await updateProjectStatus(projectId, status)
-      await recordManualVersion(projectId, `Updated project status to ${status}.`)
+      const dashboard = await goalControlGateway.dashboard(projectId)
+      await recomputeSchedule('active_tool_status_changed', {
+        projectId,
+        baseVersionId: dashboard.versions?.[0]?.version_id,
+        changes: { status },
+      })
+      setApplyStatus('已生成工具状态及全局重排影响提案，确认前不会修改工具或日历。')
     },
   }
 }

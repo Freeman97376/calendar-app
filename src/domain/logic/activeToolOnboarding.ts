@@ -1,4 +1,5 @@
 import { GoalActivationPlanSchema } from '../schemas/goalActivationPlan.schema'
+import { missingPlanningDateActions } from './goalActionScheduling'
 import type {
   ActiveToolOnboardingSeed,
   GoalActivationPlan,
@@ -116,11 +117,8 @@ export function activeToolClarificationQuestions(
 
   if (seed.template.id === 'fitness-ai') {
     const safetyWasExplicit =
-      Boolean(seed.activationForm.constraints?.trim()) ||
-      hasPattern(
-        request,
-        /(?:no|without|没有|无).{0,8}(?:injur|pain|medical|constraint|受伤|疼痛|医疗|限制)|injur|pain|knee|medical|受伤|疼痛|膝|医疗|限制/i,
-      )
+      hasExplicitFitnessSafetyText(seed.activationForm.constraints ?? '') ||
+      hasExplicitFitnessSafetyText(request)
     const frequencyWasExplicit = hasPattern(
       request,
       /每周\s*\d+\s*次|\d+\s*(?:times|sessions)\s*(?:per|a)\s*week/i,
@@ -139,7 +137,7 @@ export function activeToolClarificationQuestions(
   )
   const horizonWasExplicit = hasPattern(
     request,
-    /\d+\s*(?:天|周|个月|days?|weeks?|months?)|截止|deadline|by\s+\d{4}-\d{2}-\d{2}/i,
+    /\d+\s*(?:天|周|个月|days?|weeks?|months?)|截止|deadline|by\s+\d{4}-\d{2}-\d{2}|暂无期限|无固定期限|没有具体日期|没有明确日期|no fixed date|open[- ]ended/i,
   )
   const constraintsWereExplicit = hasPattern(
     request,
@@ -161,19 +159,20 @@ function answerHasValue(answer: unknown): boolean {
   )
 }
 
+function hasExplicitFitnessSafetyText(value: string): boolean {
+  return hasPattern(
+    value,
+    /(?:no|without|没有|无).{0,10}(?:injur|pain|medical|physical limitation|伤病|受伤|疼痛|医疗|身体限制)|injur|pain|knee|medical|surgery|pregnan|伤病|受伤|疼痛|膝|腰伤|医疗|手术|怀孕/i,
+  )
+}
+
 export function fitnessSafetyWasConfirmed(
   messages: Array<{ structured: Record<string, unknown> }>,
   seed?: ActiveToolOnboardingSeed | null,
 ): boolean {
   if (seed?.template.id !== 'fitness-ai') return true
-  if (seed.activationForm.constraints?.trim()) return true
-  if (
-    hasPattern(
-      seed.originalRequest,
-      /(?:no|without|没有|无).{0,8}(?:injur|pain|medical|constraint|受伤|疼痛|医疗|限制)|injur|pain|knee|medical|受伤|疼痛|膝|医疗|限制/i,
-    )
-  )
-    return true
+  if (hasExplicitFitnessSafetyText(seed.activationForm.constraints ?? '')) return true
+  if (hasExplicitFitnessSafetyText(seed.originalRequest)) return true
 
   return messages.some((message) => {
     if (message.structured.kind !== 'question_answers') return false
@@ -251,6 +250,15 @@ export function planBlockingIssues(plan: GoalActivationPlan): string[] {
   if (!plan.summary.trim()) issues.push('Plan summary is required.')
   if (!plan.milestones.length) issues.push('At least one Milestone is required.')
   if (!plan.actions.length) issues.push('At least one Action is required.')
+  const unscheduled = missingPlanningDateActions(plan)
+  if (unscheduled.length) {
+    issues.push(
+      `必要行动缺少计划完成日：${unscheduled
+        .slice(0, 5)
+        .map((action) => action.title)
+        .join('、')}`,
+    )
+  }
   if (plan.missing_information.some((item) => item.blocking)) {
     issues.push('Resolve blocking missing information before activation.')
   }

@@ -6,6 +6,11 @@
 // Do NOT define types manually — always derive them from the Zod schemas via z.infer<>.
 
 export type { Event } from '../schemas/event.schema'
+export type {
+  ScheduleProposal,
+  SchedulingPreferences,
+  SchedulingWindow,
+} from '../schemas/scheduling.schema'
 export type { EventType } from '../schemas/eventType.schema'
 export type { RecurrenceRule, Weekday } from '../schemas/recurrence.schema'
 export type { Todo, TodoLongProject } from '../schemas/todo.schema'
@@ -50,7 +55,12 @@ export type {
   ToolSessionRequest,
   ToolSessionResult,
 } from '../schemas/toolSession.schema'
-export type { AppCapabilities, AppUser, BootstrapResponse } from '../schemas/auth.schema'
+export type { AIRuntime, AppCapabilities, AppUser, BootstrapResponse } from '../schemas/auth.schema'
+export type {
+  CalendarActionBatchRequest,
+  CalendarActionBatchResponse,
+  CalendarBatchAction,
+} from '../schemas/calendarActionBatch.schema'
 export type {
   DesktopDistribution,
   DesktopUpdateInfo,
